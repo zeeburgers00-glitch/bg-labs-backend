@@ -1,0 +1,44 @@
+# Core
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+sqlalchemy==2.0.25
+asyncpg==0.29.0
+alembic==1.13.0
+
+# Auth & Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.6
+email-validator==2.1.0.post1
+
+# Data Validation
+pydantic==2.5.3
+pydantic-settings==2.1.0
+
+# HTTP Client
+httpx==0.25.2
+
+# Environment
+python-dotenv==1.0.0
+
+# Local Storage (no AWS needed)
+aiofiles==23.2.1
+
+# Free TTS Engine - Coqui XTTS v2 (17+ languages)
+TTS==0.22.0
+torch==2.1.2
+torchaudio==2.1.2
+
+# Audio processing
+pydub==0.25.1
+soundfile==0.12.1
+numpy==1.26.3
+
+# Background tasks
+celery==5.3.6
+redis==5.0.1
+
+# Testing
+pytest==7.4.4
+pytest-asyncio==0.23.3
+pytest-cov==4.1.0
