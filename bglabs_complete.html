@@ -2098,7 +2098,7 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
 /* ═══════════════════════════════════════════
    BG LABS — Database Layer (localStorage)
    ═══════════════════════════════════════════ */
-const API_BASE = (typeof BG_BACKEND_URL !== 'undefined' ? BG_BACKEND_URL : '');
+const API_BASE = '/api';
 
 const DB = {
   _get: k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
@@ -2139,35 +2139,49 @@ const DB = {
   },
 
   createUser: async (name, email, password) => {
-    const users = DB._getUsers();
-    if (users.find(u => u.email === email)) throw new Error('An account with this email already exists');
-    const username = email.split('@')[0] + '_' + Math.random().toString(36).slice(2,5);
-    const user = {
-      id: DB.uid(),
-      email,
-      username,
-      full_name: name,
-      password_hash: DB._hash(password),
-      role: 'user',
-      credits: 999999,
-      is_active: true,
-      referral_code: 'BGLABS-' + name.toUpperCase().slice(0,6) + Math.random().toString(36).slice(2,4).toUpperCase(),
-      created_at: new Date().toISOString(),
-      total_credits_used: 0
-    };
-    users.push(user);
-    DB._setUsers(users);
-    localStorage.setItem('bglabs_token', user.id);
-    return { ...user, name: user.full_name, avatar: user.full_name.slice(0,2).toUpperCase(), plan: 'free', planCredits: 999999, charsUsed: 0, isBlocked: false, isAdmin: false };
+    const form = new URLSearchParams();
+    form.append('email', email);
+    form.append('username', email.split('@')[0] + '_' + Math.random().toString(36).slice(2,5));
+    form.append('full_name', name);
+    form.append('password', password);
+    try {
+      const r = await fetch(API_BASE + '/auth/register', { method: 'POST', body: form });
+      if (!r.ok) { const e = await r.json(); throw new Error(e.error || 'Registration failed'); }
+      const data = await r.json();
+      localStorage.setItem('bglabs_token', data.access_token);
+      return { ...data.user, name: data.user.full_name, avatar: (data.user.full_name || data.user.username).slice(0,2).toUpperCase(), plan: 'free', planCredits: 999999, charsUsed: 0, isBlocked: false, isAdmin: data.user.role === 'admin' };
+    } catch (err) {
+      // Fallback to localStorage if API fails
+      const users = DB._getUsers();
+      if (users.find(u => u.email === email)) throw new Error('An account with this email already exists');
+      const username = email.split('@')[0] + '_' + Math.random().toString(36).slice(2,5);
+      const user = { id: DB.uid(), email, username, full_name: name, password_hash: DB._hash(password), role: 'user', credits: 999999, is_active: true, referral_code: 'BGLABS-' + name.toUpperCase().slice(0,6) + Math.random().toString(36).slice(2,4).toUpperCase(), created_at: new Date().toISOString(), total_credits_used: 0 };
+      users.push(user);
+      DB._setUsers(users);
+      localStorage.setItem('bglabs_token', user.id);
+      return { ...user, name: user.full_name, avatar: user.full_name.slice(0,2).toUpperCase(), plan: 'free', planCredits: 999999, charsUsed: 0, isBlocked: false, isAdmin: false };
+    }
   },
 
   loginUser: async (email, password) => {
-    const users = DB._getUsers();
-    const user = users.find(u => u.email === email && u.password_hash === DB._hash(password));
-    if (!user) throw new Error('Invalid email or password');
-    if (!user.is_active) throw new Error('Account has been blocked');
-    localStorage.setItem('bglabs_token', user.id);
-    return { ...user, name: user.full_name || user.username, avatar: (user.full_name || user.username).slice(0,2).toUpperCase(), plan: user.plan || 'free', planCredits: user.planCredits || 999999, charsUsed: user.total_credits_used || 0, isBlocked: !user.is_active, isAdmin: user.role === 'admin' };
+    const form = new URLSearchParams();
+    form.append('username', email);
+    form.append('password', password);
+    try {
+      const r = await fetch(API_BASE + '/auth/login', { method: 'POST', body: form });
+      if (!r.ok) { const e = await r.json(); throw new Error(e.error || 'Login failed'); }
+      const data = await r.json();
+      localStorage.setItem('bglabs_token', data.access_token);
+      return { ...data.user, name: data.user.full_name || data.user.username, avatar: (data.user.full_name || data.user.username).slice(0,2).toUpperCase(), plan: 'free', planCredits: 999999, charsUsed: 0, isBlocked: false, isAdmin: data.user.role === 'admin' };
+    } catch (err) {
+      // Fallback to localStorage
+      const users = DB._getUsers();
+      const user = users.find(u => (u.email === email || u.username === email) && u.password_hash === DB._hash(password));
+      if (!user) throw new Error('Invalid email or password');
+      if (!user.is_active) throw new Error('Account has been blocked');
+      localStorage.setItem('bglabs_token', user.id);
+      return { ...user, name: user.full_name || user.username, avatar: (user.full_name || user.username).slice(0,2).toUpperCase(), plan: user.plan || 'free', planCredits: user.planCredits || 999999, charsUsed: user.total_credits_used || 0, isBlocked: !user.is_active, isAdmin: user.role === 'admin' };
+    }
   },
 
   updateUser: async (id, data) => {
@@ -2230,25 +2244,27 @@ const DB = {
   },
 
   getStats: async () => {
+    const token = DB.getToken();
+    try {
+      const r = await fetch(API_BASE + '/admin/stats', { headers: { 'Authorization': 'Bearer ' + token } });
+      if (r.ok) {
+        const d = await r.json();
+        return { totalUsers: d.total_users || 0, activeUsers: d.total_users || 0, blockedUsers: 0, totalGenerations: (d.total_audio || 0) + (d.total_images || 0), totalCharsGenerated: d.total_credits_used || 0, pendingRequests: 0 };
+      }
+    } catch(e) {}
+    // Fallback
     const users = DB._getUsers();
     let totalGenerations = 0, totalChars = 0;
-    users.forEach(u => {
-      const hist = DB.getHistory(u.id);
-      totalGenerations += hist.length;
-      totalChars += (u.total_credits_used || 0);
-    });
-    const pendingReqs = DB.getRequests().filter(r => r.status === 'pending').length;
-    return {
-      totalUsers: users.length,
-      activeUsers: users.filter(u => u.is_active !== false).length,
-      blockedUsers: users.filter(u => u.is_active === false).length,
-      totalGenerations,
-      totalCharsGenerated: totalChars,
-      pendingRequests: pendingReqs
-    };
+    users.forEach(u => { const hist = DB.getHistory(u.id); totalGenerations += hist.length; totalChars += (u.total_credits_used || 0); });
+    return { totalUsers: users.length, activeUsers: users.filter(u => u.is_active !== false).length, blockedUsers: users.filter(u => u.is_active === false).length, totalGenerations, totalCharsGenerated: totalChars, pendingRequests: DB.getRequests().filter(r => r.status === 'pending').length };
   },
 
   getAllUsers: async () => {
+    const token = DB.getToken();
+    try {
+      const r = await fetch(API_BASE + '/admin/users', { headers: { 'Authorization': 'Bearer ' + token } });
+      if (r.ok) { const d = await r.json(); return d.users || []; }
+    } catch(e) {}
     const users = DB._getUsers();
     return users.map(u => ({ ...u, name: u.full_name || u.username, avatar: (u.full_name || u.username).slice(0,2).toUpperCase(), plan: u.plan || 'free', isBlocked: u.is_active === false, isAdmin: u.role === 'admin' }));
   }

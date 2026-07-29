@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BG LABS - Redirecting...</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: #09090f; 
+            color: #f1f5f9; 
+            font-family: 'Inter', system-ui, sans-serif;
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            min-height: 100vh;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        .logo { font-size: 3rem; font-weight: 900; }
+        .bg { color: #f97316; }
+        .spinner {
+            width: 40px; height: 40px;
+            border: 3px solid rgba(255,255,255,.1);
+            border-top-color: #f97316;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .msg { color: #64748b; font-size: 0.9rem; }
+        .btn {
+            display: inline-block;
+            margin-top: 1rem;
+            padding: 0.7rem 1.5rem;
+            background: #f97316;
+            color: #fff;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .btn:hover { background: #ea580c; transform: translateY(-2px); }
+    </style>
+</head>
+<body>
+    <div class="logo"><span class="bg">BG</span> LABS</div>
+    <div class="spinner"></div>
+    <p class="msg">Redirecting to BG LABS...</p>
+    <a href="https://zeeburgers-bglabs-frontend.hf.space" class="btn">Click here if not redirected</a>
+    <script>
+        setTimeout(function() {
+            window.location.href = 'https://zeeburgers-bglabs-frontend.hf.space';
+        }, 2000);
+    </script>
+</body>
+</html>
