@@ -1,7 +1,7 @@
 """
 BG LABS - Complete AI Platform Backend
-Deploy to Hugging Face Spaces
-FREE Unlimited: TTS, Image Gen, Video, Voice Cloning, Avatars
+Deploy to Render / any cloud - 100% FREE, runs 24/7
+Uses Neon PostgreSQL (free 3GB), Edge TTS, Pollinations.ai, FFmpeg
 """
 import os
 import json
@@ -9,21 +9,23 @@ import uuid
 import time
 import asyncio
 import hashlib
-import sqlite3
+import logging
+from pathlib import Path
+from datetime import datetime, timedelta
+from typing import Optional
+from contextlib import asynccontextmanager
+
+import asyncpg
 import jwt
 import edge_tts
 import httpx
-import subprocess
-from pathlib import Path
-from datetime import datetime, timedelta
-from typing import Optional, Dict, List
-from io import BytesIO
-
-from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, Request, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import uvicorn
+
+logger = logging.getLogger("bglabs")
 
 # ============================================================
 # CONFIG
@@ -35,90 +37,137 @@ IMAGE_DIR = STORAGE_DIR / "images"
 VIDEO_DIR = STORAGE_DIR / "videos"
 AVATAR_DIR = STORAGE_DIR / "avatars"
 VOICE_DIR = STORAGE_DIR / "voices"
-DB_PATH = BASE_DIR / "bg_labs.db"
-SECRET_KEY = os.getenv("SECRET_KEY", "bglabs-secret-key-2024-free-unlimited")
+SECRET_KEY = os.getenv("SECRET_KEY", "bglabs-secret-key-change-in-production")
 ALGORITHM = "HS256"
+DATABASE_URL = os.getenv("DATABASE_URL", "")
 
 for d in [STORAGE_DIR, AUDIO_DIR, IMAGE_DIR, VIDEO_DIR, AVATAR_DIR, VOICE_DIR]:
     d.mkdir(parents=True, exist_ok=True)
 
 # ============================================================
-# DATABASE
+# DATABASE - Neon PostgreSQL (asyncpg)
 # ============================================================
-def init_db():
-    conn = sqlite3.connect(str(DB_PATH))
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.executescript("""
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            email TEXT UNIQUE NOT NULL,
-            username TEXT UNIQUE NOT NULL,
-            full_name TEXT DEFAULT '',
-            password_hash TEXT NOT NULL,
-            role TEXT DEFAULT 'user',
-            is_active INTEGER DEFAULT 1,
-            credits INTEGER DEFAULT 999999,
-            total_used INTEGER DEFAULT 0,
-            referral_code TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-        CREATE TABLE IF NOT EXISTS audio_history (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER, text TEXT, voice TEXT, language TEXT,
-            model TEXT, filename TEXT, url TEXT, chars INTEGER,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-        CREATE TABLE IF NOT EXISTS image_history (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER, prompt TEXT, style TEXT,
-            filename TEXT, url TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-        CREATE TABLE IF NOT EXISTS video_history (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER, script TEXT, scenes TEXT,
-            filename TEXT, url TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-        CREATE TABLE IF NOT EXISTS voice_profiles (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER, name TEXT, voice_key TEXT,
-            settings TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-    """)
-    conn.commit()
-    conn.close()
+pool: Optional[asyncpg.Pool] = None
 
-def get_db():
-    conn = sqlite3.connect(str(DB_PATH))
-    conn.row_factory = sqlite3.Row
-    return conn
+async def init_db():
+    global pool
+    if not DATABASE_URL:
+        logger.warning("DATABASE_URL not set - running without persistent database")
+        return
+    pool = await asyncpg.create_pool(DATABASE_URL, min_size=2, max_size=10)
+    async with pool.acquire() as conn:
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                email TEXT UNIQUE NOT NULL,
+                username TEXT UNIQUE NOT NULL,
+                full_name TEXT DEFAULT '',
+                password_hash TEXT NOT NULL,
+                role TEXT DEFAULT 'user',
+                is_active BOOLEAN DEFAULT TRUE,
+                credits INTEGER DEFAULT 999999,
+                total_used INTEGER DEFAULT 0,
+                referral_code TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+            CREATE TABLE IF NOT EXISTS audio_history (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER,
+                text TEXT,
+                voice TEXT,
+                language TEXT,
+                model TEXT,
+                filename TEXT,
+                url TEXT,
+                chars INTEGER,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+            CREATE TABLE IF NOT EXISTS image_history (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER,
+                prompt TEXT,
+                style TEXT,
+                filename TEXT,
+                url TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+            CREATE TABLE IF NOT EXISTS video_history (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER,
+                script TEXT,
+                scenes TEXT,
+                filename TEXT,
+                url TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+            CREATE TABLE IF NOT EXISTS voice_profiles (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER,
+                name TEXT,
+                voice_key TEXT,
+                settings TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+            CREATE TABLE IF NOT EXISTS scripts (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER,
+                topic TEXT,
+                genre TEXT,
+                mood TEXT,
+                content TEXT,
+                word_count INTEGER,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        """)
+        await conn.execute("""
+            INSERT INTO users (email, username, full_name, password_hash, role, referral_code)
+            SELECT 'admin@bglabs.io', 'admin', 'Admin', $1, 'admin', 'ADMIN001'
+            WHERE NOT EXISTS (SELECT 1 FROM users WHERE email = 'admin@bglabs.io')
+        """, hashlib.sha256("BgLabs@Admin2024".encode()).hexdigest())
+    logger.info("Database initialized with Neon PostgreSQL")
 
-def hash_pass(p): return hashlib.sha256(p.encode()).hexdigest()
-def verify_pass(p, h): return hash_pass(p) == h
+async def get_conn():
+    if not pool:
+        raise HTTPException(503, "Database not configured")
+    return await pool.acquire()
+
+def hash_pass(p: str) -> str:
+    return hashlib.sha256(p.encode()).hexdigest()
+
+def verify_pass(p: str, h: str) -> bool:
+    return hash_pass(p) == h
 
 def create_token(user_id: int) -> str:
-    return jwt.encode({"user_id": user_id, "exp": datetime.utcnow() + timedelta(days=30), "iat": datetime.utcnow()}, SECRET_KEY, algorithm=ALGORITHM)
+    return jwt.encode(
+        {"user_id": user_id, "exp": datetime.utcnow() + timedelta(days=30), "iat": datetime.utcnow()},
+        SECRET_KEY, algorithm=ALGORITHM
+    )
 
 def decode_token(token: str) -> Optional[int]:
     try:
         return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM]).get("user_id")
-    except: return None
+    except Exception:
+        return None
 
-def get_current_user(request: Request):
+async def get_current_user(request: Request):
     auth = request.headers.get("Authorization", "")
-    if not auth.startswith("Bearer "): raise HTTPException(401, "No token")
+    if not auth.startswith("Bearer "):
+        raise HTTPException(401, "No token provided")
     user_id = decode_token(auth.replace("Bearer ", ""))
-    if not user_id: raise HTTPException(401, "Invalid token")
-    conn = get_db()
-    user = conn.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()
-    conn.close()
-    if not user: raise HTTPException(401, "User not found")
-    if not user["is_active"]: raise HTTPException(403, "Blocked")
+    if not user_id:
+        raise HTTPException(401, "Invalid token")
+    if not pool:
+        raise HTTPException(503, "Database not available")
+    async with pool.acquire() as conn:
+        user = await conn.fetchrow("SELECT * FROM users WHERE id=$1", user_id)
+    if not user:
+        raise HTTPException(401, "User not found")
+    if not user["is_active"]:
+        raise HTTPException(403, "Account blocked")
     return dict(user)
 
 # ============================================================
-# EDGE TTS - FREE UNLIMITED
+# EDGE TTS - FREE UNLIMITED (26+ voices)
 # ============================================================
 EDGE_VOICES = {
     "aria": {"name": "Aria", "voice": "en-US-AriaNeural", "gender": "Female", "lang": "en", "accent": "American", "color": "#a855f7"},
@@ -145,6 +194,8 @@ EDGE_VOICES = {
     "italian_female": {"name": "Elsa", "voice": "it-IT-ElsaNeural", "gender": "Female", "lang": "it", "accent": "Italian", "color": "#f472b6"},
     "turkish_female": {"name": "Emel", "voice": "tr-TR-EmelNeural", "gender": "Female", "lang": "tr", "accent": "Turkish", "color": "#a3e635"},
     "russian_female": {"name": "Svetlana", "voice": "ru-RU-SvetlanaNeural", "gender": "Female", "lang": "ru", "accent": "Russian", "color": "#38bdf8"},
+    "polish_female": {"name": "Agnieszka", "voice": "pl-PL-AgnieszkaNeural", "gender": "Female", "lang": "pl", "accent": "Polish", "color": "#d946ef"},
+    "dutch_female": {"name": "Colette", "voice": "nl-NL-ColetteNeural", "gender": "Female", "lang": "nl", "accent": "Dutch", "color": "#0891b2"},
 }
 
 async def edge_tts_generate(text: str, voice_key: str = "aria") -> bytes:
@@ -154,11 +205,12 @@ async def edge_tts_generate(text: str, voice_key: str = "aria") -> bytes:
     async for chunk in communicate.stream():
         if chunk["type"] == "audio":
             audio_data += chunk["data"]
-    if not audio_data: raise Exception("TTS returned empty audio")
+    if not audio_data:
+        raise Exception("TTS returned empty audio")
     return audio_data
 
 # ============================================================
-# IMAGE GENERATION - Pollinations.ai (FREE)
+# IMAGE GENERATION - Pollinations.ai (FREE, no API key)
 # ============================================================
 async def generate_image_pollinations(prompt: str, style: str = "realistic", width: int = 1024, height: int = 1024) -> bytes:
     style_prompts = {
@@ -175,7 +227,6 @@ async def generate_image_pollinations(prompt: str, style: str = "realistic", wid
     full_prompt = f"{prompt}, {style_suffix}" if style_suffix else prompt
     encoded_prompt = full_prompt.replace(" ", "%20")
     url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width={width}&height={height}&seed={int(time.time())}&nologo=true"
-    
     async with httpx.AsyncClient(timeout=60.0) as client:
         resp = await client.get(url, follow_redirects=True)
         if resp.status_code != 200:
@@ -186,15 +237,9 @@ async def generate_image_pollinations(prompt: str, style: str = "realistic", wid
 # VIDEO GENERATION - FFmpeg (FREE)
 # ============================================================
 async def create_video_from_scenes(scenes: list, output_path: str) -> str:
-    """Create video from scenes (images + audio) using FFmpeg"""
     if not scenes:
         raise Exception("No scenes provided")
-    
-    # Create a simple slideshow video with TTS audio
-    # For now, create a title card video with text overlay
     title = scenes[0].get("text", "BG LABS Video")[:50]
-    
-    # Use FFmpeg to create a simple video
     cmd = [
         "ffmpeg", "-y",
         "-f", "lavfi", "-i", f"color=c=black:s=1280x720:d=5",
@@ -204,27 +249,21 @@ async def create_video_from_scenes(scenes: list, output_path: str) -> str:
         "-shortest", "-pix_fmt", "yuv420p",
         output_path
     ]
-    
     try:
         proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
+            *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
         )
         stdout, stderr = await proc.communicate()
         if proc.returncode != 0:
             raise Exception(f"FFmpeg failed: {stderr.decode()}")
     except FileNotFoundError:
-        # FFmpeg not installed - create placeholder
-        raise Exception("FFmpeg not installed. Video generation requires FFmpeg.")
-    
+        raise Exception("FFmpeg not installed")
     return output_path
 
 # ============================================================
-# AVATAR GENERATION - SVG-based (FREE)
+# AVATAR GENERATION - SVG (FREE)
 # ============================================================
 def generate_avatar_svg(hair_color: str = "#333", eye_color: str = "#333", skin_tone: str = "#fdbcb4", clothing_color: str = "#3b82f6") -> str:
-    """Generate SVG avatar"""
     return f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
         <circle cx="100" cy="100" r="95" fill="{skin_tone}"/>
         <circle cx="100" cy="85" r="55" fill="{hair_color}"/>
@@ -235,9 +274,51 @@ def generate_avatar_svg(hair_color: str = "#333", eye_color: str = "#333", skin_
     </svg>'''
 
 # ============================================================
+# KEEP-ALIVE SYSTEM
+# ============================================================
+async def keep_alive_ping():
+    """Self-ping every 10 minutes to prevent Render free tier sleep"""
+    while True:
+        try:
+            await asyncio.sleep(600)  # 10 minutes
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                # Ping self
+                port = os.getenv("PORT", "7860")
+                url = f"http://localhost:{port}/keep-alive"
+                try:
+                    resp = await client.get(url)
+                    logger.info(f"Keep-alive ping: {resp.status_code}")
+                except Exception:
+                    pass
+                # Also try external ping if RENDER_EXTERNAL_URL is set
+                ext_url = os.getenv("RENDER_EXTERNAL_URL")
+                if ext_url:
+                    try:
+                        await client.get(f"{ext_url}/keep-alive")
+                        logger.info("External keep-alive ping sent")
+                    except Exception:
+                        pass
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            logger.error(f"Keep-alive error: {e}")
+
+keep_alive_task = None
+
+# ============================================================
 # FASTAPI APP
 # ============================================================
-app = FastAPI(title="BG LABS API", version="5.0.0")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global keep_alive_task
+    await init_db()
+    keep_alive_task = asyncio.create_task(keep_alive_ping())
+    logger.info("BG LABS API started - All features FREE!")
+    yield
+    if keep_alive_task:
+        keep_alive_task.cancel()
+
+app = FastAPI(title="BG LABS API", version="6.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -249,76 +330,96 @@ app.add_middleware(
 
 app.mount("/api/storage", StaticFiles(directory=str(STORAGE_DIR)), name="storage")
 
-@app.on_event("startup")
-async def startup():
-    init_db()
-    print("BG LABS API v5.0 started - All features FREE!")
-
 # ============================================================
 # AUTH
 # ============================================================
 @app.post("/api/auth/register")
 async def register(email: str = Form(...), username: str = Form(...), full_name: str = Form(""), password: str = Form(...)):
-    conn = get_db()
-    try:
-        existing = conn.execute("SELECT 1 FROM users WHERE email=? OR username=?", (email, username)).fetchone()
-        if existing: raise HTTPException(400, "Email or username already exists")
-        code = uuid.uuid4().hex[:8]
-        cursor = conn.execute("INSERT INTO users (email, username, full_name, password_hash, referral_code) VALUES (?,?,?,?,?)",
-            (email, username, full_name, hash_pass(password), code))
-        conn.commit()
-        user_id = cursor.lastrowid
-        user = conn.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()
-        conn.close()
-        token = create_token(user_id)
-        return {"access_token": token, "token_type": "bearer",
-                "user": {"id": user["id"], "email": user["email"], "username": user["username"],
-                         "full_name": user["full_name"], "role": user["role"], "credits": user["credits"]}}
-    except HTTPException: raise
-    except Exception as e:
-        conn.close(); raise HTTPException(500, str(e))
+    if not pool:
+        raise HTTPException(503, "Database not available")
+    code = uuid.uuid4().hex[:8]
+    async with pool.acquire() as conn:
+        existing = await conn.fetchrow("SELECT 1 FROM users WHERE email=$1 OR username=$2", email, username)
+        if existing:
+            raise HTTPException(400, "Email or username already exists")
+        row = await conn.fetchrow(
+            "INSERT INTO users (email, username, full_name, password_hash, referral_code) VALUES ($1,$2,$3,$4,$5) RETURNING *",
+            email, username, full_name, hash_pass(password), code
+        )
+    user = dict(row)
+    token = create_token(user["id"])
+    return {
+        "access_token": token, "token_type": "bearer",
+        "user": {
+            "id": user["id"], "email": user["email"], "username": user["username"],
+            "full_name": user["full_name"], "role": user["role"],
+            "credits": user["credits"], "total_credits_used": user["total_used"],
+            "is_active": user["is_active"]
+        }
+    }
 
 @app.post("/api/auth/login")
 async def login(username: str = Form(...), password: str = Form(...)):
-    conn = get_db()
-    user = conn.execute("SELECT * FROM users WHERE username=? OR email=?", (username, username)).fetchone()
-    conn.close()
-    if not user: raise HTTPException(401, "User not found")
-    if not verify_pass(password, user["password_hash"]): raise HTTPException(401, "Incorrect password")
-    if not user["is_active"]: raise HTTPException(403, "Account blocked")
+    if not pool:
+        raise HTTPException(503, "Database not available")
+    async with pool.acquire() as conn:
+        user = await conn.fetchrow("SELECT * FROM users WHERE username=$1 OR email=$1", username)
+    if not user:
+        raise HTTPException(401, "User not found")
+    if not verify_pass(password, user["password_hash"]):
+        raise HTTPException(401, "Incorrect password")
+    if not user["is_active"]:
+        raise HTTPException(403, "Account blocked")
     token = create_token(user["id"])
-    return {"access_token": token, "token_type": "bearer",
-            "user": {"id": user["id"], "email": user["email"], "username": user["username"],
-                     "full_name": user["full_name"], "role": user["role"], "credits": user["credits"]}}
+    return {
+        "access_token": token, "token_type": "bearer",
+        "user": {
+            "id": user["id"], "email": user["email"], "username": user["username"],
+            "full_name": user["full_name"], "role": user["role"],
+            "credits": user["credits"], "total_credits_used": user["total_used"],
+            "is_active": user["is_active"]
+        }
+    }
 
 @app.get("/api/auth/me")
 async def get_me(request: Request):
-    user = get_current_user(request)
-    return {"id": user["id"], "email": user["email"], "username": user["username"],
-            "full_name": user["full_name"], "role": user["role"], "is_active": bool(user["is_active"]),
-            "credits": user["credits"], "total_credits_used": user["total_used"],
-            "referral_code": user["referral_code"], "created_at": user["created_at"]}
+    user = await get_current_user(request)
+    return {
+        "id": user["id"], "email": user["email"], "username": user["username"],
+        "full_name": user["full_name"], "role": user["role"],
+        "is_active": bool(user["is_active"]), "credits": user["credits"],
+        "total_credits_used": user["total_used"],
+        "referral_code": user.get("referral_code", ""),
+        "created_at": str(user.get("created_at", ""))
+    }
 
 @app.put("/api/auth/me")
 async def update_me(request: Request):
-    user = get_current_user(request)
+    user = await get_current_user(request)
     body = await request.json()
-    conn = get_db()
-    if "full_name" in body: conn.execute("UPDATE users SET full_name=? WHERE id=?", (body["full_name"], user["id"]))
-    conn.commit()
-    updated = conn.execute("SELECT * FROM users WHERE id=?", (user["id"],)).fetchone()
-    conn.close()
-    return {"id": updated["id"], "email": updated["email"], "username": updated["username"],
-            "full_name": updated["full_name"], "role": updated["role"], "credits": updated["credits"]}
+    if not pool:
+        raise HTTPException(503, "Database not available")
+    async with pool.acquire() as conn:
+        if "full_name" in body:
+            await conn.execute("UPDATE users SET full_name=$1 WHERE id=$2", body["full_name"], user["id"])
+        updated = await conn.fetchrow("SELECT * FROM users WHERE id=$1", user["id"])
+    u = dict(updated)
+    return {
+        "id": u["id"], "email": u["email"], "username": u["username"],
+        "full_name": u["full_name"], "role": u["role"], "credits": u["credits"],
+        "total_credits_used": u["total_used"], "is_active": u["is_active"]
+    }
 
 # ============================================================
 # VOICES
 # ============================================================
 @app.get("/api/voices")
 async def list_voices():
-    voices = [{"key": k, "name": v["name"], "gender": v["gender"], "accent": v["accent"],
-               "lang": v["lang"], "color": v["color"], "desc": f"{v['gender']} {v['accent']} voice"}
-              for k, v in EDGE_VOICES.items()]
+    voices = [
+        {"key": k, "name": v["name"], "gender": v["gender"], "accent": v["accent"],
+         "lang": v["lang"], "color": v["color"], "desc": f"{v['gender']} {v['accent']} voice"}
+        for k, v in EDGE_VOICES.items()
+    ]
     return {"voices": voices, "total": len(voices), "engine": "Edge TTS (FREE)"}
 
 # ============================================================
@@ -326,130 +427,126 @@ async def list_voices():
 # ============================================================
 @app.post("/api/studio/generate")
 async def generate_audio(request: Request):
-    user = get_current_user(request)
+    user = await get_current_user(request)
     body = await request.json()
     text = body.get("text", "").strip()
     voice_key = body.get("voice_key", "aria")
-    if not text: raise HTTPException(400, "Text is required")
-    if len(text) > 10000: raise HTTPException(400, "Text too long (max 10,000 chars)")
-    
+    if not text:
+        raise HTTPException(400, "Text is required")
+    if len(text) > 10000:
+        raise HTTPException(400, "Text too long (max 10,000 chars)")
     try:
         audio_bytes = await edge_tts_generate(text, voice_key)
     except Exception as e:
         raise HTTPException(500, f"TTS failed: {str(e)}")
-    
     filename = f"{uuid.uuid4().hex}.mp3"
     (AUDIO_DIR / filename).write_bytes(audio_bytes)
-    
     voice_info = EDGE_VOICES.get(voice_key, EDGE_VOICES["aria"])
-    conn = get_db()
-    conn.execute("INSERT INTO audio_history (user_id, text, voice, language, model, filename, url, chars) VALUES (?,?,?,?,?,?,?,?)",
-        (user["id"], text[:500], voice_key, voice_info["lang"], "Edge TTS", filename, f"/api/storage/audio/{filename}", len(text)))
-    conn.execute("UPDATE users SET total_used = total_used + ? WHERE id = ?", (len(text), user["id"]))
-    conn.commit(); conn.close()
-    
-    return {"url": f"/api/storage/audio/{filename}", "filename": filename,
-            "model_used": "Edge TTS (FREE)", "chars": len(text), "voice": voice_info["name"]}
+    if pool:
+        async with pool.acquire() as conn:
+            await conn.execute(
+                "INSERT INTO audio_history (user_id, text, voice, language, model, filename, url, chars) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)",
+                user["id"], text[:500], voice_key, voice_info["lang"], "Edge TTS", filename, f"/api/storage/audio/{filename}", len(text)
+            )
+            await conn.execute("UPDATE users SET total_used = total_used + $1 WHERE id = $2", len(text), user["id"])
+    return {
+        "url": f"/api/storage/audio/{filename}", "filename": filename,
+        "model_used": "Edge TTS (FREE)", "chars": len(text), "voice": voice_info["name"]
+    }
 
 @app.get("/api/studio/audio")
 async def list_audio(request: Request):
-    user = get_current_user(request)
-    conn = get_db()
-    history = conn.execute("SELECT * FROM audio_history WHERE user_id=? ORDER BY created_at DESC LIMIT 50", (user["id"],)).fetchall()
-    conn.close()
-    return [dict(h) for h in history]
+    user = await get_current_user(request)
+    if not pool:
+        return []
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            "SELECT * FROM audio_history WHERE user_id=$1 ORDER BY created_at DESC LIMIT 50", user["id"]
+        )
+    return [dict(r) for r in rows]
 
 # ============================================================
 # IMAGE GENERATION - FREE
 # ============================================================
 @app.post("/api/image/generate")
 async def generate_image(request: Request):
-    user = get_current_user(request)
+    user = await get_current_user(request)
     body = await request.json()
     prompt = body.get("prompt", "").strip()
     style = body.get("style", "realistic")
     width = body.get("width", 1024)
     height = body.get("height", 1024)
-    
-    if not prompt: raise HTTPException(400, "Prompt is required")
-    
+    if not prompt:
+        raise HTTPException(400, "Prompt is required")
     try:
         image_bytes = await generate_image_pollinations(prompt, style, width, height)
     except Exception as e:
         raise HTTPException(500, f"Image generation failed: {str(e)}")
-    
     filename = f"{uuid.uuid4().hex}.png"
     (IMAGE_DIR / filename).write_bytes(image_bytes)
-    
-    conn = get_db()
-    conn.execute("INSERT INTO image_history (user_id, prompt, style, filename, url) VALUES (?,?,?,?,?)",
-        (user["id"], prompt[:500], style, filename, f"/api/storage/images/{filename}"))
-    conn.commit(); conn.close()
-    
-    return {"url": f"/api/storage/images/{filename}", "filename": filename,
-            "prompt": prompt, "style": style}
+    if pool:
+        async with pool.acquire() as conn:
+            await conn.execute(
+                "INSERT INTO image_history (user_id, prompt, style, filename, url) VALUES ($1,$2,$3,$4,$5)",
+                user["id"], prompt[:500], style, filename, f"/api/storage/images/{filename}"
+            )
+    return {"url": f"/api/storage/images/{filename}", "filename": filename, "prompt": prompt, "style": style}
 
 @app.get("/api/image/history")
 async def image_history(request: Request):
-    user = get_current_user(request)
-    conn = get_db()
-    history = conn.execute("SELECT * FROM image_history WHERE user_id=? ORDER BY created_at DESC LIMIT 50", (user["id"],)).fetchall()
-    conn.close()
-    return [dict(h) for h in history]
+    user = await get_current_user(request)
+    if not pool:
+        return []
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            "SELECT * FROM image_history WHERE user_id=$1 ORDER BY created_at DESC LIMIT 50", user["id"]
+        )
+    return [dict(r) for r in rows]
 
 # ============================================================
 # VIDEO GENERATION - FREE
 # ============================================================
 @app.post("/api/video/generate")
 async def generate_video(request: Request):
-    user = get_current_user(request)
+    user = await get_current_user(request)
     body = await request.json()
     script = body.get("script", "").strip()
     scenes_text = body.get("scenes", script)
-    
-    if not script: raise HTTPException(400, "Script is required")
-    
-    # Split script into scenes
+    if not script:
+        raise HTTPException(400, "Script is required")
     scenes = [{"text": s.strip()} for s in scenes_text.split("\n\n") if s.strip()]
     if not scenes:
         scenes = [{"text": script}]
-    
     filename = f"{uuid.uuid4().hex}.mp4"
     output_path = str(VIDEO_DIR / filename)
-    
     try:
         await create_video_from_scenes(scenes, output_path)
     except Exception as e:
-        # Create a text-based placeholder
         filename = f"{uuid.uuid4().hex}.txt"
         (VIDEO_DIR / filename).write_text(f"Video Script:\n{script}\n\nScenes: {len(scenes)}")
-        return {"url": f"/api/storage/videos/{filename}", "filename": filename,
-                "script": script, "scenes": len(scenes), "note": "FFmpeg not available - script saved as text"}
-    
-    conn = get_db()
-    conn.execute("INSERT INTO video_history (user_id, script, scenes, filename, url) VALUES (?,?,?,?,?)",
-        (user["id"], script[:500], json.dumps(scenes), filename, f"/api/storage/videos/{filename}"))
-    conn.commit(); conn.close()
-    
-    return {"url": f"/api/storage/videos/{filename}", "filename": filename,
-            "script": script, "scenes": len(scenes)}
+        return {"url": f"/api/storage/videos/{filename}", "filename": filename, "script": script, "scenes": len(scenes), "note": "FFmpeg not available - script saved as text"}
+    if pool:
+        async with pool.acquire() as conn:
+            await conn.execute(
+                "INSERT INTO video_history (user_id, script, scenes, filename, url) VALUES ($1,$2,$3,$4,$5)",
+                user["id"], script[:500], json.dumps(scenes), filename, f"/api/storage/videos/{filename}"
+            )
+    return {"url": f"/api/storage/videos/{filename}", "filename": filename, "script": script, "scenes": len(scenes)}
 
 # ============================================================
 # AVATAR STUDIO - FREE
 # ============================================================
 @app.post("/api/avatar/generate")
 async def generate_avatar(request: Request):
-    user = get_current_user(request)
+    user = await get_current_user(request)
     body = await request.json()
     hair_color = body.get("hair_color", "#333333")
     eye_color = body.get("eye_color", "#333333")
     skin_tone = body.get("skin_tone", "#fdbcb4")
     clothing_color = body.get("clothing_color", "#3b82f6")
-    
     svg = generate_avatar_svg(hair_color, eye_color, skin_tone, clothing_color)
     filename = f"{uuid.uuid4().hex}.svg"
     (AVATAR_DIR / filename).write_text(svg)
-    
     return {"url": f"/api/storage/avatars/{filename}", "filename": filename, "svg": svg}
 
 # ============================================================
@@ -457,79 +554,72 @@ async def generate_avatar(request: Request):
 # ============================================================
 @app.post("/api/voice-clone/create")
 async def create_voice_clone(request: Request):
-    user = get_current_user(request)
+    user = await get_current_user(request)
     body = await request.json()
     name = body.get("name", "My Voice")
     base_voice = body.get("base_voice", "aria")
-    settings = {
-        "pitch": body.get("pitch", 1.0),
-        "speed": body.get("speed", 1.0),
-        "base_voice": base_voice,
-        "name": name,
-    }
-    
-    conn = get_db()
-    cursor = conn.execute("INSERT INTO voice_profiles (user_id, name, voice_key, settings) VALUES (?,?,?,?)",
-        (user["id"], name, base_voice, json.dumps(settings)))
-    conn.commit()
-    profile_id = cursor.lastrowid
-    conn.close()
-    
+    settings = {"pitch": body.get("pitch", 1.0), "speed": body.get("speed", 1.0), "base_voice": base_voice, "name": name}
+    if pool:
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow(
+                "INSERT INTO voice_profiles (user_id, name, voice_key, settings) VALUES ($1,$2,$3,$4) RETURNING id",
+                user["id"], name, base_voice, json.dumps(settings)
+            )
+            profile_id = row["id"]
+    else:
+        profile_id = 0
     return {"id": profile_id, "name": name, "base_voice": base_voice, "settings": settings}
 
 @app.get("/api/voice-clone/list")
 async def list_voice_clones(request: Request):
-    user = get_current_user(request)
-    conn = get_db()
-    profiles = conn.execute("SELECT * FROM voice_profiles WHERE user_id=? ORDER BY created_at DESC", (user["id"],)).fetchall()
-    conn.close()
-    return [dict(p) for p in profiles]
+    user = await get_current_user(request)
+    if not pool:
+        return []
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            "SELECT * FROM voice_profiles WHERE user_id=$1 ORDER BY created_at DESC", user["id"]
+        )
+    return [dict(r) for r in rows]
 
 @app.post("/api/voice-clone/generate")
 async def generate_with_clone(request: Request):
-    user = get_current_user(request)
+    user = await get_current_user(request)
     body = await request.json()
     text = body.get("text", "").strip()
     profile_id = body.get("profile_id")
-    
-    if not text: raise HTTPException(400, "Text is required")
-    
-    # Get voice profile
-    conn = get_db()
-    profile = conn.execute("SELECT * FROM voice_profiles WHERE id=? AND user_id=?", (profile_id, user["id"])).fetchone()
-    conn.close()
-    
-    if not profile: raise HTTPException(404, "Voice profile not found")
-    
+    if not text:
+        raise HTTPException(400, "Text is required")
+    if not pool:
+        raise HTTPException(503, "Database not available")
+    async with pool.acquire() as conn:
+        profile = await conn.fetchrow(
+            "SELECT * FROM voice_profiles WHERE id=$1 AND user_id=$2", profile_id, user["id"]
+        )
+    if not profile:
+        raise HTTPException(404, "Voice profile not found")
     settings = json.loads(profile["settings"])
     voice_key = settings.get("base_voice", "aria")
-    
-    # Generate TTS with base voice
     try:
         audio_bytes = await edge_tts_generate(text, voice_key)
     except Exception as e:
         raise HTTPException(500, f"Voice generation failed: {str(e)}")
-    
     filename = f"{uuid.uuid4().hex}.mp3"
     (AUDIO_DIR / filename).write_bytes(audio_bytes)
-    
-    return {"url": f"/api/storage/audio/{filename}", "filename": filename,
-            "profile_name": profile["name"], "base_voice": voice_key}
+    return {"url": f"/api/storage/audio/{filename}", "filename": filename, "profile_name": profile["name"], "base_voice": voice_key}
 
 # ============================================================
 # SCRIPT WRITER - Template-based (FREE)
 # ============================================================
 @app.post("/api/script/write")
 async def write_script(request: Request):
-    user = get_current_user(request)
+    user = await get_current_user(request)
     body = await request.json()
     topic = body.get("topic", "").strip()
     genre = body.get("genre", "general")
     mood = body.get("mood", "neutral")
     duration = body.get("duration", "medium")
-    
-    if not topic: raise HTTPException(400, "Topic is required")
-    
+    if not topic:
+        raise HTTPException(400, "Topic is required")
     templates = {
         "youtube": {
             "intro": f"Hey everyone! Welcome back to the channel. Today we're diving into {topic}.",
@@ -552,62 +642,71 @@ async def write_script(request: Request):
             "outro": f"That concludes our overview of {topic}. I hope this was informative and helpful."
         }
     }
-    
     template = templates.get(genre, templates["general"])
-    
     word_counts = {"short": 150, "medium": 300, "long": 600}
     target_words = word_counts.get(duration, 300)
-    
     script = f"{template['intro']}\n\n{template['body']}\n\n{template['outro']}"
-    
-    # Pad or trim to approximate length
     words = script.split()
     if len(words) < target_words:
         extra = f"\n\nTo elaborate further on {topic}, there are several additional aspects worth discussing. The implications are far-reaching and continue to evolve as we learn more."
         script += extra
-    
-    return {"script": script, "topic": topic, "genre": genre, "mood": mood,
-            "word_count": len(script.split()), "scenes": script.split("\n\n")}
+    if pool:
+        async with pool.acquire() as conn:
+            await conn.execute(
+                "INSERT INTO scripts (user_id, topic, genre, mood, content, word_count) VALUES ($1,$2,$3,$4,$5,$6)",
+                user["id"], topic, genre, mood, script[:2000], len(script.split())
+            )
+    return {"script": script, "topic": topic, "genre": genre, "mood": mood, "word_count": len(script.split()), "scenes": script.split("\n\n")}
 
 # ============================================================
 # ADMIN
 # ============================================================
 @app.get("/api/admin/stats")
 async def admin_stats(request: Request):
-    user = get_current_user(request)
-    if user["role"] != "admin": raise HTTPException(403, "Admin only")
-    conn = get_db()
-    users = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
-    audio_count = conn.execute("SELECT COUNT(*) FROM audio_history").fetchone()[0]
-    image_count = conn.execute("SELECT COUNT(*) FROM image_history").fetchone()[0]
-    video_count = conn.execute("SELECT COUNT(*) FROM video_history").fetchone()[0]
-    total_chars = conn.execute("SELECT SUM(total_used) FROM users").fetchone()[0] or 0
-    conn.close()
-    return {"total_users": users, "active_users": users, "total_voices": len(EDGE_VOICES),
-            "total_audio": audio_count, "total_images": image_count, "total_videos": video_count,
-            "total_credits_used": total_chars}
+    user = await get_current_user(request)
+    if user["role"] != "admin":
+        raise HTTPException(403, "Admin only")
+    if not pool:
+        return {"total_users": 0, "active_users": 0, "total_voices": len(EDGE_VOICES), "total_audio": 0, "total_images": 0, "total_videos": 0, "total_credits_used": 0}
+    async with pool.acquire() as conn:
+        users = await conn.fetchval("SELECT COUNT(*) FROM users")
+        audio_count = await conn.fetchval("SELECT COUNT(*) FROM audio_history")
+        image_count = await conn.fetchval("SELECT COUNT(*) FROM image_history")
+        video_count = await conn.fetchval("SELECT COUNT(*) FROM video_history")
+        total_chars = await conn.fetchval("SELECT COALESCE(SUM(total_used), 0) FROM users")
+    return {
+        "total_users": users, "active_users": users, "total_voices": len(EDGE_VOICES),
+        "total_audio": audio_count, "total_images": image_count, "total_videos": video_count,
+        "total_credits_used": total_chars
+    }
 
 @app.get("/api/admin/users")
 async def admin_users(request: Request):
-    user = get_current_user(request)
-    if user["role"] != "admin": raise HTTPException(403, "Admin only")
-    conn = get_db()
-    users = [dict(u) for u in conn.execute("SELECT * FROM users ORDER BY created_at DESC").fetchall()]
-    conn.close()
-    return users
+    user = await get_current_user(request)
+    if user["role"] != "admin":
+        raise HTTPException(403, "Admin only")
+    if not pool:
+        return []
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("SELECT * FROM users ORDER BY created_at DESC")
+    return [dict(r) for r in rows]
 
 @app.put("/api/admin/users/{user_id}")
 async def admin_update_user(user_id: int, request: Request):
-    admin = get_current_user(request)
-    if admin["role"] != "admin": raise HTTPException(403, "Admin only")
+    admin = await get_current_user(request)
+    if admin["role"] != "admin":
+        raise HTTPException(403, "Admin only")
     body = await request.json()
-    conn = get_db()
-    if "credits" in body: conn.execute("UPDATE users SET credits=? WHERE id=?", (body["credits"], user_id))
-    if "is_active" in body: conn.execute("UPDATE users SET is_active=? WHERE id=?", (1 if body["is_active"] else 0, user_id))
-    conn.commit()
-    user = conn.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()
-    conn.close()
-    if not user: raise HTTPException(404, "User not found")
+    if not pool:
+        raise HTTPException(503, "Database not available")
+    async with pool.acquire() as conn:
+        if "credits" in body:
+            await conn.execute("UPDATE users SET credits=$1 WHERE id=$2", body["credits"], user_id)
+        if "is_active" in body:
+            await conn.execute("UPDATE users SET is_active=$1 WHERE id=$2", body["is_active"], user_id)
+        user = await conn.fetchrow("SELECT * FROM users WHERE id=$1", user_id)
+    if not user:
+        raise HTTPException(404, "User not found")
     return dict(user)
 
 # ============================================================
@@ -615,13 +714,17 @@ async def admin_update_user(user_id: int, request: Request):
 # ============================================================
 @app.get("/api/billing/plans")
 async def plans():
-    return {"plans": {"free": {"name": "FREE", "price": 0, "credits": "Unlimited"},
-                      "pro": {"name": "PRO", "price": 9.99, "credits": "Unlimited + Priority"},
-                      "enterprise": {"name": "ENTERPRISE", "price": 49.99, "credits": "Unlimited + API + Custom"}}}
+    return {
+        "plans": {
+            "free": {"name": "FREE", "price": 0, "credits": "Unlimited"},
+            "pro": {"name": "PRO", "price": 9.99, "credits": "Unlimited + Priority"},
+            "enterprise": {"name": "ENTERPRISE", "price": 49.99, "credits": "Unlimited + API + Custom"}
+        }
+    }
 
 @app.get("/api/billing/current")
 async def current_sub(request: Request):
-    user = get_current_user(request)
+    user = await get_current_user(request)
     return {"tier": "free", "credits": user["credits"], "status": "active"}
 
 # ============================================================
@@ -629,25 +732,51 @@ async def current_sub(request: Request):
 # ============================================================
 @app.get("/api/referral/code")
 async def get_referral_code(request: Request):
-    user = get_current_user(request)
-    return {"referral_code": user["referral_code"], "referral_link": f"https://bglabs.app?ref={user['referral_code']}"}
+    user = await get_current_user(request)
+    code = user.get("referral_code", "UNKNOWN")
+    return {"referral_code": code, "referral_link": f"https://bglabs.app?ref={code}"}
 
 # ============================================================
-# ROOT
+# KEEP-ALIVE ENDPOINT
+# ============================================================
+@app.get("/keep-alive")
+async def keep_alive():
+    return {"status": "alive", "timestamp": datetime.utcnow().isoformat(), "version": "6.0.0"}
+
+# ============================================================
+# ROOT & HEALTH
 # ============================================================
 @app.get("/")
 async def root():
-    return {"name": "BG LABS API", "version": "5.0.0", "status": "running",
-            "features": ["TTS (Edge - FREE)", "Image Gen (Pollinations - FREE)", "Video Gen (FFmpeg)",
-                         "Voice Cloning", "Avatar Studio", "Script Writer"],
-            "voices": len(EDGE_VOICES)}
+    return {
+        "name": "BG LABS API", "version": "6.0.0", "status": "running",
+        "features": [
+            "TTS (Edge TTS - FREE, 26+ voices)",
+            "Image Gen (Pollinations.ai - FREE)",
+            "Video Gen (FFmpeg)",
+            "Voice Cloning",
+            "Avatar Studio",
+            "Script Writer",
+            "Keep-Alive 24/7"
+        ],
+        "voices": len(EDGE_VOICES),
+        "database": "Neon PostgreSQL" if pool else "Not connected"
+    }
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy", "version": "5.0.0"}
+    db_ok = False
+    if pool:
+        try:
+            async with pool.acquire() as conn:
+                await conn.fetchval("SELECT 1")
+            db_ok = True
+        except Exception:
+            pass
+    return {"status": "healthy", "version": "6.0.0", "database": db_ok}
 
 # ============================================================
 if __name__ == "__main__":
-    print("BG LABS v5.0 - Starting...")
+    print("BG LABS v6.0 - Starting with Neon PostgreSQL...")
     port = int(os.getenv("PORT", 7860))
-    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)

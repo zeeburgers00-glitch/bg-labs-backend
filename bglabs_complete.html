@@ -2067,7 +2067,9 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
 /* ═══════════════════════════════════════════
    BG LABS — Database Layer (localStorage)
    ═══════════════════════════════════════════ */
-const API_BASE = 'http://localhost:8000';
+const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:7860'
+  : (typeof BG_BACKEND_URL !== 'undefined' ? BG_BACKEND_URL : window.location.origin);
 
 const DB = {
   _get: k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
@@ -2100,13 +2102,20 @@ const DB = {
 
   createUser: async (name, email, password) => {
     const username = email.split('@')[0] + '_' + Math.random().toString(36).slice(2,5);
+    const form = new URLSearchParams();
+    form.append('email', email);
+    form.append('username', username);
+    form.append('full_name', name);
+    form.append('password', password);
     const r = await fetch(API_BASE + '/api/auth/register', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, username, full_name: name, password })
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: form.toString()
     });
     if (!r.ok) throw new Error(await DB._apiErr(r));
-    const user = await r.json();
+    const data = await r.json();
+    localStorage.setItem('bglabs_token', data.access_token);
+    const user = data.user || data;
     return { ...user, name: user.full_name || user.username, avatar: (user.full_name || user.username).slice(0,2).toUpperCase(), plan: 'free', planCredits: 999999, charsUsed: user.total_credits_used || 0, isBlocked: !user.is_active, isAdmin: user.role === 'admin' };
   },
 
@@ -2182,7 +2191,7 @@ const DB = {
       const r = await fetch(API_BASE + '/api/admin/stats', { headers: DB._headers() });
       if (!r.ok) return { totalUsers:0, activeUsers:0, blockedUsers:0, totalGenerations:0, totalCharsGenerated:0, pendingRequests:0 };
       const d = await r.json();
-      return { totalUsers: d.total_users, activeUsers: d.active_users, blockedUsers: 0, totalGenerations: d.total_audio_generated, totalCharsGenerated: d.total_credits_used, pendingRequests: 0 };
+      return { totalUsers: d.total_users, activeUsers: d.active_users, blockedUsers: 0, totalGenerations: (d.total_audio||0) + (d.total_images||0) + (d.total_videos||0), totalCharsGenerated: d.total_credits_used, pendingRequests: 0 };
     } catch { return { totalUsers:0, activeUsers:0, blockedUsers:0, totalGenerations:0, totalCharsGenerated:0, pendingRequests:0 }; }
   },
 

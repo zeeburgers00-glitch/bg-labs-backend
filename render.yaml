@@ -10,5 +10,14 @@ services:
         value: "3.11"
       - key: SECRET_KEY
         generateValue: true
+      - key: DATABASE_URL
+        sync: false
     healthCheckPath: /health
     autoDeploy: true
+    cron: []
+    preDeployCommand: ""
+
+# Keep-alive cron: pings /keep-alive every 10 minutes via external service
+# Configure this in Render dashboard or use a service like cron-job.org
+# URL to ping: https://your-app.onrender.com/keep-alive
+# Schedule: */10 * * * *
