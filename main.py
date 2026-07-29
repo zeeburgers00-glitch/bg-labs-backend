@@ -1,7 +1,7 @@
 """
 BG LABS - Complete AI Platform Backend
 Deploy to Vercel / any cloud - 100% FREE
-F5-TTS (ultra realistic) + Edge TTS (322+ voices) = ElevenLabs-level quality
+cvoice.ai (20,000+ character voices) + Edge TTS + F5-TTS
 """
 import os
 import json
@@ -17,16 +17,19 @@ from contextlib import asynccontextmanager
 
 import asyncpg
 import jwt
-import edge_tts
 import httpx
-from fastapi import FastAPI, HTTPException, Request, Form
+from fastapi import FastAPI, HTTPException, Request, Form, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, Response
 import uvicorn
 from dotenv import load_dotenv
 
-from tts_engine import smart_tts_generate, get_all_voices, F5_REF_VOICES, EDGE_VOICES
+from tts_engine import (
+    smart_tts_generate, get_edge_voices,
+    cvoice_search_characters, cvoice_get_voices,
+    EDGE_VOICES,
+)
 
 load_dotenv()
 
@@ -360,35 +363,56 @@ async def update_me(request: Request):
     }
 
 # ============================================================
-# VOICES - Combined F5-TTS + Edge TTS
+# VOICES - cvoice.ai (20,000+) + Edge TTS (322+)
 # ============================================================
 @app.get("/api/voices")
 async def list_voices():
-    voices = get_all_voices()
-    return {"voices": voices, "total": len(voices), "engines": ["F5-TTS (Ultra)", "Edge-TTS (Fast)"]}
+    edge = get_edge_voices()
+    return {"edge_voices": edge, "total_edge": len(edge), "engine": "cvoice.ai + Edge TTS"}
+
+@app.get("/api/voices/characters")
+async def search_characters(q: str = Query("", description="Search query"), limit: int = Query(50, ge=1, le=200)):
+    try:
+        chars = await cvoice_search_characters(q, limit)
+        return {"characters": chars, "total": len(chars)}
+    except Exception as e:
+        raise HTTPException(500, f"Failed to load characters: {e}")
+
+@app.get("/api/voices/characters/{username}")
+async def get_character_voices(username: str):
+    try:
+        voices = await cvoice_get_voices(username)
+        return {"username": username, "voices": voices, "total": len(voices)}
+    except Exception as e:
+        raise HTTPException(500, f"Failed to load voices: {e}")
 
 # ============================================================
-# TTS - F5-TTS + Edge TTS (ElevenLabs-level quality)
+# TTS - cvoice.ai (Primary) + Edge TTS (Fallback)
 # ============================================================
 @app.post("/api/studio/generate")
 async def generate_audio(request: Request):
     user = await get_current_user(request)
     body = await request.json()
     text = body.get("text", "").strip()
+    engine = body.get("engine", "cvoice")
     voice_key = body.get("voice_key", "en-US-AriaNeural")
-    engine = body.get("engine", "auto")  # "f5", "edge", or "auto"
-    ref_voice_key = body.get("ref_voice", "en_male")
+    voice_id = body.get("voice_id", None)
+    person_slug = body.get("person_slug", "")
+    person_name = body.get("person_name", "")
+
     if not text:
         raise HTTPException(400, "Text is required")
-    if len(text) > 10000:
-        raise HTTPException(400, "Text too long (max 10,000 chars)")
+    if len(text) > 500:
+        raise HTTPException(400, "Text too long (max 500 chars for cvoice.ai)")
 
     try:
         audio_bytes, engine_used, voice_name = await smart_tts_generate(
             text=text,
             engine=engine,
             voice_key=voice_key,
-            ref_voice_key=ref_voice_key,
+            voice_id=voice_id,
+            person_slug=person_slug,
+            person_name=person_name,
         )
     except Exception as e:
         raise HTTPException(500, f"TTS failed: {str(e)}")
@@ -406,7 +430,7 @@ async def generate_audio(request: Request):
             async with pool.acquire() as conn:
                 await conn.execute(
                     "INSERT INTO audio_history (user_id, text, voice, language, model, filename, url, chars) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)",
-                    user["id"], text[:500], voice_key, "multi", engine_used, filename, f"/api/storage/audio/{filename}", len(text)
+                    user["id"], text[:500], voice_name, "multi", engine_used, filename, f"/api/storage/audio/{filename}", len(text)
                 )
                 await conn.execute("UPDATE users SET total_used = total_used + $1 WHERE id = $2", len(text), user["id"])
         except Exception:
@@ -418,7 +442,6 @@ async def generate_audio(request: Request):
         "engine": engine_used,
         "voice": voice_name,
         "chars": len(text),
-        "quality": "Ultra (ElevenLabs-level)" if engine_used == "F5-TTS" else "High (Edge TTS)"
     }
 
 @app.get("/api/studio/audio")
@@ -719,17 +742,18 @@ async def root():
     if html_path.exists():
         return FileResponse(str(html_path), media_type="text/html")
     return {
-        "name": "BG LABS API", "version": "7.0.0", "status": "running",
-        "engines": ["F5-TTS (Ultra Realistic)", "Edge-TTS (322+ voices)"],
+        "name": "BG LABS API", "version": "8.0.0", "status": "running",
+        "engines": ["cvoice.ai (20,000+ character voices)", "Edge-TTS (322+ voices)"],
         "features": [
-            "TTS (F5-TTS + Edge TTS - ElevenLabs-level quality)",
+            "Character TTS (cvoice.ai - 20,000+ voices)",
+            "Edge TTS (322+ neural voices)",
+            "Voice Cloning",
             "Image Gen (Pollinations.ai - FREE)",
             "Video Gen (FFmpeg)",
-            "Voice Cloning",
             "Avatar Studio",
             "Script Writer"
         ],
-        "voices": len(EDGE_VOICES) + 2,
+        "voices": "20,000+",
         "database": "Neon PostgreSQL" if pool else "Not connected"
     }
 
