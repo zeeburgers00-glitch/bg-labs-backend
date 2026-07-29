@@ -2067,9 +2067,7 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
 /* ═══════════════════════════════════════════
    BG LABS — Database Layer (localStorage)
    ═══════════════════════════════════════════ */
-const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? 'http://localhost:7860'
-  : (typeof BG_BACKEND_URL !== 'undefined' ? BG_BACKEND_URL : window.location.origin);
+const API_BASE = (typeof BG_BACKEND_URL !== 'undefined' ? BG_BACKEND_URL : '');
 
 const DB = {
   _get: k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
@@ -2080,85 +2078,99 @@ const DB = {
   setToken: t => localStorage.setItem('bglabs_token', t),
   clearToken: () => localStorage.removeItem('bglabs_token'),
 
-  _headers: () => {
-    const h = { 'Content-Type': 'application/json' };
-    const t = localStorage.getItem('bglabs_token');
-    if (t) h['Authorization'] = 'Bearer ' + t;
-    return h;
-  },
+  _getUsers: () => DB._get('bglabs_users') || [],
+  _setUsers: (u) => DB._set('bglabs_users', u),
+  _hash: (s) => { let h=0; for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0;} return 'h_'+Math.abs(h).toString(36); },
 
-  _apiErr: async (resp) => {
-    try { const d = await resp.json(); return d.detail || d.message || JSON.stringify(d); }
-    catch { return 'HTTP ' + resp.status; }
+  seedAdmin: () => {
+    const users = DB._getUsers();
+    if (!users.find(u => u.email === 'admin@bglabs.io')) {
+      users.push({
+        id: 'u_admin_001',
+        email: 'admin@bglabs.io',
+        username: 'admin',
+        full_name: 'Admin',
+        password_hash: DB._hash('BgLabs@Admin2024'),
+        role: 'admin',
+        credits: 999999,
+        is_active: true,
+        referral_code: 'BGLABS-ADMIN',
+        created_at: '2024-01-01T00:00:00Z',
+        total_credits_used: 0
+      });
+      DB._setUsers(users);
+    }
   },
 
   getUserById: async (id) => {
-    try {
-      const r = await fetch(API_BASE + '/api/auth/me', { headers: DB._headers() });
-      if (!r.ok) return null;
-      return await r.json();
-    } catch { return null; }
+    const users = DB._getUsers();
+    return users.find(u => u.id === id) || null;
   },
 
   createUser: async (name, email, password) => {
+    const users = DB._getUsers();
+    if (users.find(u => u.email === email)) throw new Error('An account with this email already exists');
     const username = email.split('@')[0] + '_' + Math.random().toString(36).slice(2,5);
-    const form = new URLSearchParams();
-    form.append('email', email);
-    form.append('username', username);
-    form.append('full_name', name);
-    form.append('password', password);
-    const r = await fetch(API_BASE + '/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: form.toString()
-    });
-    if (!r.ok) throw new Error(await DB._apiErr(r));
-    const data = await r.json();
-    localStorage.setItem('bglabs_token', data.access_token);
-    const user = data.user || data;
-    return { ...user, name: user.full_name || user.username, avatar: (user.full_name || user.username).slice(0,2).toUpperCase(), plan: 'free', planCredits: 999999, charsUsed: user.total_credits_used || 0, isBlocked: !user.is_active, isAdmin: user.role === 'admin' };
+    const user = {
+      id: DB.uid(),
+      email,
+      username,
+      full_name: name,
+      password_hash: DB._hash(password),
+      role: 'user',
+      credits: 999999,
+      is_active: true,
+      referral_code: 'BGLABS-' + name.toUpperCase().slice(0,6) + Math.random().toString(36).slice(2,4).toUpperCase(),
+      created_at: new Date().toISOString(),
+      total_credits_used: 0
+    };
+    users.push(user);
+    DB._setUsers(users);
+    localStorage.setItem('bglabs_token', user.id);
+    return { ...user, name: user.full_name, avatar: user.full_name.slice(0,2).toUpperCase(), plan: 'free', planCredits: 999999, charsUsed: 0, isBlocked: false, isAdmin: false };
   },
 
   loginUser: async (email, password) => {
-    const form = new URLSearchParams();
-    form.append('username', email);
-    form.append('password', password);
-    const r = await fetch(API_BASE + '/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: form.toString()
-    });
-    if (!r.ok) throw new Error(await DB._apiErr(r));
-    const data = await r.json();
-    localStorage.setItem('bglabs_token', data.access_token);
-    const userR = await fetch(API_BASE + '/api/auth/me', { headers: DB._headers() });
-    if (!userR.ok) throw new Error('Failed to fetch user profile');
-    const u = await userR.json();
-    return { ...u, name: u.full_name || u.username, avatar: (u.full_name || u.username).slice(0,2).toUpperCase(), plan: 'free', planCredits: 999999, charsUsed: u.total_credits_used || 0, isBlocked: !u.is_active, isAdmin: u.role === 'admin' };
+    const users = DB._getUsers();
+    const user = users.find(u => u.email === email && u.password_hash === DB._hash(password));
+    if (!user) throw new Error('Invalid email or password');
+    if (!user.is_active) throw new Error('Account has been blocked');
+    localStorage.setItem('bglabs_token', user.id);
+    return { ...user, name: user.full_name || user.username, avatar: (user.full_name || user.username).slice(0,2).toUpperCase(), plan: user.plan || 'free', planCredits: user.planCredits || 999999, charsUsed: user.total_credits_used || 0, isBlocked: !user.is_active, isAdmin: user.role === 'admin' };
   },
 
   updateUser: async (id, data) => {
-    const r = await fetch(API_BASE + '/api/auth/me', {
-      method: 'PUT',
-      headers: DB._headers(),
-      body: JSON.stringify(data)
-    });
-    if (!r.ok) return null;
-    const u = await r.json();
-    return { ...u, name: u.full_name || u.username, avatar: (u.full_name || u.username).slice(0,2).toUpperCase() };
+    const users = DB._getUsers();
+    const i = users.findIndex(u => u.id === id);
+    if (i < 0) return null;
+    users[i] = { ...users[i], ...data };
+    DB._setUsers(users);
+    return users[i];
   },
 
-  deductCredits: async (id, chars) => true,
+  deductCredits: async (id, chars) => {
+    const users = DB._getUsers();
+    const i = users.findIndex(u => u.id === id);
+    if (i >= 0) { users[i].total_credits_used = (users[i].total_credits_used || 0) + chars; DB._setUsers(users); }
+    return true;
+  },
 
-  addCredits: async (id, amount) => {},
+  addCredits: async (id, amount) => {
+    const users = DB._getUsers();
+    const i = users.findIndex(u => u.id === id);
+    if (i >= 0) { users[i].credits = (users[i].credits || 0) + amount; DB._setUsers(users); }
+  },
 
-  assignPlan: async (id, plan) => {},
+  assignPlan: async (id, plan) => {
+    const users = DB._getUsers();
+    const i = users.findIndex(u => u.id === id);
+    if (i >= 0) { users[i].plan = plan; DB._setUsers(users); }
+  },
 
   getSession: () => {
     const t = localStorage.getItem('bglabs_token');
     if (!t) return null;
-    const s = DB._get('bg_session');
-    return s;
+    return DB._get('bg_session');
   },
   setSession: u => DB._set('bg_session', u),
   clearSession: () => { localStorage.removeItem('bg_session'); localStorage.removeItem('bglabs_token'); },
@@ -2187,25 +2199,31 @@ const DB = {
   },
 
   getStats: async () => {
-    try {
-      const r = await fetch(API_BASE + '/api/admin/stats', { headers: DB._headers() });
-      if (!r.ok) return { totalUsers:0, activeUsers:0, blockedUsers:0, totalGenerations:0, totalCharsGenerated:0, pendingRequests:0 };
-      const d = await r.json();
-      return { totalUsers: d.total_users, activeUsers: d.active_users, blockedUsers: 0, totalGenerations: (d.total_audio||0) + (d.total_images||0) + (d.total_videos||0), totalCharsGenerated: d.total_credits_used, pendingRequests: 0 };
-    } catch { return { totalUsers:0, activeUsers:0, blockedUsers:0, totalGenerations:0, totalCharsGenerated:0, pendingRequests:0 }; }
+    const users = DB._getUsers();
+    let totalGenerations = 0, totalChars = 0;
+    users.forEach(u => {
+      const hist = DB.getHistory(u.id);
+      totalGenerations += hist.length;
+      totalChars += (u.total_credits_used || 0);
+    });
+    const pendingReqs = DB.getRequests().filter(r => r.status === 'pending').length;
+    return {
+      totalUsers: users.length,
+      activeUsers: users.filter(u => u.is_active !== false).length,
+      blockedUsers: users.filter(u => u.is_active === false).length,
+      totalGenerations,
+      totalCharsGenerated: totalChars,
+      pendingRequests: pendingReqs
+    };
   },
 
   getAllUsers: async () => {
-    try {
-      const r = await fetch(API_BASE + '/api/admin/users', { headers: DB._headers() });
-      if (!r.ok) return [];
-      const users = await r.json();
-      return users.map(u => ({ ...u, name: u.full_name || u.username, avatar: (u.full_name || u.username).slice(0,2).toUpperCase(), plan: 'free', isBlocked: !u.is_active, isAdmin: u.role === 'admin' }));
-    } catch { return []; }
-  },
-
-  seedAdmin: () => {}
+    const users = DB._getUsers();
+    return users.map(u => ({ ...u, name: u.full_name || u.username, avatar: (u.full_name || u.username).slice(0,2).toUpperCase(), plan: u.plan || 'free', isBlocked: u.is_active === false, isAdmin: u.role === 'admin' }));
+  }
 };
+
+DB.seedAdmin();
 
 </script>
 <script>
@@ -2266,50 +2284,42 @@ const TTS = {
     const voice = this.getVoice(voiceId);
     onStatus?.('generating', `⚡ Generating with ${voice.name}…`);
 
-    try {
-      const token = localStorage.getItem('bglabs_token');
-      if (!token) {
-        onStatus?.('generating', '🔊 Using browser TTS…');
-        const result = await this._browserTTSRecord(text, voice);
-        this.isGenerating = false;
-        if (!result) throw new Error('Browser TTS failed');
-        const url = URL.createObjectURL(result);
-        onStatus?.('done', 'Done · Browser TTS');
-        return { url, blob: result, modelUsed: 'Browser TTS', chars: text.length };
+    // Try backend first if available, otherwise use browser TTS
+    if (API_BASE) {
+      try {
+        onStatus?.('generating', '⚡ Trying backend XTTS v2…');
+        const lang = 'en';
+        const resp = await fetch(API_BASE + '/api/studio/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: text.slice(0, 10000), voice_key: voiceId || 'aria', language: lang, temperature: 0.7, speed: 1.0 })
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          const audioUrl = API_BASE + data.url;
+          this.isGenerating = false;
+          onStatus?.('done', 'Done · XTTS v2');
+          DB.deductCredits(currentUser?.id, text.length);
+          return { url: audioUrl, blob: null, modelUsed: 'XTTS v2', chars: text.length };
+        }
+      } catch (e) {
+        console.warn('Backend TTS failed:', e.message);
       }
-
-      onStatus?.('generating', '⚡ Backend XTTS v2…');
-      const langMap = { rachel:'en', domi:'en', bella:'en', elli:'en', grace:'en', sarah:'en', emily:'en', serena:'en', dorothy:'en', freya:'en', adam:'en', josh:'en', arnold:'en', sam:'en', thomas:'en', liam:'en', michael:'en', harry:'en', daniel:'en', charlie:'en', fin:'en', ethan:'en' };
-      const lang = langMap[voiceId] || 'en';
-
-      const resp = await fetch(API_BASE + '/api/studio/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify({ text: text.slice(0, 10000), voice_key: voiceId || 'aria', language: lang, temperature: 0.7, speed: 1.0 })
-      });
-
-      if (resp.ok) {
-        const data = await resp.json();
-        const audioUrl = API_BASE + data.url;
-        this.isGenerating = false;
-        onStatus?.('done', 'Done · XTTS v2');
-        return { url: audioUrl, blob: null, modelUsed: 'XTTS v2', chars: text.length };
-      }
-    } catch (e) {
-      console.warn('Backend TTS failed:', e.message);
     }
 
-    onStatus?.('generating', '🔊 Fallback: browser TTS…');
+    // Browser TTS as primary method
+    onStatus?.('generating', '🔊 Using browser TTS…');
     try {
       const result = await this._browserTTSRecord(text, voice);
       this.isGenerating = false;
-      if (!result) throw new Error('All TTS backends failed');
+      if (!result) throw new Error('Browser TTS failed');
       const url = URL.createObjectURL(result);
+      DB.deductCredits(currentUser?.id, text.length);
       onStatus?.('done', 'Done · Browser TTS');
       return { url, blob: result, modelUsed: 'Browser TTS', chars: text.length };
     } catch (e) {
       this.isGenerating = false;
-      throw new Error('All TTS backends failed. Please try again.');
+      throw new Error('TTS generation failed. Please try again.');
     }
   },
 
@@ -2743,8 +2753,7 @@ window.searchVoicesApp=function(q){document.querySelectorAll('#pg-voices-app .vo
 // ── HISTORY ──────────────────────────────────
 function renderHistory() {
   if(!currentUser)return;
-  const u=DB.getUserById(currentUser.id);
-  const hist=DB.getHistory(u.id);
+  const hist=DB.getHistory(currentUser.id);
   const el=document.getElementById('hist-list');
   if(!el)return;
   if(!hist.length){el.innerHTML='<div class="empty"><div class="empty-icon">🕐</div><h3>No history yet</h3><p>Generate some voices in the Studio to see them here.</p></div>';return;}
@@ -2757,9 +2766,9 @@ function renderHistory() {
         <div class="hist-meta">${v.name} · ${(h.chars||0).toLocaleString()} chars · ${timeAgo(h.createdAt)}</div>
       </div>
       <div class="hist-actions">
-        ${h.url?`<button class="btn btn-ghost btn-sm" onclick="replayHist('${h.id}','${u.id}')">▶</button>
-        <button class="btn btn-ghost btn-sm" onclick="dlHist('${h.id}','${u.id}')">⬇</button>`:''}
-        <button class="btn btn-ghost btn-sm" style="color:#ef4444" onclick="delHist('${h.id}','${u.id}')">🗑</button>
+        ${h.url?`<button class="btn btn-ghost btn-sm" onclick="replayHist('${h.id}','${currentUser.id}')">▶</button>
+        <button class="btn btn-ghost btn-sm" onclick="dlHist('${h.id}','${currentUser.id}')">⬇</button>`:''}
+        <button class="btn btn-ghost btn-sm" style="color:#ef4444" onclick="delHist('${h.id}','${currentUser.id}')">🗑</button>
       </div>
     </div>`;
   }).join('');
@@ -2928,15 +2937,14 @@ function renderAdminRequests(){
 window.admSearchUsers=q=>renderAdminUsers(q.toLowerCase());
 
 window.admToggleBlock=async function(uid){
-  try {
-    await fetch(API_BASE + '/api/admin/users/' + uid, {
-      method: 'PUT',
-      headers: DB._headers(),
-      body: JSON.stringify({ is_active: false })
-    });
+  const users = DB._getUsers();
+  const i = users.findIndex(u => u.id === uid);
+  if (i >= 0) {
+    users[i].is_active = !users[i].is_active;
+    DB._setUsers(users);
     renderAdminUsers(); renderAdminStats();
     toast('User status updated','success');
-  } catch(e) { toast('Failed: ' + e.message, 'error'); }
+  }
 };
 
 window.admSendCredits=function(uid,name){
@@ -3311,7 +3319,7 @@ window.generateImage = function() {
   const size = document.getElementById('ig-size')?.value || '512x512';
   const [w, h] = size.split('x');
   const styledPrompt = `${prompt}, ${style} style, high quality, detailed`;
-  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(styledPrompt)}?width=${w}&height=${h}&seed=${Date.now()}`;
+  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(styledPrompt)}?width=${w}&height=${h}&nologo=true&seed=${Date.now()}`;
   document.getElementById('ig-status').style.display = 'flex';
   document.getElementById('ig-status').className = 'gen-status generating';
   document.getElementById('ig-status').innerHTML = '<div class="status-spinner"></div><span>Generating image...</span>';
@@ -3672,13 +3680,13 @@ window.toggleFQ=function(i){
 
 // ── BOOT ─────────────────────────────────────
 function boot(){
+  DB.seedAdmin();
   const token = localStorage.getItem('bglabs_token');
   const sess = DB.getSession();
   if (token && sess) {
-    currentUser = sess;
     DB.getUserById(sess.id).then(u => {
-      if (u && !u.is_blocked) {
-        currentUser = { ...u, name: u.full_name || u.username, avatar: (u.full_name || u.username).slice(0,2).toUpperCase(), plan: 'free', planCredits: 999999, charsUsed: u.total_credits_used || 0, isBlocked: !u.is_active, isAdmin: u.role === 'admin' };
+      if (u && u.is_active !== false) {
+        currentUser = { ...u, name: u.full_name || u.username, avatar: (u.full_name || u.username).slice(0,2).toUpperCase(), plan: u.plan || 'free', planCredits: u.planCredits || 999999, charsUsed: u.total_credits_used || 0, isBlocked: u.is_active === false, isAdmin: u.role === 'admin' };
         DB.setSession(currentUser);
         updateAuthUI();
         if(currentPage === 'home') { renderDashboard(); showPage('dashboard'); }
