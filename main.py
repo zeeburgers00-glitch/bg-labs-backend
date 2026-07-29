@@ -34,7 +34,7 @@ logger = logging.getLogger("bglabs")
 # CONFIG
 # ============================================================
 BASE_DIR = Path(__file__).parent
-STORAGE_DIR = BASE_DIR / "storage"
+STORAGE_DIR = Path("/tmp/bglabs_storage") if os.getenv("VERCEL") else BASE_DIR / "storage"
 AUDIO_DIR = STORAGE_DIR / "audio"
 IMAGE_DIR = STORAGE_DIR / "images"
 VIDEO_DIR = STORAGE_DIR / "videos"
@@ -44,8 +44,11 @@ SECRET_KEY = os.getenv("SECRET_KEY", "bglabs-secret-key-change-in-production")
 ALGORITHM = "HS256"
 DATABASE_URL = os.getenv("DATABASE_URL", "")
 
-for d in [STORAGE_DIR, AUDIO_DIR, IMAGE_DIR, VIDEO_DIR, AVATAR_DIR, VOICE_DIR]:
-    d.mkdir(parents=True, exist_ok=True)
+try:
+    for d in [STORAGE_DIR, AUDIO_DIR, IMAGE_DIR, VIDEO_DIR, AVATAR_DIR, VOICE_DIR]:
+        d.mkdir(parents=True, exist_ok=True)
+except OSError:
+    pass
 
 # ============================================================
 # DATABASE - Neon PostgreSQL (asyncpg)
@@ -57,77 +60,81 @@ async def init_db():
     if not DATABASE_URL:
         logger.warning("DATABASE_URL not set - running without persistent database")
         return
-    pool = await asyncpg.create_pool(DATABASE_URL, min_size=2, max_size=10)
-    async with pool.acquire() as conn:
-        await conn.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id SERIAL PRIMARY KEY,
-                email TEXT UNIQUE NOT NULL,
-                username TEXT UNIQUE NOT NULL,
-                full_name TEXT DEFAULT '',
-                password_hash TEXT NOT NULL,
-                role TEXT DEFAULT 'user',
-                is_active BOOLEAN DEFAULT TRUE,
-                credits INTEGER DEFAULT 999999,
-                total_used INTEGER DEFAULT 0,
-                referral_code TEXT,
-                created_at TIMESTAMP DEFAULT NOW()
-            );
-            CREATE TABLE IF NOT EXISTS audio_history (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER,
-                text TEXT,
-                voice TEXT,
-                language TEXT,
-                model TEXT,
-                filename TEXT,
-                url TEXT,
-                chars INTEGER,
-                created_at TIMESTAMP DEFAULT NOW()
-            );
-            CREATE TABLE IF NOT EXISTS image_history (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER,
-                prompt TEXT,
-                style TEXT,
-                filename TEXT,
-                url TEXT,
-                created_at TIMESTAMP DEFAULT NOW()
-            );
-            CREATE TABLE IF NOT EXISTS video_history (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER,
-                script TEXT,
-                scenes TEXT,
-                filename TEXT,
-                url TEXT,
-                created_at TIMESTAMP DEFAULT NOW()
-            );
-            CREATE TABLE IF NOT EXISTS voice_profiles (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER,
-                name TEXT,
-                voice_key TEXT,
-                settings TEXT,
-                created_at TIMESTAMP DEFAULT NOW()
-            );
-            CREATE TABLE IF NOT EXISTS scripts (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER,
-                topic TEXT,
-                genre TEXT,
-                mood TEXT,
-                content TEXT,
-                word_count INTEGER,
-                created_at TIMESTAMP DEFAULT NOW()
-            );
-        """)
-        await conn.execute("""
-            INSERT INTO users (email, username, full_name, password_hash, role, referral_code)
-            SELECT 'admin@bglabs.io', 'admin', 'Admin', $1, 'admin', 'ADMIN001'
-            WHERE NOT EXISTS (SELECT 1 FROM users WHERE email = 'admin@bglabs.io')
-        """, hashlib.sha256("BgLabs@Admin2024".encode()).hexdigest())
-    logger.info("Database initialized with Neon PostgreSQL")
+    try:
+        pool = await asyncpg.create_pool(DATABASE_URL, min_size=1, max_size=5)
+        async with pool.acquire() as conn:
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id SERIAL PRIMARY KEY,
+                    email TEXT UNIQUE NOT NULL,
+                    username TEXT UNIQUE NOT NULL,
+                    full_name TEXT DEFAULT '',
+                    password_hash TEXT NOT NULL,
+                    role TEXT DEFAULT 'user',
+                    is_active BOOLEAN DEFAULT TRUE,
+                    credits INTEGER DEFAULT 999999,
+                    total_used INTEGER DEFAULT 0,
+                    referral_code TEXT,
+                    created_at TIMESTAMP DEFAULT NOW()
+                );
+                CREATE TABLE IF NOT EXISTS audio_history (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER,
+                    text TEXT,
+                    voice TEXT,
+                    language TEXT,
+                    model TEXT,
+                    filename TEXT,
+                    url TEXT,
+                    chars INTEGER,
+                    created_at TIMESTAMP DEFAULT NOW()
+                );
+                CREATE TABLE IF NOT EXISTS image_history (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER,
+                    prompt TEXT,
+                    style TEXT,
+                    filename TEXT,
+                    url TEXT,
+                    created_at TIMESTAMP DEFAULT NOW()
+                );
+                CREATE TABLE IF NOT EXISTS video_history (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER,
+                    script TEXT,
+                    scenes TEXT,
+                    filename TEXT,
+                    url TEXT,
+                    created_at TIMESTAMP DEFAULT NOW()
+                );
+                CREATE TABLE IF NOT EXISTS voice_profiles (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER,
+                    name TEXT,
+                    voice_key TEXT,
+                    settings TEXT,
+                    created_at TIMESTAMP DEFAULT NOW()
+                );
+                CREATE TABLE IF NOT EXISTS scripts (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER,
+                    topic TEXT,
+                    genre TEXT,
+                    mood TEXT,
+                    content TEXT,
+                    word_count INTEGER,
+                    created_at TIMESTAMP DEFAULT NOW()
+                );
+            """)
+            await conn.execute("""
+                INSERT INTO users (email, username, full_name, password_hash, role, referral_code)
+                SELECT 'admin@bglabs.io', 'admin', 'Admin', $1, 'admin', 'ADMIN001'
+                WHERE NOT EXISTS (SELECT 1 FROM users WHERE email = 'admin@bglabs.io')
+            """, hashlib.sha256("BgLabs@Admin2024".encode()).hexdigest())
+        logger.info("Database initialized with Neon PostgreSQL")
+    except Exception as e:
+        logger.error(f"Database init failed: {e}")
+        pool = None
 
 async def get_conn():
     if not pool:
@@ -509,33 +516,6 @@ def generate_avatar_svg(hair_color: str = "#333", eye_color: str = "#333", skin_
 # ============================================================
 # KEEP-ALIVE SYSTEM
 # ============================================================
-async def keep_alive_ping():
-    """Self-ping every 10 minutes to prevent Render free tier sleep"""
-    while True:
-        try:
-            await asyncio.sleep(600)  # 10 minutes
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                # Ping self
-                port = os.getenv("PORT", "7860")
-                url = f"http://localhost:{port}/keep-alive"
-                try:
-                    resp = await client.get(url)
-                    logger.info(f"Keep-alive ping: {resp.status_code}")
-                except Exception:
-                    pass
-                # Also try external ping if RENDER_EXTERNAL_URL is set
-                ext_url = os.getenv("RENDER_EXTERNAL_URL")
-                if ext_url:
-                    try:
-                        await client.get(f"{ext_url}/keep-alive")
-                        logger.info("External keep-alive ping sent")
-                    except Exception:
-                        pass
-        except asyncio.CancelledError:
-            break
-        except Exception as e:
-            logger.error(f"Keep-alive error: {e}")
-
 keep_alive_task = None
 
 # ============================================================
@@ -543,13 +523,12 @@ keep_alive_task = None
 # ============================================================
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global keep_alive_task
-    await init_db()
-    keep_alive_task = asyncio.create_task(keep_alive_ping())
+    try:
+        await init_db()
+    except Exception as e:
+        logger.error(f"Startup DB init failed: {e}")
     logger.info("BG LABS API started - All features FREE!")
     yield
-    if keep_alive_task:
-        keep_alive_task.cancel()
 
 app = FastAPI(title="BG LABS API", version="6.0.0", lifespan=lifespan)
 
@@ -561,7 +540,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/api/storage", StaticFiles(directory=str(STORAGE_DIR)), name="storage")
+try:
+    STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+    app.mount("/api/storage", StaticFiles(directory=str(STORAGE_DIR)), name="storage")
+except Exception:
+    pass
 
 # ============================================================
 # AUTH
