@@ -11,7 +11,7 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: DATABASE_URL
-        sync: false
+        value: "postgresql://neondb_owner:npg_i8kuvDWocUt5@ep-dark-tree-ax4ktb4c-pooler.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require"
     healthCheckPath: /health
     autoDeploy: true
     cron: []
