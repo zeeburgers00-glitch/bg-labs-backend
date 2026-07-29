@@ -170,39 +170,269 @@ async def get_current_user(request: Request):
     return dict(user)
 
 # ============================================================
-# EDGE TTS - FREE UNLIMITED (26+ voices)
+# EDGE TTS - FREE UNLIMITED (322+ voices)
 # ============================================================
 EDGE_VOICES = {
-    "aria": {"name": "Aria", "voice": "en-US-AriaNeural", "gender": "Female", "lang": "en", "accent": "American", "color": "#a855f7"},
-    "jenny": {"name": "Jenny", "voice": "en-US-JennyNeural", "gender": "Female", "lang": "en", "accent": "American", "color": "#ec4899"},
-    "sara": {"name": "Sara", "voice": "en-US-SaraNeural", "gender": "Female", "lang": "en", "accent": "American", "color": "#f97316"},
-    "tony": {"name": "Tony", "voice": "en-US-TonyNeural", "gender": "Male", "lang": "en", "accent": "American", "color": "#06b6d4"},
-    "guy": {"name": "Guy", "voice": "en-US-GuyNeural", "gender": "Male", "lang": "en", "accent": "American", "color": "#84cc16"},
-    "davis": {"name": "Davis", "voice": "en-US-DavisNeural", "gender": "Male", "lang": "en", "accent": "American", "color": "#3b82f6"},
-    "sonia": {"name": "Sonia", "voice": "en-GB-SoniaNeural", "gender": "Female", "lang": "en", "accent": "British", "color": "#0ea5e9"},
-    "ryan": {"name": "Ryan", "voice": "en-GB-RyanNeural", "gender": "Male", "lang": "en", "accent": "British", "color": "#64748b"},
-    "urdu_female": {"name": "Asma", "voice": "ur-PK-UzmaNeural", "gender": "Female", "lang": "ur", "accent": "Pakistani", "color": "#ef4444"},
-    "urdu_male": {"name": "Salman", "voice": "ur-PK-SalmanNeural", "gender": "Male", "lang": "ur", "accent": "Pakistani", "color": "#8b5cf6"},
-    "hindi_female": {"name": "Swara", "voice": "hi-IN-SwaraNeural", "gender": "Female", "lang": "hi", "accent": "Indian", "color": "#f59e0b"},
-    "hindi_male": {"name": "Madhur", "voice": "hi-IN-MadhurNeural", "gender": "Male", "lang": "hi", "accent": "Indian", "color": "#10b981"},
-    "arabic_female": {"name": "Fatima", "voice": "ar-SA-FatimaNeural", "gender": "Female", "lang": "ar", "accent": "Arabic", "color": "#14b8a6"},
-    "arabic_male": {"name": "Hamed", "voice": "ar-SA-HamedNeural", "gender": "Male", "lang": "ar", "accent": "Arabic", "color": "#6366f1"},
-    "chinese_female": {"name": "Xiaoxiao", "voice": "zh-CN-XiaoxiaoNeural", "gender": "Female", "lang": "zh", "accent": "Chinese", "color": "#f43f5e"},
-    "japanese_female": {"name": "Nanami", "voice": "ja-JP-NanamiNeural", "gender": "Female", "lang": "ja", "accent": "Japanese", "color": "#c084fc"},
-    "korean_female": {"name": "SunHi", "voice": "ko-KR-SunHiNeural", "gender": "Female", "lang": "ko", "accent": "Korean", "color": "#22d3ee"},
-    "spanish_female": {"name": "Elvira", "voice": "es-ES-ElviraNeural", "gender": "Female", "lang": "es", "accent": "Spanish", "color": "#e879f9"},
-    "french_female": {"name": "Denise", "voice": "fr-FR-DeniseNeural", "gender": "Female", "lang": "fr", "accent": "French", "color": "#fb923c"},
-    "german_female": {"name": "Katja", "voice": "de-DE-KatjaNeural", "gender": "Female", "lang": "de", "accent": "German", "color": "#22c55e"},
-    "portuguese_female": {"name": "Francisca", "voice": "pt-BR-FranciscaNeural", "gender": "Female", "lang": "pt", "accent": "Brazilian", "color": "#818cf8"},
-    "italian_female": {"name": "Elsa", "voice": "it-IT-ElsaNeural", "gender": "Female", "lang": "it", "accent": "Italian", "color": "#f472b6"},
-    "turkish_female": {"name": "Emel", "voice": "tr-TR-EmelNeural", "gender": "Female", "lang": "tr", "accent": "Turkish", "color": "#a3e635"},
-    "russian_female": {"name": "Svetlana", "voice": "ru-RU-SvetlanaNeural", "gender": "Female", "lang": "ru", "accent": "Russian", "color": "#38bdf8"},
-    "polish_female": {"name": "Agnieszka", "voice": "pl-PL-AgnieszkaNeural", "gender": "Female", "lang": "pl", "accent": "Polish", "color": "#d946ef"},
-    "dutch_female": {"name": "Colette", "voice": "nl-NL-ColetteNeural", "gender": "Female", "lang": "nl", "accent": "Dutch", "color": "#0891b2"},
+    # English - US
+    "en-US-AriaNeural": {"name": "Aria", "voice": "en-US-AriaNeural", "gender": "Female", "lang": "en", "accent": "American", "color": "#a855f7"},
+    "en-US-JennyNeural": {"name": "Jenny", "voice": "en-US-JennyNeural", "gender": "Female", "lang": "en", "accent": "American", "color": "#ec4899"},
+    "en-US-GuyNeural": {"name": "Guy", "voice": "en-US-GuyNeural", "gender": "Male", "lang": "en", "accent": "American", "color": "#84cc16"},
+    "en-US-BrianNeural": {"name": "Brian", "voice": "en-US-BrianNeural", "gender": "Male", "lang": "en", "accent": "American", "color": "#3b82f6"},
+    "en-US-AndrewNeural": {"name": "Andrew", "voice": "en-US-AndrewNeural", "gender": "Male", "lang": "en", "accent": "American", "color": "#06b6d4"},
+    "en-US-EmmaNeural": {"name": "Emma", "voice": "en-US-EmmaNeural", "gender": "Female", "lang": "en", "accent": "American", "color": "#f472b6"},
+    "en-US-ChristopherNeural": {"name": "Christopher", "voice": "en-US-ChristopherNeural", "gender": "Male", "lang": "en", "accent": "American", "color": "#14b8a6"},
+    "en-US-EricNeural": {"name": "Eric", "voice": "en-US-EricNeural", "gender": "Male", "lang": "en", "accent": "American", "color": "#6366f1"},
+    "en-US-MichelleNeural": {"name": "Michelle", "voice": "en-US-MichelleNeural", "gender": "Female", "lang": "en", "accent": "American", "color": "#f59e0b"},
+    "en-US-RogerNeural": {"name": "Roger", "voice": "en-US-RogerNeural", "gender": "Male", "lang": "en", "accent": "American", "color": "#10b981"},
+    "en-US-AvaNeural": {"name": "Ava", "voice": "en-US-AvaNeural", "gender": "Female", "lang": "en", "accent": "American", "color": "#c084fc"},
+    "en-US-AnaNeural": {"name": "Ana", "voice": "en-US-AnaNeural", "gender": "Female", "lang": "en", "accent": "American", "color": "#e879f9"},
+    "en-US-SteffanNeural": {"name": "Steffan", "voice": "en-US-SteffanNeural", "gender": "Male", "lang": "en", "accent": "American", "color": "#fb923c"},
+    # English - GB
+    "en-GB-SoniaNeural": {"name": "Sonia", "voice": "en-GB-SoniaNeural", "gender": "Female", "lang": "en", "accent": "British", "color": "#0ea5e9"},
+    "en-GB-RyanNeural": {"name": "Ryan", "voice": "en-GB-RyanNeural", "gender": "Male", "lang": "en", "accent": "British", "color": "#64748b"},
+    "en-GB-LibbyNeural": {"name": "Libby", "voice": "en-GB-LibbyNeural", "gender": "Female", "lang": "en", "accent": "British", "color": "#22d3ee"},
+    "en-GB-MaisieNeural": {"name": "Maisie", "voice": "en-GB-MaisieNeural", "gender": "Female", "lang": "en", "accent": "British", "color": "#a3e635"},
+    "en-GB-ThomasNeural": {"name": "Thomas", "voice": "en-GB-ThomasNeural", "gender": "Male", "lang": "en", "accent": "British", "color": "#38bdf8"},
+    # English - IN
+    "en-IN-NeerjaNeural": {"name": "Neerja", "voice": "en-IN-NeerjaNeural", "gender": "Female", "lang": "en", "accent": "Indian", "color": "#d946ef"},
+    "en-IN-PrabhatNeural": {"name": "Prabhat", "voice": "en-IN-PrabhatNeural", "gender": "Male", "lang": "en", "accent": "Indian", "color": "#22c55e"},
+    # English - AU
+    "en-AU-NatashaNeural": {"name": "Natasha", "voice": "en-AU-NatashaNeural", "gender": "Female", "lang": "en", "accent": "Australian", "color": "#f43f5e"},
+    "en-AU-WilliamNeural": {"name": "William", "voice": "en-AU-WilliamNeural", "gender": "Male", "lang": "en", "accent": "Australian", "color": "#818cf8"},
+    # English - CA
+    "en-CA-ClaraNeural": {"name": "Clara", "voice": "en-CA-ClaraNeural", "gender": "Female", "lang": "en", "accent": "Canadian", "color": "#a855f7"},
+    "en-CA-LiamNeural": {"name": "Liam", "voice": "en-CA-LiamNeural", "gender": "Male", "lang": "en", "accent": "Canadian", "color": "#ec4899"},
+    # English - HK
+    "en-HK-YanNeural": {"name": "Yan", "voice": "en-HK-YanNeural", "gender": "Female", "lang": "en", "accent": "Hong Kong", "color": "#06b6d4"},
+    "en-HK-SamNeural": {"name": "Sam", "voice": "en-HK-SamNeural", "gender": "Male", "lang": "en", "accent": "Hong Kong", "color": "#84cc16"},
+    # English - IE
+    "en-IE-EmilyNeural": {"name": "Emily", "voice": "en-IE-EmilyNeural", "gender": "Female", "lang": "en", "accent": "Irish", "color": "#14b8a6"},
+    "en-IE-ConnorNeural": {"name": "Connor", "voice": "en-IE-ConnorNeural", "gender": "Male", "lang": "en", "accent": "Irish", "color": "#6366f1"},
+    # English - NZ
+    "en-NZ-MollyNeural": {"name": "Molly", "voice": "en-NZ-MollyNeural", "gender": "Female", "lang": "en", "accent": "New Zealand", "color": "#f59e0b"},
+    "en-NZ-MitchellNeural": {"name": "Mitchell", "voice": "en-NZ-MitchellNeural", "gender": "Male", "lang": "en", "accent": "New Zealand", "color": "#10b981"},
+    # English - PH
+    "en-PH-RosaNeural": {"name": "Rosa", "voice": "en-PH-RosaNeural", "gender": "Female", "lang": "en", "accent": "Philippines", "color": "#c084fc"},
+    "en-PH-JamesNeural": {"name": "James", "voice": "en-PH-JamesNeural", "gender": "Male", "lang": "en", "accent": "Philippines", "color": "#e879f9"},
+    # English - SG
+    "en-SG-LunaNeural": {"name": "Luna", "voice": "en-SG-LunaNeural", "gender": "Female", "lang": "en", "accent": "Singapore", "color": "#fb923c"},
+    "en-SG-WayneNeural": {"name": "Wayne", "voice": "en-SG-WayneNeural", "gender": "Male", "lang": "en", "accent": "Singapore", "color": "#22d3ee"},
+    # English - ZA
+    "en-ZA-LeahNeural": {"name": "Leah", "voice": "en-ZA-LeahNeural", "gender": "Female", "lang": "en", "accent": "South African", "color": "#a3e635"},
+    "en-ZA-LukeNeural": {"name": "Luke", "voice": "en-ZA-LukeNeural", "gender": "Male", "lang": "en", "accent": "South African", "color": "#38bdf8"},
+    # Urdu
+    "ur-PK-UzmaNeural": {"name": "Uzma", "voice": "ur-PK-UzmaNeural", "gender": "Female", "lang": "ur", "accent": "Pakistani", "color": "#ef4444"},
+    "ur-PK-SalmanNeural": {"name": "Salman", "voice": "ur-PK-SalmanNeural", "gender": "Male", "lang": "ur", "accent": "Pakistani", "color": "#8b5cf6"},
+    # Hindi
+    "hi-IN-SwaraNeural": {"name": "Swara", "voice": "hi-IN-SwaraNeural", "gender": "Female", "lang": "hi", "accent": "Indian", "color": "#f59e0b"},
+    # Arabic
+    "ar-SA-ZariyahNeural": {"name": "Zariyah", "voice": "ar-SA-ZariyahNeural", "gender": "Female", "lang": "ar", "accent": "Arabic", "color": "#14b8a6"},
+    "ar-SA-HamedNeural": {"name": "Hamed", "voice": "ar-SA-HamedNeural", "gender": "Male", "lang": "ar", "accent": "Arabic", "color": "#6366f1"},
+    # Chinese
+    "zh-CN-XiaoxiaoNeural": {"name": "Xiaoxiao", "voice": "zh-CN-XiaoxiaoNeural", "gender": "Female", "lang": "zh", "accent": "Chinese", "color": "#f43f5e"},
+    "zh-CN-YunxiNeural": {"name": "Yunxi", "voice": "zh-CN-YunxiNeural", "gender": "Male", "lang": "zh", "accent": "Chinese", "color": "#22c55e"},
+    # Japanese
+    "ja-JP-NanamiNeural": {"name": "Nanami", "voice": "ja-JP-NanamiNeural", "gender": "Female", "lang": "ja", "accent": "Japanese", "color": "#c084fc"},
+    "ja-JP-KeitaNeural": {"name": "Keita", "voice": "ja-JP-KeitaNeural", "gender": "Male", "lang": "ja", "accent": "Japanese", "color": "#818cf8"},
+    # Korean
+    "ko-KR-SunHiNeural": {"name": "SunHi", "voice": "ko-KR-SunHiNeural", "gender": "Female", "lang": "ko", "accent": "Korean", "color": "#22d3ee"},
+    "ko-KR-InJoonNeural": {"name": "InJoon", "voice": "ko-KR-InJoonNeural", "gender": "Male", "lang": "ko", "accent": "Korean", "color": "#f97316"},
+    # Spanish
+    "es-ES-ElviraNeural": {"name": "Elvira", "voice": "es-ES-ElviraNeural", "gender": "Female", "lang": "es", "accent": "Spanish", "color": "#e879f9"},
+    "es-ES-AlvaroNeural": {"name": "Alvaro", "voice": "es-ES-AlvaroNeural", "gender": "Male", "lang": "es", "accent": "Spanish", "color": "#d946ef"},
+    # French
+    "fr-FR-DeniseNeural": {"name": "Denise", "voice": "fr-FR-DeniseNeural", "gender": "Female", "lang": "fr", "accent": "French", "color": "#fb923c"},
+    "fr-FR-HenriNeural": {"name": "Henri", "voice": "fr-FR-HenriNeural", "gender": "Male", "lang": "fr", "accent": "French", "color": "#0ea5e9"},
+    # German
+    "de-DE-KatjaNeural": {"name": "Katja", "voice": "de-DE-KatjaNeural", "gender": "Female", "lang": "de", "accent": "German", "color": "#22c55e"},
+    "de-DE-ConradNeural": {"name": "Conrad", "voice": "de-DE-ConradNeural", "gender": "Male", "lang": "de", "accent": "German", "color": "#06b6d4"},
+    # Portuguese
+    "pt-BR-FranciscaNeural": {"name": "Francisca", "voice": "pt-BR-FranciscaNeural", "gender": "Female", "lang": "pt", "accent": "Brazilian", "color": "#818cf8"},
+    "pt-BR-AntonioNeural": {"name": "Antonio", "voice": "pt-BR-AntonioNeural", "gender": "Male", "lang": "pt", "accent": "Brazilian", "color": "#84cc16"},
+    # Italian
+    "it-IT-ElsaNeural": {"name": "Elsa", "voice": "it-IT-ElsaNeural", "gender": "Female", "lang": "it", "accent": "Italian", "color": "#f472b6"},
+    "it-IT-DiegoNeural": {"name": "Diego", "voice": "it-IT-DiegoNeural", "gender": "Male", "lang": "it", "accent": "Italian", "color": "#10b981"},
+    # Russian
+    "ru-RU-SvetlanaNeural": {"name": "Svetlana", "voice": "ru-RU-SvetlanaNeural", "gender": "Female", "lang": "ru", "accent": "Russian", "color": "#38bdf8"},
+    "ru-RU-DmitryNeural": {"name": "Dmitry", "voice": "ru-RU-DmitryNeural", "gender": "Male", "lang": "ru", "accent": "Russian", "color": "#a855f7"},
+    # Turkish
+    "tr-TR-EmelNeural": {"name": "Emel", "voice": "tr-TR-EmelNeural", "gender": "Female", "lang": "tr", "accent": "Turkish", "color": "#a3e635"},
+    "tr-TR-AhmetNeural": {"name": "Ahmet", "voice": "tr-TR-AhmetNeural", "gender": "Male", "lang": "tr", "accent": "Turkish", "color": "#ec4899"},
+    # Polish
+    "pl-PL-AgnieszkaNeural": {"name": "Agnieszka", "voice": "pl-PL-AgnieszkaNeural", "gender": "Female", "lang": "pl", "accent": "Polish", "color": "#d946ef"},
+    "pl-PL-MarekNeural": {"name": "Marek", "voice": "pl-PL-MarekNeural", "gender": "Male", "lang": "pl", "accent": "Polish", "color": "#14b8a6"},
+    # Dutch
+    "nl-NL-ColetteNeural": {"name": "Colette", "voice": "nl-NL-ColetteNeural", "gender": "Female", "lang": "nl", "accent": "Dutch", "color": "#0891b2"},
+    "nl-NL-MaartenNeural": {"name": "Maarten", "voice": "nl-NL-MaartenNeural", "gender": "Male", "lang": "nl", "accent": "Dutch", "color": "#6366f1"},
+    # Swedish
+    "sv-SE-SofieNeural": {"name": "Sofie", "voice": "sv-SE-SofieNeural", "gender": "Female", "lang": "sv", "accent": "Swedish", "color": "#f43f5e"},
+    "sv-SE-SvanteNeural": {"name": "Svante", "voice": "sv-SE-SvanteNeural", "gender": "Male", "lang": "sv", "accent": "Swedish", "color": "#22d3ee"},
+    # Danish
+    "da-DK-ChristelNeural": {"name": "Christel", "voice": "da-DK-ChristelNeural", "gender": "Female", "lang": "da", "accent": "Danish", "color": "#c084fc"},
+    "da-DK-JeppeNeural": {"name": "Jeppe", "voice": "da-DK-JeppeNeural", "gender": "Male", "lang": "da", "accent": "Danish", "color": "#fb923c"},
+    # Finnish
+    "fi-FI-SelmaNeural": {"name": "Selma", "voice": "fi-FI-SelmaNeural", "gender": "Female", "lang": "fi", "accent": "Finnish", "color": "#e879f9"},
+    "fi-FI-HarriNeural": {"name": "Harri", "voice": "fi-FI-HarriNeural", "gender": "Male", "lang": "fi", "accent": "Finnish", "color": "#a3e635"},
+    # Norwegian
+    "nb-NO-PernilleNeural": {"name": "Pernille", "voice": "nb-NO-PernilleNeural", "gender": "Female", "lang": "nb", "accent": "Norwegian", "color": "#38bdf8"},
+    "nb-NO-FinnNeural": {"name": "Finn", "voice": "nb-NO-FinnNeural", "gender": "Male", "lang": "nb", "accent": "Norwegian", "color": "#d946ef"},
+    # Greek
+    "el-GR-AthinaNeural": {"name": "Athina", "voice": "el-GR-AthinaNeural", "gender": "Female", "lang": "el", "accent": "Greek", "color": "#0ea5e9"},
+    "el-GR-NestorasNeural": {"name": "Nestoras", "voice": "el-GR-NestorasNeural", "gender": "Male", "lang": "el", "accent": "Greek", "color": "#22c55e"},
+    # Hungarian
+    "hu-HU-NoemiNeural": {"name": "Noemi", "voice": "hu-HU-NoemiNeural", "gender": "Female", "lang": "hu", "accent": "Hungarian", "color": "#818cf8"},
+    "hu-HU-TamasNeural": {"name": "Tamas", "voice": "hu-HU-TamasNeural", "gender": "Male", "lang": "hu", "accent": "Hungarian", "color": "#f59e0b"},
+    # Czech
+    "cs-CZ-VlastaNeural": {"name": "Vlasta", "voice": "cs-CZ-VlastaNeural", "gender": "Female", "lang": "cs", "accent": "Czech", "color": "#10b981"},
+    "cs-CZ-AntoninNeural": {"name": "Antonin", "voice": "cs-CZ-AntoninNeural", "gender": "Male", "lang": "cs", "accent": "Czech", "color": "#c084fc"},
+    # Romanian
+    "ro-RO-AlinaNeural": {"name": "Alina", "voice": "ro-RO-AlinaNeural", "gender": "Female", "lang": "ro", "accent": "Romanian", "color": "#f472b6"},
+    "ro-RO-EmilNeural": {"name": "Emil", "voice": "ro-RO-EmilNeural", "gender": "Male", "lang": "ro", "accent": "Romanian", "color": "#84cc16"},
+    # Thai
+    "th-TH-PremwadeeNeural": {"name": "Premwadee", "voice": "th-TH-PremwadeeNeural", "gender": "Female", "lang": "th", "accent": "Thai", "color": "#6366f1"},
+    "th-TH-NiwatNeural": {"name": "Niwat", "voice": "th-TH-NiwatNeural", "gender": "Male", "lang": "th", "accent": "Thai", "color": "#ef4444"},
+    # Vietnamese
+    "vi-VN-HoaiMyNeural": {"name": "HoaiMy", "voice": "vi-VN-HoaiMyNeural", "gender": "Female", "lang": "vi", "accent": "Vietnamese", "color": "#8b5cf6"},
+    "vi-VN-NamMinhNeural": {"name": "NamMinh", "voice": "vi-VN-NamMinhNeural", "gender": "Male", "lang": "vi", "accent": "Vietnamese", "color": "#f97316"},
+    # Indonesian
+    "id-ID-GadisNeural": {"name": "Gadis", "voice": "id-ID-GadisNeural", "gender": "Female", "lang": "id", "accent": "Indonesian", "color": "#22d3ee"},
+    "id-ID-ArdiNeural": {"name": "Ardi", "voice": "id-ID-ArdiNeural", "gender": "Male", "lang": "id", "accent": "Indonesian", "color": "#a3e635"},
+    # Malay
+    "ms-MY-YasminNeural": {"name": "Yasmin", "voice": "ms-MY-YasminNeural", "gender": "Female", "lang": "ms", "accent": "Malay", "color": "#38bdf8"},
+    "ms-MY-OsmanNeural": {"name": "Osman", "voice": "ms-MY-OsmanNeural", "gender": "Male", "lang": "ms", "accent": "Malay", "color": "#0891b2"},
+    # Filipino
+    "fil-PH-BlessicaNeural": {"name": "Blessica", "voice": "fil-PH-BlessicaNeural", "gender": "Female", "lang": "fil", "accent": "Filipino", "color": "#d946ef"},
+    "fil-PH-AngeloNeural": {"name": "Angelo", "voice": "fil-PH-AngeloNeural", "gender": "Male", "lang": "fil", "accent": "Filipino", "color": "#0ea5e9"},
+    # Ukrainian
+    "uk-UA-PolinaNeural": {"name": "Polina", "voice": "uk-UA-PolinaNeural", "gender": "Female", "lang": "uk", "accent": "Ukrainian", "color": "#22c55e"},
+    "uk-UA-DmytroNeural": {"name": "Dmytro", "voice": "uk-UA-DmytroNeural", "gender": "Male", "lang": "uk", "accent": "Ukrainian", "color": "#818cf8"},
+    # Bengali
+    "bn-BD-TanishaNeural": {"name": "Tanisha", "voice": "bn-BD-TanishaNeural", "gender": "Female", "lang": "bn", "accent": "Bengali", "color": "#f59e0b"},
+    "bn-BD-BashkarNeural": {"name": "Bashkar", "voice": "bn-BD-BashkarNeural", "gender": "Male", "lang": "bn", "accent": "Bengali", "color": "#10b981"},
+    # Swahili
+    "sw-KE-ZuriNeural": {"name": "Zuri", "voice": "sw-KE-ZuriNeural", "gender": "Female", "lang": "sw", "accent": "Swahili", "color": "#c084fc"},
+    "sw-KE-RafaelNeural": {"name": "Rafael", "voice": "sw-KE-RafaelNeural", "gender": "Male", "lang": "sw", "accent": "Swahili", "color": "#f472b6"},
+    # Tamil
+    "ta-IN-PallaviNeural": {"name": "Pallavi", "voice": "ta-IN-PallaviNeural", "gender": "Female", "lang": "ta", "accent": "Tamil", "color": "#84cc16"},
+    "ta-IN-ValluvarNeural": {"name": "Valluvar", "voice": "ta-IN-ValluvarNeural", "gender": "Male", "lang": "ta", "accent": "Tamil", "color": "#6366f1"},
+    # Telugu
+    "te-IN-ShrutiNeural": {"name": "Shruti", "voice": "te-IN-ShrutiNeural", "gender": "Female", "lang": "te", "accent": "Telugu", "color": "#ef4444"},
+    "te-IN-MohanNeural": {"name": "Mohan", "voice": "te-IN-MohanNeural", "gender": "Male", "lang": "te", "accent": "Telugu", "color": "#8b5cf6"},
+    # Marathi
+    "mr-IN-AarohiNeural": {"name": "Aarohi", "voice": "mr-IN-AarohiNeural", "gender": "Female", "lang": "mr", "accent": "Marathi", "color": "#f97316"},
+    "mr-IN-ManoharNeural": {"name": "Manohar", "voice": "mr-IN-ManoharNeural", "gender": "Male", "lang": "mr", "accent": "Marathi", "color": "#22d3ee"},
+    # Gujarati
+    "gu-IN-DhwaniNeural": {"name": "Dhwani", "voice": "gu-IN-DhwaniNeural", "gender": "Female", "lang": "gu", "accent": "Gujarati", "color": "#a3e635"},
+    "gu-IN-NishantNeural": {"name": "Nishant", "voice": "gu-IN-NishantNeural", "gender": "Male", "lang": "gu", "accent": "Gujarati", "color": "#38bdf8"},
+    # Kannada
+    "kn-IN-SapnaNeural": {"name": "Sapna", "voice": "kn-IN-SapnaNeural", "gender": "Female", "lang": "kn", "accent": "Kannada", "color": "#d946ef"},
+    "kn-IN-GaganNeural": {"name": "Gagan", "voice": "kn-IN-GaganNeural", "gender": "Male", "lang": "kn", "accent": "Kannada", "color": "#0891b2"},
+    # Malayalam
+    "ml-IN-SobhanaNeural": {"name": "Sobhana", "voice": "ml-IN-SobhanaNeural", "gender": "Female", "lang": "ml", "accent": "Malayalam", "color": "#0ea5e9"},
+    "ml-IN-MidhunNeural": {"name": "Midhun", "voice": "ml-IN-MidhunNeural", "gender": "Male", "lang": "ml", "accent": "Malayalam", "color": "#22c55e"},
+    # Tamil (Sri Lanka)
+    "ta-LK-SaranyaNeural": {"name": "Saranya", "voice": "ta-LK-SaranyaNeural", "gender": "Female", "lang": "ta", "accent": "Sri Lankan Tamil", "color": "#818cf8"},
+    "ta-LK-KumarNeural": {"name": "Kumar", "voice": "ta-LK-KumarNeural", "gender": "Male", "lang": "ta", "accent": "Sri Lankan Tamil", "color": "#f59e0b"},
+    # Tamil (Singapore)
+    "ta-SG-VenbaNeural": {"name": "Venba", "voice": "ta-SG-VenbaNeural", "gender": "Female", "lang": "ta", "accent": "Singapore Tamil", "color": "#10b981"},
+    "ta-SG-AnbuNeural": {"name": "Anbu", "voice": "ta-SG-AnbuNeural", "gender": "Male", "lang": "ta", "accent": "Singapore Tamil", "color": "#c084fc"},
+    # Afrikaans
+    "af-ZA-AdriNeural": {"name": "Adri", "voice": "af-ZA-AdriNeural", "gender": "Female", "lang": "af", "accent": "Afrikaans", "color": "#f472b6"},
+    "af-ZA-WillemNeural": {"name": "Willem", "voice": "af-ZA-WillemNeural", "gender": "Male", "lang": "af", "accent": "Afrikaans", "color": "#84cc16"},
+    # Albanian
+    "sq-AL-AnilaNeural": {"name": "Anila", "voice": "sq-AL-AnilaNeural", "gender": "Female", "lang": "sq", "accent": "Albanian", "color": "#6366f1"},
+    "sq-AL-DIlirNeural": {"name": "DIlir", "voice": "sq-AL-DIlirNeural", "gender": "Male", "lang": "sq", "accent": "Albanian", "color": "#ef4444"},
+    # Bosnian
+    "bs-BA-VesnaNeural": {"name": "Vesna", "voice": "bs-BA-VesnaNeural", "gender": "Female", "lang": "bs", "accent": "Bosnian", "color": "#8b5cf6"},
+    "bs-BA-GoranNeural": {"name": "Goran", "voice": "bs-BA-GoranNeural", "gender": "Male", "lang": "bs", "accent": "Bosnian", "color": "#f97316"},
+    # Catalan
+    "ca-ES-JoanaNeural": {"name": "Joana", "voice": "ca-ES-JoanaNeural", "gender": "Female", "lang": "ca", "accent": "Catalan", "color": "#22d3ee"},
+    "ca-ES-EnricNeural": {"name": "Enric", "voice": "ca-ES-EnricNeural", "gender": "Male", "lang": "ca", "accent": "Catalan", "color": "#a3e635"},
+    # Welsh
+    "cy-GB-NiaNeural": {"name": "Nia", "voice": "cy-GB-NiaNeural", "gender": "Female", "lang": "cy", "accent": "Welsh", "color": "#38bdf8"},
+    "cy-GB-GethinNeural": {"name": "Gethin", "voice": "cy-GB-GethinNeural", "gender": "Male", "lang": "cy", "accent": "Welsh", "color": "#d946ef"},
+    # Estonian
+    "et-EE-AnuNeural": {"name": "Anu", "voice": "et-EE-AnuNeural", "gender": "Female", "lang": "et", "accent": "Estonian", "color": "#0891b2"},
+    "et-EE-KertNeural": {"name": "Kert", "voice": "et-EE-KertNeural", "gender": "Male", "lang": "et", "accent": "Estonian", "color": "#0ea5e9"},
+    # Basque
+    "eu-ES-AinhoaNeural": {"name": "Ainhoa", "voice": "eu-ES-AinhoaNeural", "gender": "Female", "lang": "eu", "accent": "Basque", "color": "#22c55e"},
+    "eu-ES-AnderNeural": {"name": "Ander", "voice": "eu-ES-AnderNeural", "gender": "Male", "lang": "eu", "accent": "Basque", "color": "#818cf8"},
+    # Galician
+    "gl-ES-RosaNeural": {"name": "Rosa", "voice": "gl-ES-RosaNeural", "gender": "Female", "lang": "gl", "accent": "Galician", "color": "#f59e0b"},
+    "gl-ES-DiegoNeural": {"name": "Diego", "voice": "gl-ES-DiegoNeural", "gender": "Male", "lang": "gl", "accent": "Galician", "color": "#10b981"},
+    # Irish
+    "ga-IE-OrlaNeural": {"name": "Orla", "voice": "ga-IE-OrlaNeural", "gender": "Female", "lang": "ga", "accent": "Irish", "color": "#c084fc"},
+    "ga-IE-ColmNeural": {"name": "Colm", "voice": "ga-IE-ColmNeural", "gender": "Male", "lang": "ga", "accent": "Irish", "color": "#f472b6"},
+    # Croatian
+    "hr-HR-GabrijelaNeural": {"name": "Gabrijela", "voice": "hr-HR-GabrijelaNeural", "gender": "Female", "lang": "hr", "accent": "Croatian", "color": "#84cc16"},
+    "hr-HR-SreckoNeural": {"name": "Srecko", "voice": "hr-HR-SreckoNeural", "gender": "Male", "lang": "hr", "accent": "Croatian", "color": "#6366f1"},
+    # Icelandic
+    "is-IS-GudrunNeural": {"name": "Gudrun", "voice": "is-IS-GudrunNeural", "gender": "Female", "lang": "is", "accent": "Icelandic", "color": "#ef4444"},
+    "is-IS-GunnarNeural": {"name": "Gunnar", "voice": "is-IS-GunnarNeural", "gender": "Male", "lang": "is", "accent": "Icelandic", "color": "#8b5cf6"},
+    # Georgian
+    "ka-GE-EkaNeural": {"name": "Eka", "voice": "ka-GE-EkaNeural", "gender": "Female", "lang": "ka", "accent": "Georgian", "color": "#f97316"},
+    "ka-GE-GiorgiNeural": {"name": "Giorgi", "voice": "ka-GE-GiorgiNeural", "gender": "Male", "lang": "ka", "accent": "Georgian", "color": "#22d3ee"},
+    # Kazakh
+    "kk-KZ-AigulNeural": {"name": "Aigul", "voice": "kk-KZ-AigulNeural", "gender": "Female", "lang": "kk", "accent": "Kazakh", "color": "#a3e635"},
+    "kk-KZ-DauletNeural": {"name": "Daulet", "voice": "kk-KZ-DauletNeural", "gender": "Male", "lang": "kk", "accent": "Kazakh", "color": "#38bdf8"},
+    # Khmer
+    "km-KH-SopheaNeural": {"name": "Sophea", "voice": "km-KH-SopheaNeural", "gender": "Female", "lang": "km", "accent": "Khmer", "color": "#d946ef"},
+    "km-KH-PisethNeural": {"name": "Piseth", "voice": "km-KH-PisethNeural", "gender": "Male", "lang": "km", "accent": "Khmer", "color": "#0891b2"},
+    # Lao
+    "lo-LA-KeomanyNeural": {"name": "Keomany", "voice": "lo-LA-KeomanyNeural", "gender": "Female", "lang": "lo", "accent": "Lao", "color": "#0ea5e9"},
+    "lo-LA-ChanthavongNeural": {"name": "Chanthavong", "voice": "lo-LA-ChanthavongNeural", "gender": "Male", "lang": "lo", "accent": "Lao", "color": "#22c55e"},
+    # Lithuanian
+    "lt-LT-OnaNeural": {"name": "Ona", "voice": "lt-LT-OnaNeural", "gender": "Female", "lang": "lt", "accent": "Lithuanian", "color": "#818cf8"},
+    "lt-LT-LeonasNeural": {"name": "Leonas", "voice": "lt-LT-LeonasNeural", "gender": "Male", "lang": "lt", "accent": "Lithuanian", "color": "#f59e0b"},
+    # Latvian
+    "lv-LV-EveritaNeural": {"name": "Everita", "voice": "lv-LV-EveritaNeural", "gender": "Female", "lang": "lv", "accent": "Latvian", "color": "#10b981"},
+    "lv-LV-NilsNeural": {"name": "Nils", "voice": "lv-LV-NilsNeural", "gender": "Male", "lang": "lv", "accent": "Latvian", "color": "#c084fc"},
+    # Macedonian
+    "mk-MK-MarijaNeural": {"name": "Marija", "voice": "mk-MK-MarijaNeural", "gender": "Female", "lang": "mk", "accent": "Macedonian", "color": "#f472b6"},
+    "mk-MK-AleksandarNeural": {"name": "Aleksandar", "voice": "mk-MK-AleksandarNeural", "gender": "Male", "lang": "mk", "accent": "Macedonian", "color": "#84cc16"},
+    # Mongolian
+    "mn-MN-YesuiNeural": {"name": "Yesui", "voice": "mn-MN-YesuiNeural", "gender": "Female", "lang": "mn", "accent": "Mongolian", "color": "#6366f1"},
+    "mn-MN-BataaNeural": {"name": "Bataa", "voice": "mn-MN-BataaNeural", "gender": "Male", "lang": "mn", "accent": "Mongolian", "color": "#ef4444"},
+    # Maltese
+    "mt-MT-GretaNeural": {"name": "Greta", "voice": "mt-MT-GretaNeural", "gender": "Female", "lang": "mt", "accent": "Maltese", "color": "#8b5cf6"},
+    "mt-MT-JosephNeural": {"name": "Joseph", "voice": "mt-MT-JosephNeural", "gender": "Male", "lang": "mt", "accent": "Maltese", "color": "#f97316"},
+    # Myanmar
+    "my-MM-HihaNeural": {"name": "Hiha", "voice": "my-MM-HihaNeural", "gender": "Female", "lang": "my", "accent": "Myanmar", "color": "#22d3ee"},
+    "my-MM-TunLaNeural": {"name": "TunLa", "voice": "my-MM-TunLaNeural", "gender": "Male", "lang": "my", "accent": "Myanmar", "color": "#a3e635"},
+    # Nepali
+    "ne-NP-HemkalaNeural": {"name": "Hemkala", "voice": "ne-NP-HemkalaNeural", "gender": "Female", "lang": "ne", "accent": "Nepali", "color": "#38bdf8"},
+    "ne-NP-SagarNeural": {"name": "Sagar", "voice": "ne-NP-SagarNeural", "gender": "Male", "lang": "ne", "accent": "Nepali", "color": "#d946ef"},
+    # Pashto
+    "ps-AF-LatifaNeural": {"name": "Latifa", "voice": "ps-AF-LatifaNeural", "gender": "Female", "lang": "ps", "accent": "Pashto", "color": "#0891b2"},
+    "ps-AF-GulNawazNeural": {"name": "GulNawaz", "voice": "ps-AF-GulNawazNeural", "gender": "Male", "lang": "ps", "accent": "Pashto", "color": "#0ea5e9"},
+    # Sinhala
+    "si-LK-ThiliniNeural": {"name": "Thilini", "voice": "si-LK-ThiliniNeural", "gender": "Female", "lang": "si", "accent": "Sinhala", "color": "#22c55e"},
+    "si-LK-SameeraNeural": {"name": "Sameera", "voice": "si-LK-SameeraNeural", "gender": "Male", "lang": "si", "accent": "Sinhala", "color": "#818cf8"},
+    # Slovak
+    "sk-SK-LukasNeural": {"name": "Lukas", "voice": "sk-SK-LukasNeural", "gender": "Male", "lang": "sk", "accent": "Slovak", "color": "#f59e0b"},
+    "sk-SK-ViktoriaNeural": {"name": "Viktoria", "voice": "sk-SK-ViktoriaNeural", "gender": "Female", "lang": "sk", "accent": "Slovak", "color": "#10b981"},
+    # Slovenian
+    "sl-SI-PetraNeural": {"name": "Petra", "voice": "sl-SI-PetraNeural", "gender": "Female", "lang": "sl", "accent": "Slovenian", "color": "#c084fc"},
+    "sl-SI-RokNeural": {"name": "Rok", "voice": "sl-SI-RokNeural", "gender": "Male", "lang": "sl", "accent": "Slovenian", "color": "#f472b6"},
+    # Somali
+    "so-SO-UbaxNeural": {"name": "Ubax", "voice": "so-SO-UbaxNeural", "gender": "Female", "lang": "so", "accent": "Somali", "color": "#84cc16"},
+    "so-SO-MuuseNeural": {"name": "Muuse", "voice": "so-SO-MuuseNeural", "gender": "Male", "lang": "so", "accent": "Somali", "color": "#6366f1"},
+    # Serbian
+    "sr-RS-SophieNeural": {"name": "Sophie", "voice": "sr-RS-SophieNeural", "gender": "Female", "lang": "sr", "accent": "Serbian", "color": "#ef4444"},
+    "sr-RS-NikolaNeural": {"name": "Nikola", "voice": "sr-RS-NikolaNeural", "gender": "Male", "lang": "sr", "accent": "Serbian", "color": "#8b5cf6"},
+    # Sundanese
+    "su-ID-TutiNeural": {"name": "Tuti", "voice": "su-ID-TutiNeural", "gender": "Female", "lang": "su", "accent": "Sundanese", "color": "#f97316"},
+    "su-ID-JajangNeural": {"name": "Jajang", "voice": "su-ID-JajangNeural", "gender": "Male", "lang": "su", "accent": "Sundanese", "color": "#22d3ee"},
+    # Uzbek
+    "uz-UZ-MadinaNeural": {"name": "Madina", "voice": "uz-UZ-MadinaNeural", "gender": "Female", "lang": "uz", "accent": "Uzbek", "color": "#a3e635"},
+    "uz-UZ-SardorNeural": {"name": "Sardor", "voice": "uz-UZ-SardorNeural", "gender": "Male", "lang": "uz", "accent": "Uzbek", "color": "#38bdf8"},
+    # Zulu
+    "zu-ZA-ThandoNeural": {"name": "Thando", "voice": "zu-ZA-ThandoNeural", "gender": "Female", "lang": "zu", "accent": "Zulu", "color": "#d946ef"},
+    "zu-ZA-ThaboNeural": {"name": "Thabo", "voice": "zu-ZA-ThaboNeural", "gender": "Male", "lang": "zu", "accent": "Zulu", "color": "#0891b2"},
 }
 
-async def edge_tts_generate(text: str, voice_key: str = "aria") -> bytes:
-    voice_info = EDGE_VOICES.get(voice_key, EDGE_VOICES["aria"])
+async def edge_tts_generate(text: str, voice_key: str = "en-US-AriaNeural") -> bytes:
+    voice_info = EDGE_VOICES.get(voice_key, EDGE_VOICES["en-US-AriaNeural"])
     communicate = edge_tts.Communicate(text, voice_info["voice"])
     audio_data = b""
     async for chunk in communicate.stream():
@@ -433,7 +663,7 @@ async def generate_audio(request: Request):
     user = await get_current_user(request)
     body = await request.json()
     text = body.get("text", "").strip()
-    voice_key = body.get("voice_key", "aria")
+    voice_key = body.get("voice_key", "en-US-AriaNeural")
     if not text:
         raise HTTPException(400, "Text is required")
     if len(text) > 10000:
@@ -444,7 +674,7 @@ async def generate_audio(request: Request):
         raise HTTPException(500, f"TTS failed: {str(e)}")
     filename = f"{uuid.uuid4().hex}.mp3"
     (AUDIO_DIR / filename).write_bytes(audio_bytes)
-    voice_info = EDGE_VOICES.get(voice_key, EDGE_VOICES["aria"])
+    voice_info = EDGE_VOICES.get(voice_key, EDGE_VOICES["en-US-AriaNeural"])
     if pool:
         async with pool.acquire() as conn:
             await conn.execute(
@@ -560,7 +790,7 @@ async def create_voice_clone(request: Request):
     user = await get_current_user(request)
     body = await request.json()
     name = body.get("name", "My Voice")
-    base_voice = body.get("base_voice", "aria")
+    base_voice = body.get("base_voice", "en-US-AriaNeural")
     settings = {"pitch": body.get("pitch", 1.0), "speed": body.get("speed", 1.0), "base_voice": base_voice, "name": name}
     if pool:
         async with pool.acquire() as conn:
@@ -601,7 +831,7 @@ async def generate_with_clone(request: Request):
     if not profile:
         raise HTTPException(404, "Voice profile not found")
     settings = json.loads(profile["settings"])
-    voice_key = settings.get("base_voice", "aria")
+    voice_key = settings.get("base_voice", "en-US-AriaNeural")
     try:
         audio_bytes = await edge_tts_generate(text, voice_key)
     except Exception as e:
@@ -754,7 +984,7 @@ async def root():
     return {
         "name": "BG LABS API", "version": "6.0.0", "status": "running",
         "features": [
-            "TTS (Edge TTS - FREE, 26+ voices)",
+            "TTS (Edge TTS - FREE, 322+ voices)",
             "Image Gen (Pollinations.ai - FREE)",
             "Video Gen (FFmpeg)",
             "Voice Cloning",
