@@ -73,18 +73,28 @@ EDGE_VOICES = {
     "fi-FI-HarriNeural": {"name": "Harri", "gender": "Male", "lang": "fi", "accent": "Finnish", "color": "#a3e635"},
     "id-ID-GadisNeural": {"name": "Gadis", "gender": "Female", "lang": "id", "accent": "Indonesian", "color": "#22d3ee"},
     "id-ID-ArdiNeural": {"name": "Ardi", "gender": "Male", "lang": "id", "accent": "Indonesian", "color": "#a3e635"},
+    "th-TH-PremwadeeNeural": {"name": "Premwadee", "gender": "Female", "lang": "th", "accent": "Thai", "color": "#a51931"},
+    "th-TH-NiwatNeural": {"name": "Niwat", "gender": "Male", "lang": "th", "accent": "Thai", "color": "#2d2a4a"},
+    "vi-VN-HoaiMyNeural": {"name": "Hoai My", "gender": "Female", "lang": "vi", "accent": "Vietnamese", "color": "#da251d"},
+    "vi-VN-NamMinhNeural": {"name": "Nam Minh", "gender": "Male", "lang": "vi", "accent": "Vietnamese", "color": "#cd2d37"},
+    "ms-MY-YasminNeural": {"name": "Yasmin", "gender": "Female", "lang": "ms", "accent": "Malay", "color": "#010066"},
+    "ms-MY-OsmanNeural": {"name": "Osman", "gender": "Male", "lang": "ms", "accent": "Malay", "color": "#cc0001"},
+    "fil-PH-RoseNeural": {"name": "Rose", "gender": "Female", "lang": "fil", "accent": "Filipino", "color": "#0038a8"},
+    "fil-PH-AngelosNeural": {"name": "Angelos", "gender": "Male", "lang": "fil", "accent": "Filipino", "color": "#ce1126"},
+    "bn-BD-TanishaaNeural": {"name": "Tanishaa", "gender": "Female", "lang": "bn", "accent": "Bengali", "color": "#006a4e"},
+    "bn-BD-BashirNeural": {"name": "Bashir", "gender": "Male", "lang": "bn", "accent": "Bengali", "color": "#f42a41"},
 }
 
 
 # ============================================================
 # EDGE TTS GENERATION (PRIMARY - FREE, UNLIMITED)
 # ============================================================
-async def edge_tts_generate(text: str, voice_key: str = "en-US-AriaNeural") -> bytes:
+async def edge_tts_generate(text: str, voice_key: str = "en-US-AriaNeural", rate: str = "+0%", pitch: str = "+0Hz") -> bytes:
     """Generate speech using Edge TTS. Returns audio bytes."""
     voice_info = EDGE_VOICES.get(voice_key)
     if not voice_info:
         voice_key = "en-US-AriaNeural"
-    communicate = edge_tts.Communicate(text, voice_key)
+    communicate = edge_tts.Communicate(text, voice_key, rate=rate, pitch=pitch)
     audio_data = b""
     async for chunk in communicate.stream():
         if chunk["type"] == "audio":

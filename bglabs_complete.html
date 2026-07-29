@@ -966,14 +966,34 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
           </div>
           <!-- Settings card -->
           <div class="card" style="padding:1.25rem">
-            <label class="inp-label">Output Quality</label>
-            <select class="inp" id="quality-select" style="margin-top:.4rem">
-              <option value="fast">⚡ Fast (MMS-TTS)</option>
-              <option value="quality">🎯 Quality (SpeechT5)</option>
-              <option value="expressive">🎭 Expressive (Bark)</option>
-            </select>
+            <label class="inp-label">Voice Controls</label>
+            <div style="margin-top:.75rem">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem">
+                <label class="inp-label" style="margin:0">Speed</label>
+                <span id="rate-val" style="font-size:.75rem;color:var(--muted);font-family:monospace">0%</span>
+              </div>
+              <input type="range" id="rate-slider" min="-50" max="50" value="0" step="5" style="width:100%;accent-color:var(--orange)">
+            </div>
+            <div style="margin-top:.75rem">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem">
+                <label class="inp-label" style="margin:0">Pitch</label>
+                <span id="pitch-val" style="font-size:.75rem;color:var(--muted);font-family:monospace">0Hz</span>
+              </div>
+              <input type="range" id="pitch-slider" min="-50" max="50" value="0" step="5" style="width:100%;accent-color:var(--orange)">
+            </div>
+            <div style="margin-top:1rem">
+              <label class="inp-label" style="margin-bottom:.5rem">Emotion Presets</label>
+              <div style="display:flex;flex-wrap:wrap;gap:.4rem">
+                <button class="btn btn-ghost btn-sm" onclick="applyEmotion('happy')" style="font-size:.72rem">😊 Happy</button>
+                <button class="btn btn-ghost btn-sm" onclick="applyEmotion('sad')" style="font-size:.72rem">😢 Sad</button>
+                <button class="btn btn-ghost btn-sm" onclick="applyEmotion('excited')" style="font-size:.72rem">🔥 Excited</button>
+                <button class="btn btn-ghost btn-sm" onclick="applyEmotion('calm')" style="font-size:.72rem">😌 Calm</button>
+                <button class="btn btn-ghost btn-sm" onclick="applyEmotion('whisper')" style="font-size:.72rem">🤫 Whisper</button>
+                <button class="btn btn-ghost btn-sm" onclick="applyEmotion('narrator')" style="font-size:.72rem">📖 Narrator</button>
+              </div>
+            </div>
             <div style="margin-top:1rem;padding:.85rem;background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.15);border-radius:10px;font-size:.8rem;color:#94a3b8;line-height:1.6">
-              💡 <strong style="color:#f97316">1 credit = 1 character</strong><br>Generate voices from any text. Download as WAV.
+              💡 <strong style="color:#f97316">1 credit = 1 character</strong><br>Generate voices from any text. Download as MP3.
             </div>
           </div>
           <!-- Tips -->
@@ -2358,31 +2378,33 @@ const VOICES = [
   // Indonesian
   { id:'gadis',     key:'id-ID-GadisNeural',    name:'Gadis',     gender:'female', accent:'Indonesian',color:'#22d3ee', lang:'id-ID' },
   { id:'ardi',      key:'id-ID-ArdiNeural',     name:'Ardi',      gender:'male',   accent:'Indonesian',color:'#a3e635', lang:'id-ID' },
-];
-  { id:'priya',     name:'Priya',     gender:'female', accent:'Thai',      style:'Thai Female',  desc:'Thai female voice',             color:'#a51931', lang:'th-TH', pitch:1.12, rate:0.92, volume:0.91, eq:{low:-1,mid:3,high:3},  filterType:'highpass' },
-  { id:'somchai',   name:'Somchai',   gender:'male',   accent:'Thai',      style:'Thai Male',    desc:'Thai male voice',               color:'#2d2a4a', lang:'th-TH', pitch:0.68, rate:0.88, volume:0.96, eq:{low:5,mid:0,high:-3},  filterType:'lowpass' },
+  // Thai
+  { id:'priya',     key:'th-TH-PremwadeeNeural', name:'Premwadee', gender:'female', accent:'Thai',     color:'#a51931', lang:'th-TH' },
+  { id:'somchai',   key:'th-TH-NiwatNeural',     name:'Niwat',     gender:'male',   accent:'Thai',     color:'#2d2a4a', lang:'th-TH' },
   // Vietnamese
-  { id:'linh',      name:'Linh',      gender:'female', accent:'Vietnamese',style:'Vietnamese Female',desc:'Vietnamese female voice',     color:'#da251d', lang:'vi-VN', pitch:1.1,  rate:0.9,  volume:0.92, eq:{low:0,mid:3,high:2},   filterType:'highpass' },
-  { id:'nam',       name:'Nam',       gender:'male',   accent:'Vietnamese',style:'Vietnamese Male',  desc:'Vietnamese male voice',       color:'#cd2d37', lang:'vi-VN', pitch:0.7,  rate:0.87, volume:0.97, eq:{low:4,mid:1,high:-2},  filterType:'lowpass' },
-  // Indonesian
-  { id:'gita',      name:'Gita',      gender:'female', accent:'Indonesian',style:'Indonesian Female',desc:'Indonesian female voice',     color:'#ff0000', lang:'id-ID', pitch:1.08, rate:0.9,  volume:0.92, eq:{low:1,mid:2,high:2},   filterType:'none' },
-  { id:'budi',      name:'Budi',      gender:'male',   accent:'Indonesian',style:'Indonesian Male',  desc:'Indonesian male voice',       color:'#ffffff', lang:'id-ID', pitch:0.72, rate:0.88, volume:0.96, eq:{low:3,mid:2,high:-1},  filterType:'bandpass' },
+  { id:'hoai-my',   key:'vi-VN-HoaiMyNeural',    name:'Hoai My',   gender:'female', accent:'Vietnamese',color:'#da251d', lang:'vi-VN' },
+  { id:'nam-minh',  key:'vi-VN-NamMinhNeural',   name:'Nam Minh',  gender:'male',   accent:'Vietnamese',color:'#cd2d37', lang:'vi-VN' },
   // Malay
-  { id:'nurul',     name:'Nurul',     gender:'female', accent:'Malay',     style:'Malay Female', desc:'Malay female voice',            color:'#010066', lang:'ms-MY', pitch:1.06, rate:0.9,  volume:0.93, eq:{low:1,mid:3,high:1},   filterType:'none' },
-  { id:'azman',     name:'Azman',     gender:'male',   accent:'Malay',     style:'Malay Male',   desc:'Malay male voice',              color:'#cc0001', lang:'ms-MY', pitch:0.73, rate:0.88, volume:0.96, eq:{low:4,mid:1,high:-2},  filterType:'lowpass' },
-  // Tagalog (Filipino)
-  { id:'maria',     name:'Maria',     gender:'female', accent:'Filipino',  style:'Filipino Female',desc:'Filipino female voice',        color:'#0038a8', lang:'fil-PH', pitch:1.1,  rate:0.92, volume:0.92, eq:{low:-1,mid:3,high:3},  filterType:'highpass' },
-  { id:'carlos',    name:'Carlos',    gender:'male',   accent:'Filipino',  style:'Filipino Male',  desc:'Filipino male voice',          color:'#ce1126', lang:'fil-PH', pitch:0.7,  rate:0.88, volume:0.96, eq:{low:4,mid:0,high:-2},  filterType:'lowpass' },
-  // Ukrainian
-  { id:'oksana',    name:'Oksana',    gender:'female', accent:'Ukrainian', style:'Ukrainian Female',desc:'Ukrainian female voice',       color:'#005bbb', lang:'uk-UA', pitch:1.08, rate:0.9,  volume:0.93, eq:{low:1,mid:2,high:2},   filterType:'none' },
-  { id:'andriy',    name:'Andriy',    gender:'male',   accent:'Ukrainian', style:'Ukrainian Male',  desc:'Ukrainian male voice',         color:'#ffd500', lang:'uk-UA', pitch:0.72, rate:0.88, volume:0.96, eq:{low:4,mid:1,high:-1},  filterType:'lowpass' },
+  { id:'yasmin',    key:'ms-MY-YasminNeural',    name:'Yasmin',    gender:'female', accent:'Malay',    color:'#010066', lang:'ms-MY' },
+  { id:'osman',     key='ms-MY-OsmanNeural',     name:'Osman',     gender:'male',   accent:'Malay',    color:'#cc0001', lang:'ms-MY' },
+  // Filipino
+  { id:'rose',      key:'fil-PH-RoseNeural',     name:'Rose',      gender:'female', accent:'Filipino', color:'#0038a8', lang:'fil-PH' },
+  { id:'angelos',   key:'fil-PH-AngelosNeural',  name:'Angelos',   gender:'male',   accent:'Filipino', color:'#ce1126', lang:'fil-PH' },
   // Bengali
-  { id:'tasnia',    name:'Tasnia',    gender:'female', accent:'Bengali',   style:'Bengali Female',desc:'Bengali female voice',           color:'#006a4e', lang:'bn-BD', pitch:1.1,  rate:0.92, volume:0.92, eq:{low:0,mid:3,high:2},   filterType:'highpass' },
-  { id:'rafiq',     name:'Rafiq',     gender:'male',   accent:'Bengali',   style:'Bengali Male',  desc:'Bengali male voice',             color:'#f42a41', lang:'bn-BD', pitch:0.7,  rate:0.88, volume:0.96, eq:{low:5,mid:0,high:-3},  filterType:'lowpass' },
-  // Swahili
-  { id:'aisha',     name:'Aisha',     gender:'female', accent:'Swahili',   style:'Swahili Female',desc:'Swahili female voice',           color:'#009639', lang:'sw-KE', pitch:1.08, rate:0.9,  volume:0.93, eq:{low:1,mid:3,high:1},   filterType:'none' },
-  { id:'juma',      name:'Juma',      gender:'male',   accent:'Swahili',   style:'Swahili Male',  desc:'Swahili male voice',             color:'#000000', lang:'sw-KE', pitch:0.72, rate:0.88, volume:0.96, eq:{low:3,mid:2,high:-1},  filterType:'bandpass' },
+  { id:'tanishaa',  key:'bn-BD-TanishaaNeural',  name:'Tanishaa',  gender:'female', accent:'Bengali',  color:'#006a4e', lang:'bn-BD' },
+  { id:'bashir',    key='bn-BD-BashirNeural',    name:'Bashir',    gender:'male',   accent:'Bengali',  color:'#f42a41', lang:'bn-BD' },
 ];
+
+// Voice lookup helper for UI
+function getVoiceLang(voice) {
+  return voice.lang || 'en-US';
+}
+function getVoiceStyle(voice) {
+  return voice.accent || 'Neutral';
+}
+function getVoiceDesc(voice) {
+  return `${voice.gender} · ${voice.accent}`;
+}
 
 // ── HF Model Endpoints ───────────────────────
 const HF_MODELS = {
@@ -2440,7 +2462,7 @@ const TTS = {
 
   getVoice: id => VOICES.find(v => v.id === id) || VOICES[0],
 
-  generate: async function(text, voiceId, onStatus) {
+  generate: async function(text, voiceId, onStatus, rate, pitch) {
     if (this.isGenerating) return;
     if (!text?.trim()) throw new Error('Text is empty');
     this.isGenerating = true;
@@ -2453,7 +2475,7 @@ const TTS = {
         const resp = await fetch(API_BASE + '/studio/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: text.slice(0, 10000), voice_key: voice.key || voiceId || 'en-US-AriaNeural' })
+          body: JSON.stringify({ text: text.slice(0, 10000), voice_key: voice.key || voiceId || 'en-US-AriaNeural', rate: rate || '+0%', pitch: pitch || '+0Hz' })
         });
         if (resp.ok) {
           const data = await resp.json();
@@ -2580,7 +2602,7 @@ const TTS = {
 
   previewVoice: function(voiceId) {
     const v = this.getVoice(voiceId);
-    const t = `Hi, I'm ${v.name}. ${v.desc}. BG LABS brings you premium AI voice technology.`;
+    const t = `Hi, I'm ${v.name}. ${v.gender} voice with ${v.accent} accent. BG LABS brings you premium AI voice technology.`;
     const synth = window.speechSynthesis;
     synth?.cancel();
 
@@ -2866,7 +2888,39 @@ function renderStudio() {
   }
   buildVoiceDropdown();
   setSelectedVoice(selectedVoiceId);
+
+  // Rate/Pitch slider handlers
+  const rateSlider = document.getElementById('rate-slider');
+  const pitchSlider = document.getElementById('pitch-slider');
+  const rateVal = document.getElementById('rate-val');
+  const pitchVal = document.getElementById('pitch-val');
+  if (rateSlider && rateVal) {
+    rateSlider.oninput = () => { rateVal.textContent = (rateSlider.value >= 0 ? '+' : '') + rateSlider.value + '%'; };
+  }
+  if (pitchSlider && pitchVal) {
+    pitchSlider.oninput = () => { pitchVal.textContent = (pitchSlider.value >= 0 ? '+' : '') + pitchSlider.value + 'Hz'; };
+  }
 }
+
+window.applyEmotion = function(emotion) {
+  const presets = {
+    happy:    { rate: 10,  pitch: 15 },
+    sad:      { rate: -15, pitch: -10 },
+    excited:  { rate: 25,  pitch: 20 },
+    calm:     { rate: -10, pitch: -5 },
+    whisper:  { rate: -20, pitch: -15 },
+    narrator: { rate: -5,  pitch: 0 },
+  };
+  const p = presets[emotion];
+  if (!p) return;
+  const rateSlider = document.getElementById('rate-slider');
+  const pitchSlider = document.getElementById('pitch-slider');
+  const rateVal = document.getElementById('rate-val');
+  const pitchVal = document.getElementById('pitch-val');
+  if (rateSlider) { rateSlider.value = p.rate; if (rateVal) rateVal.textContent = (p.rate >= 0 ? '+' : '') + p.rate + '%'; }
+  if (pitchSlider) { pitchSlider.value = p.pitch; if (pitchVal) pitchVal.textContent = (p.pitch >= 0 ? '+' : '') + p.pitch + 'Hz'; }
+  toast('🎭 ' + emotion.charAt(0).toUpperCase() + emotion.slice(1) + ' preset applied');
+};
 
 function buildVoiceDropdown() {
   const dd=document.getElementById('voice-dropdown');
@@ -2877,7 +2931,7 @@ function buildVoiceDropdown() {
     <div class="vd-item${v.id===selectedVoiceId?' selected':''}" onclick="selectVoice('${v.id}')">
       <div class="vd-av" style="background:${v.color}">${v.name.slice(0,1)}</div>
       <div class="vd-info"><b>${flag} ${v.name}</b><span>${v.gender} · ${v.accent}</span></div>
-      <div class="vd-style">${v.style}</div>
+      <div class="vd-style">${v.accent || 'Neutral'}</div>
     </div>`;
   }).join('');
 }
@@ -2895,7 +2949,7 @@ function setSelectedVoice(id) {
   const v=VOICES.find(x=>x.id===id)||VOICES[0];
   const el=document.getElementById('selected-voice-display');
   const flag = LANG_FLAGS[v.lang] || '';
-  if(el) el.innerHTML=`<div class="vd-av" style="background:${v.color};width:38px;height:38px">${v.name.slice(0,1)}</div><div class="sv-info"><b>${flag} ${v.name}</b><span>${v.gender} · ${v.accent} · ${v.style}</span></div><span style="margin-left:auto;color:#64748b;font-size:.8rem">\u25BC</span>`;
+  if(el) el.innerHTML=`<div class="vd-av" style="background:${v.color};width:38px;height:38px">${v.name.slice(0,1)}</div><div class="sv-info"><b>${flag} ${v.name}</b><span>${v.gender} · ${v.accent}</span></div><span style="margin-left:auto;color:#64748b;font-size:.8rem">\u25BC</span>`;
 }
 
 window.doGenerate=async function() {
@@ -2907,8 +2961,13 @@ window.doGenerate=async function() {
   btn.disabled=true; btn.classList.add('spinning');
   showGenStatus('generating','⚡ Generating voice…');
 
+  const rateEl = document.getElementById('rate-slider');
+  const pitchEl = document.getElementById('pitch-slider');
+  const rate = rateEl ? (rateEl.value >= 0 ? '+' + rateEl.value + '%' : rateEl.value + '%') : '+0%';
+  const pitch = pitchEl ? (pitchEl.value >= 0 ? '+' + pitchEl.value + 'Hz' : pitchEl.value + 'Hz') : '+0Hz';
+
   try {
-    const result=await TTS.generate(text, selectedVoiceId, (state,msg)=>{showGenStatus(state,msg);});
+    const result=await TTS.generate(text, selectedVoiceId, (state,msg)=>{showGenStatus(state,msg);}, rate, pitch);
     DB.addHistory(currentUser.id,{text,voiceId:selectedVoiceId,chars:result.chars,model:result.modelUsed,url:result.url,blob:'has_audio'});
     lastAudioUrl=result.url; lastAudioBlob=result.blob;
     showAudioPlayer(text, selectedVoiceId, result.modelUsed, result.url);
@@ -2986,8 +3045,8 @@ function renderVoicesApp() {
         <div><div class="vc-name">${flag} ${v.name}</div><div class="vc-accent">${v.gender} · ${v.accent}</div></div>
         <div class="badge b-orange" style="margin-left:auto;font-size:.6rem">${v.lang || 'en'}</div>
       </div>
-      <div class="vc-style-badge">${v.style}</div>
-      <div class="vc-desc">${v.desc}</div>
+      <div class="vc-style-badge">${v.accent || 'Neutral'}</div>
+      <div class="vc-desc">${v.gender} · ${v.accent}</div>
       <div class="vc-actions">
         <button class="btn btn-ghost btn-sm vc-play-btn" onclick="event.stopPropagation();previewV('${v.id}')">▶ Preview</button>
         <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();useVoice('${v.id}')">Use Voice</button>
@@ -3288,8 +3347,8 @@ function renderVoiceLibrary() {
         <div><div class="vc-name">${flag} ${v.name}</div><div class="vc-accent">${v.gender} · ${v.accent}</div></div>
         <div class="badge b-orange" style="margin-left:auto;font-size:.6rem">${v.lang || 'en'}</div>
       </div>
-      <div class="vc-style-badge">${v.style} · EQ: ${v.eq ? `${v.eq.low>0?'+':''}${v.eq.low}dB / ${v.eq.mid>0?'+':''}${v.eq.mid}dB / ${v.eq.high>0?'+':''}${v.eq.high}dB` : 'flat'}</div>
-      <div class="vc-desc">${v.desc}</div>
+      <div class="vc-style-badge">${v.accent || 'Neutral'}</div>
+      <div class="vc-desc">${v.gender} · ${v.accent}</div>
       <div class="vc-actions">
         <button class="btn btn-ghost btn-sm vc-play-btn" onclick="event.stopPropagation();previewV('${v.id}')">▶ Preview</button>
         <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();useVoice('${v.id}')">Use Voice</button>
