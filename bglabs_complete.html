@@ -2279,84 +2279,86 @@ DB.seedAdmin();
    60+ Truly Diverse Voices with Web Audio API
    ═══════════════════════════════════════════ */
 
-// ── Voice Presets (60+ truly distinct) ──────
+// ── Voice Presets (Edge TTS) ──────
 const VOICES = [
   // English Female
-  { id:'aria',      name:'Aria',      gender:'female', accent:'American',  style:'Warm',        desc:'Warm American female',        color:'#f472b6', lang:'en-US', pitch:1.1,  rate:0.95, volume:0.95, eq:{low:3,mid:1,high:-1},  filterType:'none' },
-  { id:'jenny',     name:'Jenny',     gender:'female', accent:'American',  style:'Young',       desc:'Young American female',        color:'#e879f9', lang:'en-US', pitch:1.2,  rate:1.0,  volume:0.92, eq:{low:-1,mid:3,high:2},  filterType:'highpass' },
-  { id:'sara',      name:'Sara',      gender:'female', accent:'American',  style:'Professional',desc:'Professional American female',  color:'#c084fc', lang:'en-US', pitch:1.0,  rate:0.9,  volume:0.96, eq:{low:1,mid:2,high:1},   filterType:'none' },
-  { id:'dorothy',   name:'Dorothy',   gender:'female', accent:'British',   style:'Elegant',     desc:'Elegant British female',       color:'#a78bfa', lang:'en-GB', pitch:1.05, rate:0.85, volume:0.94, eq:{low:2,mid:-1,high:3},  filterType:'bandpass' },
-  { id:'freya',     name:'Freya',     gender:'female', accent:'British',   style:'Casual',      desc:'Casual British female',        color:'#fb923c', lang:'en-GB', pitch:1.15, rate:1.05, volume:0.9,  eq:{low:-2,mid:3,high:2},  filterType:'none' },
-  { id:'grace',     name:'Grace',     gender:'female', accent:'Southern',  style:'Southern',    desc:'Southern American female',     color:'#84cc16', lang:'en-US', pitch:0.95, rate:0.88, volume:0.93, eq:{low:4,mid:1,high:-2},  filterType:'lowpass' },
+  { id:'aria',      key:'en-US-AriaNeural',     name:'Aria',      gender:'female', accent:'American',  color:'#f472b6', lang:'en-US' },
+  { id:'jenny',     key:'en-US-JennyNeural',    name:'Jenny',     gender:'female', accent:'American',  color:'#e879f9', lang:'en-US' },
+  { id:'emma',      key:'en-US-EmmaNeural',     name:'Emma',      gender:'female', accent:'American',  color:'#f472b6', lang:'en-US' },
+  { id:'michelle',  key:'en-US-MichelleNeural', name:'Michelle',  gender:'female', accent:'American',  color:'#f59e0b', lang:'en-US' },
+  { id:'ava',       key:'en-US-AvaNeural',      name:'Ava',       gender:'female', accent:'American',  color:'#c084fc', lang:'en-US' },
+  { id:'ana',       key:'en-US-AnaNeural',      name:'Ana',       gender:'female', accent:'American',  color:'#e879f9', lang:'en-US' },
   // English Male
-  { id:'tony',      name:'Tony',      gender:'male',   accent:'American',  style:'Deep',        desc:'Deep American male',           color:'#3b82f6', lang:'en-US', pitch:0.7,  rate:0.9,  volume:0.97, eq:{low:5,mid:0,high:-3},  filterType:'none' },
-  { id:'guy',       name:'Guy',       gender:'male',   accent:'American',  style:'Resonant',    desc:'Resonant American male',       color:'#0ea5e9', lang:'en-US', pitch:0.75, rate:0.95, volume:0.95, eq:{low:4,mid:2,high:-2},  filterType:'none' },
-  { id:'davis',     name:'Davis',     gender:'male',   accent:'American',  style:'Authoritative',desc:'Authoritative American male',  color:'#6366f1', lang:'en-US', pitch:0.65, rate:0.85, volume:0.98, eq:{low:6,mid:-1,high:-4}, filterType:'lowpass' },
-  { id:'ryan',      name:'Ryan',      gender:'male',   accent:'British',   style:'Smooth',      desc:'Smooth British male',          color:'#818cf8', lang:'en-GB', pitch:0.8,  rate:0.9,  volume:0.94, eq:{low:2,mid:3,high:1},   filterType:'bandpass' },
-  { id:'daniel',    name:'Daniel',    gender:'male',   accent:'British',   style:'Commanding',  desc:'Commanding British male',      color:'#14b8a6', lang:'en-GB', pitch:0.6,  rate:0.8,  volume:0.97, eq:{low:6,mid:1,high:-3},  filterType:'lowpass' },
-  { id:'charlie',   name:'Charlie',   gender:'male',   accent:'British',   style:'Friendly',    desc:'Friendly British male',        color:'#f97316', lang:'en-GB', pitch:0.85, rate:1.0,  volume:0.92, eq:{low:0,mid:3,high:3},   filterType:'highpass' },
-  // Hindi
-  { id:'swara',     name:'Swara',     gender:'female', accent:'Hindi',     style:'Hindi Female',desc:'Hindi female voice',           color:'#ef4444', lang:'hi-IN', pitch:1.1,  rate:0.95, volume:0.94, eq:{low:2,mid:2,high:0},   filterType:'none' },
-  { id:'madhur',    name:'Madhur',    gender:'male',   accent:'Hindi',     style:'Hindi Male',  desc:'Hindi male voice',             color:'#dc2626', lang:'hi-IN', pitch:0.7,  rate:0.9,  volume:0.96, eq:{low:5,mid:1,high:-2},  filterType:'none' },
+  { id:'guy',       key:'en-US-GuyNeural',      name:'Guy',       gender:'male',   accent:'American',  color:'#84cc16', lang:'en-US' },
+  { id:'brian',     key:'en-US-BrianNeural',    name:'Brian',     gender:'male',   accent:'American',  color:'#3b82f6', lang:'en-US' },
+  { id:'andrew',    key:'en-US-AndrewNeural',   name:'Andrew',    gender:'male',   accent:'American',  color:'#06b6d4', lang:'en-US' },
+  { id:'roger',     key:'en-US-RogerNeural',    name:'Roger',     gender:'male',   accent:'American',  color:'#10b981', lang:'en-US' },
+  // British
+  { id:'sonia',     key:'en-GB-SoniaNeural',    name:'Sonia',     gender:'female', accent:'British',   color:'#0ea5e9', lang:'en-GB' },
+  { id:'ryan',      key:'en-GB-RyanNeural',     name:'Ryan',      gender:'male',   accent:'British',   color:'#64748b', lang:'en-GB' },
+  { id:'libby',     key:'en-GB-LibbyNeural',    name:'Libby',     gender:'female', accent:'British',   color:'#22d3ee', lang:'en-GB' },
+  { id:'thomas',    key:'en-GB-ThomasNeural',   name:'Thomas',    gender:'male',   accent:'British',   color:'#38bdf8', lang:'en-GB' },
+  // Indian
+  { id:'neerja',    key:'en-IN-NeerjaNeural',   name:'Neerja',    gender:'female', accent:'Indian',    color:'#d946ef', lang:'en-IN' },
+  { id:'prabhat',   key:'en-IN-PrabhatNeural',  name:'Prabhat',   gender:'male',   accent:'Indian',    color:'#22c55e', lang:'en-IN' },
   // Urdu
-  { id:'asma',      name:'Asma',      gender:'female', accent:'Urdu',      style:'Urdu Female', desc:'Urdu female voice',            color:'#f43f5e', lang:'ur-PK', pitch:1.05, rate:0.92, volume:0.93, eq:{low:1,mid:3,high:1},   filterType:'none' },
-  { id:'salman',    name:'Salman',    gender:'male',   accent:'Urdu',      style:'Urdu Male',   desc:'Urdu male voice',              color:'#e11d48', lang:'ur-PK', pitch:0.75, rate:0.88, volume:0.96, eq:{low:4,mid:2,high:-1},  filterType:'none' },
+  { id:'uzma',      key:'ur-PK-UzmaNeural',     name:'Uzma',      gender:'female', accent:'Urdu',      color:'#ef4444', lang:'ur-PK' },
+  { id:'salman',    key:'ur-PK-SalmanNeural',   name:'Salman',    gender:'male',   accent:'Urdu',      color:'#8b5cf6', lang:'ur-PK' },
+  // Hindi
+  { id:'swara',     key:'hi-IN-SwaraNeural',    name:'Swara',     gender:'female', accent:'Hindi',     color:'#f59e0b', lang:'hi-IN' },
+  { id:'madhur',    key:'hi-IN-MadhurNeural',   name:'Madhur',    gender:'male',   accent:'Hindi',     color:'#10b981', lang:'hi-IN' },
   // Arabic
-  { id:'fatima',    name:'Fatima',    gender:'female', accent:'Arabic',    style:'Arabic Female',desc:'Arabic female voice',          color:'#d946ef', lang:'ar-SA', pitch:1.1,  rate:0.9,  volume:0.93, eq:{low:2,mid:2,high:1},   filterType:'bandpass' },
-  { id:'hamed',     name:'Hamed',     gender:'male',   accent:'Arabic',    style:'Arabic Male', desc:'Arabic male voice',            color:'#a21caf', lang:'ar-SA', pitch:0.7,  rate:0.85, volume:0.96, eq:{low:5,mid:0,high:-2},  filterType:'lowpass' },
+  { id:'zariyah',   key:'ar-SA-ZariyahNeural',  name:'Zariyah',   gender:'female', accent:'Arabic',    color:'#14b8a6', lang:'ar-SA' },
+  { id:'hamed',     key:'ar-SA-HamedNeural',    name:'Hamed',     gender:'male',   accent:'Arabic',    color:'#6366f1', lang:'ar-SA' },
   // Chinese
-  { id:'xiaoxiao',  name:'Xiaoxiao',  gender:'female', accent:'Chinese',   style:'Chinese Female',desc:'Chinese female voice',         color:'#facc15', lang:'zh-CN', pitch:1.15, rate:0.95, volume:0.92, eq:{low:-1,mid:3,high:2},  filterType:'highpass' },
+  { id:'xiaoxiao',  key:'zh-CN-XiaoxiaoNeural', name:'Xiaoxiao',  gender:'female', accent:'Chinese',   color:'#f43f5e', lang:'zh-CN' },
+  { id:'yunxi',     key:'zh-CN-YunxiNeural',    name:'Yunxi',     gender:'male',   accent:'Chinese',   color:'#22c55e', lang:'zh-CN' },
   // Japanese
-  { id:'nanami',    name:'Nanami',    gender:'female', accent:'Japanese',  style:'Japanese Female',desc:'Japanese female voice',       color:'#fb923c', lang:'ja-JP', pitch:1.2,  rate:0.9,  volume:0.91, eq:{low:-2,mid:3,high:3},  filterType:'highpass' },
+  { id:'nanami',    key:'ja-JP-NanamiNeural',   name:'Nanami',    gender:'female', accent:'Japanese',  color:'#c084fc', lang:'ja-JP' },
+  { id:'keita',     key:'ja-JP-KeitaNeural',    name:'Keita',     gender:'male',   accent:'Japanese',  color:'#818cf8', lang:'ja-JP' },
   // Korean
-  { id:'sunhi',     name:'SunHi',     gender:'female', accent:'Korean',    style:'Korean Female',desc:'Korean female voice',          color:'#a3e635', lang:'ko-KR', pitch:1.1,  rate:0.92, volume:0.93, eq:{low:0,mid:3,high:2},   filterType:'none' },
+  { id:'sunhi',     key:'ko-KR-SunHiNeural',    name:'SunHi',     gender:'female', accent:'Korean',    color:'#22d3ee', lang:'ko-KR' },
+  { id:'injoon',    key:'ko-KR-InJoonNeural',   name:'InJoon',    gender:'male',   accent:'Korean',    color:'#f97316', lang:'ko-KR' },
   // Spanish
-  { id:'elvira',    name:'Elvira',    gender:'female', accent:'Spanish',   style:'Spanish Female',desc:'Spanish female voice',         color:'#f87171', lang:'es-ES', pitch:1.05, rate:0.95, volume:0.93, eq:{low:1,mid:2,high:1},   filterType:'none' },
+  { id:'elvira',    key:'es-ES-ElviraNeural',   name:'Elvira',    gender:'female', accent:'Spanish',   color:'#e879f9', lang:'es-ES' },
+  { id:'alvaro',    key:'es-ES-AlvaroNeural',   name:'Alvaro',    gender:'male',   accent:'Spanish',   color:'#d946ef', lang:'es-ES' },
   // French
-  { id:'denise',    name:'Denise',    gender:'female', accent:'French',    style:'French Female',desc:'French female voice',          color:'#c4b5fd', lang:'fr-FR', pitch:1.1,  rate:0.88, volume:0.92, eq:{low:0,mid:2,high:3},   filterType:'highpass' },
+  { id:'denise',    key:'fr-FR-DeniseNeural',   name:'Denise',    gender:'female', accent:'French',    color:'#fb923c', lang:'fr-FR' },
+  { id:'henri',     key:'fr-FR-HenriNeural',    name:'Henri',     gender:'male',   accent:'French',    color:'#0ea5e9', lang:'fr-FR' },
   // German
-  { id:'katja',     name:'Katja',     gender:'female', accent:'German',    style:'German Female',desc:'German female voice',          color:'#2dd4bf', lang:'de-DE', pitch:1.0,  rate:0.9,  volume:0.94, eq:{low:2,mid:1,high:0},   filterType:'none' },
-  // Turkish
-  { id:'emel',      name:'Emel',      gender:'female', accent:'Turkish',   style:'Turkish Female',desc:'Turkish female voice',         color:'#fbbf24', lang:'tr-TR', pitch:1.05, rate:0.92, volume:0.93, eq:{low:1,mid:2,high:1},   filterType:'none' },
-  // Russian
-  { id:'svetlana',  name:'Svetlana',  gender:'female', accent:'Russian',   style:'Russian Female',desc:'Russian female voice',         color:'#f472b6', lang:'ru-RU', pitch:1.1,  rate:0.88, volume:0.93, eq:{low:2,mid:0,high:2},   filterType:'bandpass' },
-  // Portuguese (Brazil)
-  { id:'francisca', name:'Francisca', gender:'female', accent:'Brazilian', style:'Brazilian Female',desc:'Brazilian Portuguese female',color:'#009c3b', lang:'pt-BR', pitch:1.05, rate:0.92, volume:0.93, eq:{low:1,mid:3,high:1},   filterType:'none' },
-  { id:'antonio',   name:'Antonio',   gender:'male',   accent:'Brazilian', style:'Brazilian Male',  desc:'Brazilian Portuguese male',  color:'#ffdf00', lang:'pt-BR', pitch:0.75, rate:0.9,  volume:0.96, eq:{low:4,mid:1,high:-2},  filterType:'lowpass' },
+  { id:'katja',     key:'de-DE-KatjaNeural',    name:'Katja',     gender:'female', accent:'German',    color:'#22c55e', lang:'de-DE' },
+  { id:'conrad',    key:'de-DE-ConradNeural',   name:'Conrad',    gender:'male',   accent:'German',    color:'#06b6d4', lang:'de-DE' },
   // Italian
-  { id:'elsa',      name:'Elsa',      gender:'female', accent:'Italian',   style:'Italian Female',desc:'Italian female voice',          color:'#008c45', lang:'it-IT', pitch:1.1,  rate:0.9,  volume:0.93, eq:{low:0,mid:3,high:2},   filterType:'highpass' },
-  { id:'diego',     name:'Diego',     gender:'male',   accent:'Italian',   style:'Italian Male',  desc:'Italian male voice',            color:'#cd212a', lang:'it-IT', pitch:0.7,  rate:0.88, volume:0.96, eq:{low:5,mid:0,high:-3},  filterType:'lowpass' },
+  { id:'elsa',      key:'it-IT-ElsaNeural',     name:'Elsa',      gender:'female', accent:'Italian',   color:'#f472b6', lang:'it-IT' },
+  { id:'diego',     key:'it-IT-DiegoNeural',    name:'Diego',     gender:'male',   accent:'Italian',   color:'#10b981', lang:'it-IT' },
+  // Portuguese
+  { id:'francisca', key:'pt-BR-FranciscaNeural',name:'Francisca', gender:'female', accent:'Brazilian', color:'#818cf8', lang:'pt-BR' },
+  { id:'antonio',   key:'pt-BR-AntonioNeural',  name:'Antonio',   gender:'male',   accent:'Brazilian', color:'#84cc16', lang:'pt-BR' },
+  // Russian
+  { id:'svetlana',  key:'ru-RU-SvetlanaNeural', name:'Svetlana',  gender:'female', accent:'Russian',   color:'#38bdf8', lang:'ru-RU' },
+  { id:'dmitry',    key:'ru-RU-DmitryNeural',   name:'Dmitry',    gender:'male',   accent:'Russian',   color:'#a855f7', lang:'ru-RU' },
+  // Turkish
+  { id:'emel',      key:'tr-TR-EmelNeural',     name:'Emel',      gender:'female', accent:'Turkish',   color:'#a3e635', lang:'tr-TR' },
+  { id:'ahmet',     key:'tr-TR-AhmetNeural',    name:'Ahmet',     gender:'male',   accent:'Turkish',   color:'#ec4899', lang:'tr-TR' },
   // Polish
-  { id:'agnieszka', name:'Agnieszka', gender:'female', accent:'Polish',    style:'Polish Female',desc:'Polish female voice',            color:'#dc143c', lang:'pl-PL', pitch:1.05, rate:0.92, volume:0.93, eq:{low:2,mid:2,high:0},   filterType:'none' },
-  { id:'janusz',    name:'Janusz',    gender:'male',   accent:'Polish',    style:'Polish Male',  desc:'Polish male voice',              color:'#ffffff', lang:'pl-PL', pitch:0.7,  rate:0.87, volume:0.97, eq:{low:5,mid:1,high:-2},  filterType:'lowpass' },
+  { id:'agnieszka', key:'pl-PL-AgnieszkaNeural',name:'Agnieszka', gender:'female', accent:'Polish',    color:'#d946ef', lang:'pl-PL' },
+  { id:'marek',     key:'pl-PL-MarekNeural',    name:'Marek',     gender:'male',   accent:'Polish',    color:'#14b8a6', lang:'pl-PL' },
   // Dutch
-  { id:'colette',   name:'Colette',   gender:'female', accent:'Dutch',     style:'Dutch Female', desc:'Dutch female voice',             color:'#ae1c28', lang:'nl-NL', pitch:1.05, rate:0.9,  volume:0.93, eq:{low:1,mid:3,high:1},   filterType:'none' },
-  { id:'maarten',   name:'Maarten',   gender:'male',   accent:'Dutch',     style:'Dutch Male',   desc:'Dutch male voice',               color:'#21468b', lang:'nl-NL', pitch:0.75, rate:0.88, volume:0.96, eq:{low:4,mid:2,high:-1},  filterType:'bandpass' },
+  { id:'colette',   key:'nl-NL-ColetteNeural',  name:'Colette',   gender:'female', accent:'Dutch',     color:'#0891b2', lang:'nl-NL' },
+  { id:'maarten',   key:'nl-NL-MaartenNeural',  name:'Maarten',   gender:'male',   accent:'Dutch',     color:'#6366f1', lang:'nl-NL' },
   // Swedish
-  { id:'sofia',     name:'Sofia',     gender:'female', accent:'Swedish',   style:'Swedish Female',desc:'Swedish female voice',          color:'#006aa7', lang:'sv-SE', pitch:1.1,  rate:0.9,  volume:0.92, eq:{low:-1,mid:3,high:3},  filterType:'highpass' },
-  { id:'erik',      name:'Erik',      gender:'male',   accent:'Swedish',   style:'Swedish Male', desc:'Swedish male voice',            color:'#fecc02', lang:'sv-SE', pitch:0.72, rate:0.88, volume:0.96, eq:{low:3,mid:2,high:0},   filterType:'none' },
-  // Norwegian
-  { id:'nora',      name:'Nora',      gender:'female', accent:'Norwegian', style:'Norwegian Female',desc:'Norwegian female voice',       color:'#ba0c2f', lang:'nb-NO', pitch:1.08, rate:0.9,  volume:0.93, eq:{low:1,mid:2,high:2},   filterType:'none' },
-  { id:'lars',      name:'Lars',      gender:'male',   accent:'Norwegian', style:'Norwegian Male', desc:'Norwegian male voice',         color:'#00205b', lang:'nb-NO', pitch:0.72, rate:0.87, volume:0.97, eq:{low:4,mid:1,high:-1},  filterType:'lowpass' },
+  { id:'sofie',     key:'sv-SE-SofieNeural',    name:'Sofie',     gender:'female', accent:'Swedish',   color:'#f43f5e', lang:'sv-SE' },
+  { id:'svante',    key:'sv-SE-SvanteNeural',   name:'Svante',    gender:'male',   accent:'Swedish',   color:'#22d3ee', lang:'sv-SE' },
   // Danish
-  { id:'astrid',    name:'Astrid',    gender:'female', accent:'Danish',    style:'Danish Female', desc:'Danish female voice',           color:'#c8102e', lang:'da-DK', pitch:1.05, rate:0.9,  volume:0.93, eq:{low:0,mid:3,high:1},   filterType:'none' },
-  { id:'mikkel',    name:'Mikkel',    gender:'male',   accent:'Danish',    style:'Danish Male',   desc:'Danish male voice',             color:'#c60c30', lang:'da-DK', pitch:0.73, rate:0.88, volume:0.96, eq:{low:3,mid:2,high:-1},  filterType:'bandpass' },
+  { id:'christel',  key:'da-DK-ChristelNeural', name:'Christel',  gender:'female', accent:'Danish',    color:'#c084fc', lang:'da-DK' },
+  { id:'jeppe',     key:'da-DK-JeppeNeural',    name:'Jeppe',     gender:'male',   accent:'Danish',    color:'#fb923c', lang:'da-DK' },
   // Finnish
-  { id:'aada',      name:'Aada',      gender:'female', accent:'Finnish',   style:'Finnish Female',desc:'Finnish female voice',          color:'#003580', lang:'fi-FI', pitch:1.08, rate:0.88, volume:0.93, eq:{low:1,mid:2,high:2},   filterType:'highpass' },
-  { id:'ville',     name:'Ville',     gender:'male',   accent:'Finnish',   style:'Finnish Male', desc:'Finnish male voice',            color:'#003580', lang:'fi-FI', pitch:0.7,  rate:0.86, volume:0.97, eq:{low:4,mid:0,high:-2},  filterType:'lowpass' },
-  // Czech
-  { id:'eliska',    name:'Eliska',    gender:'female', accent:'Czech',     style:'Czech Female', desc:'Czech female voice',            color:'#11457e', lang:'cs-CZ', pitch:1.05, rate:0.9,  volume:0.93, eq:{low:1,mid:3,high:1},   filterType:'none' },
-  { id:'tomas',     name:'Tomas',     gender:'male',   accent:'Czech',     style:'Czech Male',   desc:'Czech male voice',              color:'#d7141a', lang:'cs-CZ', pitch:0.72, rate:0.88, volume:0.96, eq:{low:4,mid:1,high:-1},  filterType:'lowpass' },
-  // Romanian
-  { id:'andreea',   name:'Andreea',   gender:'female', accent:'Romanian',  style:'Romanian Female',desc:'Romanian female voice',        color:'#002b7f', lang:'ro-RO', pitch:1.06, rate:0.9,  volume:0.93, eq:{low:0,mid:3,high:2},   filterType:'none' },
-  { id:'stefan',    name:'Stefan',    gender:'male',   accent:'Romanian',  style:'Romanian Male', desc:'Romanian male voice',           color:'#fcd116', lang:'ro-RO', pitch:0.73, rate:0.88, volume:0.96, eq:{low:3,mid:2,high:-1},  filterType:'bandpass' },
-  // Greek
-  { id:'elena',     name:'Elena',     gender:'female', accent:'Greek',     style:'Greek Female', desc:'Greek female voice',            color:'#0d5eaf', lang:'el-GR', pitch:1.1,  rate:0.9,  volume:0.92, eq:{low:-1,mid:3,high:3},  filterType:'highpass' },
-  { id:'nikos',     name:'Nikos',     gender:'male',   accent:'Greek',     style:'Greek Male',   desc:'Greek male voice',              color:'#0d5eaf', lang:'el-GR', pitch:0.7,  rate:0.87, volume:0.97, eq:{low:5,mid:0,high:-3},  filterType:'lowpass' },
-  // Hungarian
-  { id:'reka',      name:'Reka',      gender:'female', accent:'Hungarian', style:'Hungarian Female',desc:'Hungarian female voice',       color:'#477050', lang:'hu-HU', pitch:1.06, rate:0.9,  volume:0.93, eq:{low:1,mid:2,high:2},   filterType:'none' },
-  { id:'balazs',    name:'Balazs',    gender:'male',   accent:'Hungarian', style:'Hungarian Male', desc:'Hungarian male voice',         color:'#ce2939', lang:'hu-HU', pitch:0.72, rate:0.88, volume:0.96, eq:{low:4,mid:1,high:-2},  filterType:'lowpass' },
-  // Thai
+  { id:'selma',     key:'fi-FI-SelmaNeural',    name:'Selma',     gender:'female', accent:'Finnish',   color:'#e879f9', lang:'fi-FI' },
+  { id:'harri',     key:'fi-FI-HarriNeural',    name:'Harri',     gender:'male',   accent:'Finnish',   color:'#a3e635', lang:'fi-FI' },
+  // Indonesian
+  { id:'gadis',     key:'id-ID-GadisNeural',    name:'Gadis',     gender:'female', accent:'Indonesian',color:'#22d3ee', lang:'id-ID' },
+  { id:'ardi',      key:'id-ID-ArdiNeural',     name:'Ardi',      gender:'male',   accent:'Indonesian',color:'#a3e635', lang:'id-ID' },
+];
   { id:'priya',     name:'Priya',     gender:'female', accent:'Thai',      style:'Thai Female',  desc:'Thai female voice',             color:'#a51931', lang:'th-TH', pitch:1.12, rate:0.92, volume:0.91, eq:{low:-1,mid:3,high:3},  filterType:'highpass' },
   { id:'somchai',   name:'Somchai',   gender:'male',   accent:'Thai',      style:'Thai Male',    desc:'Thai male voice',               color:'#2d2a4a', lang:'th-TH', pitch:0.68, rate:0.88, volume:0.96, eq:{low:5,mid:0,high:-3},  filterType:'lowpass' },
   // Vietnamese
@@ -2447,27 +2449,18 @@ const TTS = {
 
     if (API_BASE) {
       try {
-        onStatus?.('generating', '\u26A1 Generating character voice\u2026');
-        const payload = {
-          text: text.slice(0, 500),
-          engine: 'cvoice',
-          voice_key: voiceId || 'en-US-AriaNeural',
-          voice_id: voice.voice_id || null,
-          person_slug: voice.slug || '',
-          person_name: voice.name || '',
-        };
+        onStatus?.('generating', `\u26A1 Edge TTS \u00B7 ${voice.name}\u2026`);
         const resp = await fetch(API_BASE + '/studio/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+          body: JSON.stringify({ text: text.slice(0, 10000), voice_key: voice.key || voiceId || 'en-US-AriaNeural' })
         });
         if (resp.ok) {
           const data = await resp.json();
-          const audioUrl = data.url;
           this.isGenerating = false;
           onStatus?.('done', `Done \u00B7 ${data.engine} \u00B7 ${data.voice}`);
           DB.deductCredits(currentUser?.id, text.length);
-          return { url: audioUrl, blob: null, modelUsed: data.engine, chars: text.length };
+          return { url: data.url, blob: null, modelUsed: data.engine, chars: text.length };
         }
       } catch (e) {
         console.warn('Backend TTS failed:', e.message);
