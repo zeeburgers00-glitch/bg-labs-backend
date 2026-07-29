@@ -520,6 +520,49 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
 .si-line { width: 1px; height: 36px; background: linear-gradient(to bottom, var(--orange), transparent); animation: siP 1.6s ease-in-out infinite; }
 @keyframes siP { 0%,100% { opacity: .3; } 50% { opacity: 1; } }
 
+/* ── RANGE INPUTS ── */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  background: rgba(255,255,255,.08);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  background: var(--orange);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(249,115,22,.4);
+  transition: transform .15s;
+}
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: var(--orange);
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 0 8px rgba(249,115,22,.4);
+}
+
+/* ── EMOTION PRESET BUTTONS ── */
+.btn-emotion { font-size: .72rem !important; padding: .3rem .6rem !important; border-radius: 100px !important; white-space: nowrap; }
+
+/* ── GALLERY ── */
+.gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: .75rem; }
+.gallery-item { background: var(--card); border: 1px solid var(--bdr); border-radius: var(--r); overflow: hidden; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: .8rem; cursor: pointer; transition: all .2s; }
+.gallery-item:hover { border-color: rgba(249,115,22,.3); transform: scale(1.02); }
+.gallery-item img { width: 100%; height: 100%; object-fit: cover; }
+
 /* ── RESPONSIVE ── */
 @media (max-width: 1024px) {
   .plans-grid { grid-template-columns: repeat(2,1fr); }
@@ -650,7 +693,7 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
       <button class="app-nl" data-page="pricing" onclick="goTo('pricing')">Pricing</button>
     </div>
     <div class="nav-actions">
-      <div class="credits-pill" onclick="goTo('pricing')">⚡ 1,000 credits</div>
+      <div class="credits-pill" onclick="goTo('pricing')">⚡ <span id="credits-pill-num">∞</span> credits</div>
       <div class="user-menu">
         <div class="user-avatar" onclick="toggleUserMenu()">U</div>
         <div class="user-dropdown">
@@ -1649,7 +1692,7 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
       <div class="card" style="padding:1.5rem;margin-bottom:1.5rem">
         <div class="inp-group" style="margin-bottom:1rem"><label class="inp-label">Prompt</label><textarea class="inp" id="ig-prompt" rows="3" placeholder="Describe the image you want to generate…"></textarea></div>
         <div class="settings-row" style="margin-bottom:1rem">
-          <div class="inp-group"><label class="inp-label">Style</label><select class="inp" id="ig-style"><option value="realistic">📷 Realistic</option><option value="anime">🎌 Anime</option><option value="oil-painting">🎨 Oil Painting</option><option value="digital-art">💻 Digital Art</option><option value="watercolor">🖌️ Watercolor</option><option value="3d-render">🧊 3D Render</option><option value="pixel-art">👾 Pixel Art</option><option value="cyberpunk">🌃 Cyberpunk</option></select></div>
+          <div class="inp-group"><label class="inp-label">Style</label><select class="inp" id="ig-style"><option value="realistic">📷 Realistic</option><option value="anime">🎌 Anime</option><option value="oil_painting">🎨 Oil Painting</option><option value="digital_art">💻 Digital Art</option><option value="watercolor">🖌️ Watercolor</option><option value="3d_render">🧊 3D Render</option><option value="pixel_art">👾 Pixel Art</option><option value="cyberpunk">🌃 Cyberpunk</option><option value="cinematic">🎬 Cinematic</option><option value="portrait">👤 Portrait</option><option value="landscape">🌄 Landscape</option><option value="fantasy">🧙 Fantasy</option><option value="minimalist">⬜ Minimalist</option><option value="comic">💥 Comic Book</option></select></div>
           <div class="inp-group"><label class="inp-label">Size</label><select class="inp" id="ig-size"><option value="512x512">512×512</option><option value="768x768">768×768</option><option value="1024x1024">1024×1024</option></select></div>
         </div>
         <button class="btn btn-primary btn-lg" id="ig-gen-btn" onclick="generateImage()">🎨 Generate Image</button>
@@ -1690,8 +1733,9 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
       <div class="page-header"><h1>📝 Script Writer</h1><p>AI-powered script generation with templates</p></div>
       <div class="studio-layout">
         <div class="studio-main">
+          <div class="inp-group" style="margin-bottom:1.25rem"><label class="inp-label">Topic</label><input class="inp" id="sw-topic" placeholder="e.g. Artificial Intelligence, Digital Marketing, Climate Change"/></div>
           <div class="settings-row" style="margin-bottom:1.25rem">
-            <div class="inp-group"><label class="inp-label">Topic / Genre</label><select class="inp" id="sw-genre"><option value="youtube-intro">YouTube Intro</option><option value="youtube-explainer">Explainer Video</option><option value="podcast-intro">Podcast Intro</option><option value="ad-read">Ad Read / Sponsor</option><option value="tutorial">Tutorial / How-To</option><option value="story">Story / Narrative</option><option value="presentation">Presentation</option><option value="news">News / Report</option></select></div>
+            <div class="inp-group"><label class="inp-label">Genre</label><select class="inp" id="sw-genre"><option value="youtube-intro">YouTube Intro</option><option value="youtube-explainer">Explainer Video</option><option value="podcast-intro">Podcast Intro</option><option value="ad-read">Ad Read / Sponsor</option><option value="tutorial">Tutorial / How-To</option><option value="story">Story / Narrative</option><option value="presentation">Presentation</option><option value="news">News / Report</option></select></div>
             <div class="inp-group"><label class="inp-label">Mood</label><select class="inp" id="sw-mood"><option value="professional">Professional</option><option value="casual">Casual</option><option value="energetic">Energetic</option><option value="calm">Calm</option><option value="humorous">Humorous</option><option value="dramatic">Dramatic</option></select></div>
           </div>
           <div class="inp-group" style="margin-bottom:1.25rem"><label class="inp-label">Duration</label><select class="inp" id="sw-duration"><option value="100">Short (~100 words)</option><option value="250" selected>Medium (~250 words)</option><option value="500">Long (~500 words)</option></select></div>
@@ -1701,7 +1745,7 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
             <div class="card" style="padding:1.5rem">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem"><h3 style="font-size:1rem;font-weight:700">Generated Script</h3><button class="btn btn-ghost btn-sm" onclick="copyScript()">📋 Copy</button></div>
               <div id="sw-output" style="background:var(--bg2);border:1px solid var(--bdr);border-radius:10px;padding:1.25rem;font-size:.9rem;color:var(--muted2);line-height:1.8;white-space:pre-wrap"></div>
-              <div style="display:flex;gap:.5rem;margin-top:1rem"><button class="btn btn-primary btn-sm" onclick="useScriptInStudio()">🎙️ Use in Studio</button><button class="btn btn-ghost btn-sm" onclick="copyScript()">📋 Copy</button></div>
+              <div style="display:flex;gap:.5rem;margin-top:1rem"><button class="btn btn-primary btn-sm" onclick="useScriptInStudio()">🎙️ Use in Studio</button><button class="btn btn-ghost btn-sm" onclick="copyScript()">📋 Copy</button><button class="btn btn-ghost btn-sm" onclick="downloadScript()">⬇ Download TXT</button></div>
             </div>
           </div>
         </div>
@@ -2785,6 +2829,13 @@ function updateCreditsDisplay() {
   if(!currentUser) return;
   const el=document.getElementById('credits-pill-num');
   if(el) el.textContent=(currentUser.credits||999999).toLocaleString();
+  // Update sidebar credits too
+  const sidebarCredits = document.querySelector('.credit-bar-wrap .cb-nums');
+  if (sidebarCredits) {
+    const used = currentUser.charsUsed||0;
+    const total = currentUser.planCredits||999999;
+    sidebarCredits.innerHTML = `<span id="cb-used">${used.toLocaleString()}</span> / <span id="cb-total">${total.toLocaleString()}</span> chars used`;
+  }
 }
 
 // ── LOGIN / SIGNUP ───────────────────────────
@@ -3761,13 +3812,13 @@ const SCRIPT_TEMPLATES = {
 };
 
 window.generateScript = function() {
+  const topicInput = document.getElementById('sw-topic');
   const genre = document.getElementById('sw-genre')?.value || 'youtube-intro';
   const mood = document.getElementById('sw-mood')?.value || 'professional';
   const wordCount = parseInt(document.getElementById('sw-duration')?.value || '250');
-  const details = document.getElementById('sw-details')?.value || '';
-  const topic = details || 'this topic';
+  const topic = (topicInput?.value || '').trim() || 'this topic';
   const templates = SCRIPT_TEMPLATES[genre]?.[mood] || SCRIPT_TEMPLATES['youtube-intro']['professional'];
-  let script = templates.map(t => t.replace(/\{topic\}/g, topic).replace(/\{channel\}/g, details || 'our channel').replace(/\{brand\}/g, 'our sponsor').replace(/\{benefit\}/g, 'amazing things').replace(/\{code\}/g, 'BG20').join(' ')).join('\n\n');
+  let script = templates.map(t => t.replace(/\{topic\}/g, topic).replace(/\{channel\}/g, topic).replace(/\{brand\}/g, 'our sponsor').replace(/\{benefit\}/g, 'amazing things').replace(/\{code\}/g, 'BG20').join(' ')).join('\n\n');
   const currentLen = script.split(/\s+/).length;
   if (currentLen < wordCount) {
     const extraSentences = [
@@ -3794,6 +3845,19 @@ window.generateScript = function() {
 window.copyScript = function() {
   const text = document.getElementById('sw-output')?.textContent || '';
   navigator.clipboard.writeText(text).then(() => toast('📋 Copied!', 'success')).catch(() => toast('Copy failed', 'error'));
+};
+
+window.downloadScript = function() {
+  const text = document.getElementById('sw-output')?.textContent || '';
+  if (!text) { toast('No script to download', 'error'); return; }
+  const topic = document.getElementById('sw-topic')?.value || 'script';
+  const blob = new Blob([text], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `bglabs_${topic.replace(/[^a-zA-Z0-9]/g,'_').slice(0,30)}.txt`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('⬇ Downloaded!');
 };
 
 window.useScriptInStudio = function() {
