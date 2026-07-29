@@ -590,6 +590,18 @@ input[type="range"]::-moz-range-thumb {
   .nav-actions { gap: .5rem; }
   #cur, #curRing { display: none; }
   body { cursor: auto; }
+  .studio-layout { grid-template-columns: 1fr; }
+  .studio-sidebar { order: 2; }
+  .page-header h1 { font-size: 1.3rem; }
+  .hero { padding: 4rem 1rem 2rem; min-height: auto; }
+  .section { padding: 2.5rem 1rem; }
+  .hero-h1 { font-size: 2rem; letter-spacing: -1px; }
+  .hero-p { font-size: .9rem; }
+  .btn-xl { padding: .7rem 1.5rem; font-size: .9rem; }
+  .api-endpoint { padding: 1rem; }
+  .voice-dropdown { max-height: 200px; }
+  .hist-item { flex-direction: column; align-items: flex-start; }
+  .hist-actions { margin-top: .5rem; width: 100%; justify-content: flex-end; }
 }
 @media (max-width: 480px) {
   .plans-grid { grid-template-columns: 1fr; }
@@ -2117,12 +2129,21 @@ input[type="range"]::-moz-range-thumb {
     <div class="sec-head"><div class="sec-chip">API</div><h2 class="sec-h2">API <span class="grad">Documentation</span></h2><p class="sec-sub">Integrate BG LABS into your apps with our RESTful API.</p></div>
     <div class="settings-section"><h3>Authentication</h3><p style="font-size:.875rem;color:var(--muted2);line-height:1.7;margin-bottom:1rem">All API requests require a Bearer token in the Authorization header.</p><div class="code-block" style="margin-top:0">Authorization: Bearer YOUR_API_KEY</div></div>
     <div class="settings-section"><h3>Endpoints</h3>
-      <div class="api-endpoint"><span class="api-method post">POST</span><span class="api-path">/api/studio/generate</span><div class="api-desc">Generate TTS audio from text. Body: { text, voice, language, temperature, speed }</div></div>
+      <div class="api-endpoint"><span class="api-method post">POST</span><span class="api-path">/api/studio/generate</span><div class="api-desc">Generate TTS audio. Body: { text, voice_key, rate, pitch }. Rate: "+0%" to "+50%" or "-50%". Pitch: "+0Hz" to "+50Hz" or "-50Hz".</div></div>
+      <div class="api-endpoint"><span class="api-method get">GET</span><span class="api-path">/api/voices</span><div class="api-desc">List all 60+ Edge TTS voices with language, gender, accent info.</div></div>
+      <div class="api-endpoint"><span class="api-method get">GET</span><span class="api-path">/api/voices/languages</span><div class="api-desc">List all supported languages and their voice IDs.</div></div>
+      <div class="api-endpoint"><span class="api-method get">GET</span><span class="api-path">/api/studio/audio</span><div class="api-desc">List user's audio generation history.</div></div>
+      <div class="api-endpoint"><span class="api-method get">GET</span><span class="api-path">/api/studio/audio/download/{filename}</span><div class="api-desc">Download a generated audio file as MP3.</div></div>
+      <div class="api-endpoint"><span class="api-method post">POST</span><span class="api-path">/api/image/generate</span><div class="api-desc">Generate image. Body: { prompt, style, width, height }. 14 styles available.</div></div>
+      <div class="api-endpoint"><span class="api-method get">GET</span><span class="api-path">/api/image/styles</span><div class="api-desc">List all 14 image generation styles.</div></div>
+      <div class="api-endpoint"><span class="api-method get">GET</span><span class="api-path">/api/image/history</span><div class="api-desc">List user's image generation history.</div></div>
+      <div class="api-endpoint"><span class="api-method post">POST</span><span class="api-path">/api/script/write</span><div class="api-desc">Generate script. Body: { topic, genre, mood, length }. 8 genres, 6 moods.</div></div>
+      <div class="api-endpoint"><span class="api-method post">POST</span><span class="api-path">/api/avatar/generate</span><div class="api-desc">Generate SVG avatar. Body: { hair_color, eye_color, skin_tone, clothing_color }.</div></div>
       <div class="api-endpoint"><span class="api-method get">GET</span><span class="api-path">/api/auth/me</span><div class="api-desc">Get current user profile and credit info.</div></div>
-      <div class="api-endpoint"><span class="api-method post">POST</span><span class="api-path">/api/auth/register</span><div class="api-desc">Register a new user. Body: { email, username, full_name, password }</div></div>
-      <div class="api-endpoint"><span class="api-method post">POST</span><span class="api-path">/api/auth/login</span><div class="api-desc">Login. Body (form-urlencoded): username, password. Returns access_token.</div></div>
-      <div class="api-endpoint"><span class="api-method get">GET</span><span class="api-path">/api/admin/stats</span><div class="api-desc">Admin: Get platform statistics.</div></div>
-      <div class="api-endpoint"><span class="api-method get">GET</span><span class="api-path">/api/admin/users</span><div class="api-desc">Admin: Get all users list.</div></div>
+      <div class="api-endpoint"><span class="api-method post">POST</span><span class="api-path">/api/auth/register</span><div class="api-desc">Register new user. Form: email, username, full_name, password.</div></div>
+      <div class="api-endpoint"><span class="api-method post">POST</span><span class="api-path">/api/auth/login</span><div class="api-desc">Login. Form: username, password. Returns access_token.</div></div>
+      <div class="api-endpoint"><span class="api-method get">GET</span><span class="api-path">/api/admin/stats</span><div class="api-desc">Admin: Platform statistics.</div></div>
+      <div class="api-endpoint"><span class="api-method get">GET</span><span class="api-path">/api/admin/users</span><div class="api-desc">Admin: All users list.</div></div>
     </div>
     <div class="settings-section"><h3>Code Examples</h3>
       <div class="code-block" style="margin-top:0"><span class="c-kw">curl</span> -X POST https://api.bglabs.io/api/studio/generate \\<br>&nbsp;&nbsp;-H <span class="c-str">"Authorization: Bearer YOUR_KEY"</span> \\<br>&nbsp;&nbsp;-H <span class="c-str">"Content-Type: application/json"</span> \\<br>&nbsp;&nbsp;-d <span class="c-str">'{"text":"Hello from BG LABS!","voice":"rachel"}'</span></div>
@@ -3439,7 +3460,8 @@ function renderVoiceStudio() {
   list.innerHTML = profiles.map((p, i) => `
     <div style="display:flex;align-items:center;gap:.75rem;padding:.75rem;border:1px solid var(--bdr);border-radius:10px;margin-bottom:.5rem">
       <div style="width:36px;height:36px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:.8rem">${p.name.slice(0,1)}</div>
-      <div style="flex:1"><div style="font-weight:600;font-size:.85rem">${p.name}</div><div style="font-size:.72rem;color:var(--muted)">${p.desc || 'Custom voice'}</div></div>
+      <div style="flex:1"><div style="font-weight:600;font-size:.85rem">${p.name}</div><div style="font-size:.72rem;color:var(--muted)">${p.desc || 'Custom voice'} · Speed: ${p.speed || 1}x</div></div>
+      <button class="btn btn-ghost btn-sm" onclick="useVoiceProfile(${i})" title="Use in Studio">🎙️</button>
       <button class="btn btn-ghost btn-sm" onclick="deleteVoiceProfile(${i})" style="color:var(--red)">🗑</button>
     </div>`).join('');
 }
@@ -3478,6 +3500,20 @@ window.deleteVoiceProfile = function(i) {
   localStorage.setItem('bglabs_voice_profiles', JSON.stringify(profiles));
   renderVoiceStudio();
   toast('Deleted');
+};
+
+window.useVoiceProfile = function(i) {
+  const profiles = JSON.parse(localStorage.getItem('bglabs_voice_profiles') || '[]');
+  const p = profiles[i];
+  if (!p) return;
+  goTo('studio');
+  setTimeout(() => {
+    const rateSlider = document.getElementById('rate-slider');
+    const pitchSlider = document.getElementById('pitch-slider');
+    if (rateSlider && p.speed) { rateSlider.value = Math.round((p.speed - 1) * 50); rateSlider.dispatchEvent(new Event('input')); }
+    if (pitchSlider && p.pitch) { pitchSlider.value = Math.round((p.pitch - 1) * 50); pitchSlider.dispatchEvent(new Event('input')); }
+  }, 300);
+  toast('🎙️ ' + p.name + ' profile loaded');
 };
 
 // ── AUDIO EDITOR ────────────────────────────
