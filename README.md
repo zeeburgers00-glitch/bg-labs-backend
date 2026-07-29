@@ -1,42 +1,21 @@
 ---
-title: BG Labs - Free TTS Platform
+title: BG LABS
 emoji: 🎙️
-colorFrom: purple
-colorTo: blue
+colorFrom: orange
+colorTo: red
 sdk: docker
-app_port: 8000
 pinned: false
-license: apache-2.0
+license: mit
 ---
 
-# BG Labs - Free AI Voice Generation Platform
+# BG LABS - AI Voice & Media Platform
 
-Free, unlimited AI voice generation with 20+ built-in voices and 17+ language support.
+FREE unlimited AI platform with:
+- 🎙️ Text-to-Speech (26+ voices, 14+ languages)
+- 🖼️ Image Generation (Pollinations.ai)
+- 🎬 Video Generation (FFmpeg)
+- 🎭 Avatar Studio
+- 🔊 Voice Cloning
+- ✍️ Script Writer
 
-## Features
-
-- 🎙️ 20+ built-in voices (male & female)
-- 🌍 17+ languages supported
-- 🆓 Completely free and unlimited
-- 🎤 Voice cloning support
-- 📁 Project management
-- 🔊 High-quality MP3 output
-
-## Supported Languages
-
-English, Spanish, French, German, Italian, Portuguese, Polish, Turkish, Russian, Dutch, Czech, Arabic, Chinese, Japanese, Hungarian, Korean, Hindi
-
-## API Endpoints
-
-- `POST /api/auth/register` - Create account
-- `POST /api/auth/login` - Login
-- `GET /api/voices` - List all voices
-- `POST /api/studio/generate` - Generate audio
-- `GET /api/studio/audio` - List generated audio
-
-## Tech Stack
-
-- FastAPI (Python)
-- Coqui XTTS v2 (Open Source TTS)
-- PostgreSQL
-- Docker
+All features are FREE and UNLIMITED!
