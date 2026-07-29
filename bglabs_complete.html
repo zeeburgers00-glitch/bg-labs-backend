@@ -2447,27 +2447,34 @@ const TTS = {
 
     if (API_BASE) {
       try {
-        onStatus?.('generating', '\u26A1 Trying backend XTTS v2\u2026');
-        const lang = voice.lang ? voice.lang.split('-')[0] : 'en';
+        onStatus?.('generating', '\u26A1 Generating character voice\u2026');
+        const payload = {
+          text: text.slice(0, 500),
+          engine: 'cvoice',
+          voice_key: voiceId || 'en-US-AriaNeural',
+          voice_id: voice.voice_id || null,
+          person_slug: voice.slug || '',
+          person_name: voice.name || '',
+        };
         const resp = await fetch(API_BASE + '/studio/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: text.slice(0, 10000), voice_key: voiceId || 'aria', language: lang, temperature: 0.7, speed: voice.rate || 1.0 })
+          body: JSON.stringify(payload)
         });
         if (resp.ok) {
           const data = await resp.json();
           const audioUrl = data.url;
           this.isGenerating = false;
-          onStatus?.('done', 'Done \u00B7 XTTS v2');
+          onStatus?.('done', `Done \u00B7 ${data.engine} \u00B7 ${data.voice}`);
           DB.deductCredits(currentUser?.id, text.length);
-          return { url: audioUrl, blob: null, modelUsed: 'XTTS v2', chars: text.length };
+          return { url: audioUrl, blob: null, modelUsed: data.engine, chars: text.length };
         }
       } catch (e) {
         console.warn('Backend TTS failed:', e.message);
       }
     }
 
-    onStatus?.('generating', '\uD83D\uDD0A Generating diverse voice\u2026');
+    onStatus?.('generating', '\uD83D\uDD0A Generating voice\u2026');
     try {
       const result = await this._browserTTSRecord(text, voice);
       this.isGenerating = false;
