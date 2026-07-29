@@ -1945,7 +1945,7 @@ input[type="range"]::-moz-range-thumb {
             <div class="inp-group"><label class="inp-label">Clothing Color</label><select class="inp" id="avatar-clothes" onchange="updateAvatarPreview()"><option value="#f97316">Orange</option><option value="#3b82f6">Blue</option><option value="#22c55e">Green</option><option value="#a855f7">Purple</option><option value="#1f2937">Dark</option></select></div>
           </div>
           <div class="inp-group" style="margin-bottom:1rem"><label class="inp-label">Preview Text (TTS)</label><textarea class="inp" id="avatar-text" rows="2" placeholder="Enter text to hear your avatar speak…"></textarea></div>
-          <div style="display:flex;gap:.75rem;flex-wrap:wrap"><button class="btn btn-primary" onclick="playAvatarTTS()">▶ Preview with Voice</button><button class="btn btn-outline" onclick="saveAvatar()">💾 Save Avatar</button></div>
+          <div style="display:flex;gap:.75rem;flex-wrap:wrap"><button class="btn btn-primary" onclick="playAvatarTTS()">▶ Preview with Voice</button><button class="btn btn-outline" onclick="saveAvatar()">💾 Save</button><button class="btn btn-ghost" onclick="downloadAvatarSVG()">⬇ SVG</button></div>
         </div>
         <div class="studio-sidebar">
           <div class="card" style="padding:1.25rem"><div class="inp-label" style="margin-bottom:.75rem">📋 Saved Avatars</div><div id="avatar-list"></div></div>
@@ -4008,6 +4008,7 @@ window.saveAvatar = function() {
   const avatar = {
     base: document.getElementById('avatar-base')?.value || '🧑',
     hair: document.getElementById('avatar-hair')?.value || '#1a1a2e',
+    skin: document.getElementById('avatar-skin')?.value || '#fdbcb4',
     eyes: document.getElementById('avatar-eyes')?.value || '#3b82f6',
     clothes: document.getElementById('avatar-clothes')?.value || '#f97316',
     createdAt: new Date().toISOString()
@@ -4017,6 +4018,31 @@ window.saveAvatar = function() {
   localStorage.setItem('bglabs_avatars', JSON.stringify(avatars));
   renderAvatarList();
   toast('✅ Avatar saved!', 'success');
+};
+
+window.downloadAvatarSVG = function() {
+  const hair = document.getElementById('avatar-hair')?.value || '#1a1a2e';
+  const eyes = document.getElementById('avatar-eyes')?.value || '#3b82f6';
+  const skin = document.getElementById('avatar-skin')?.value || '#fdbcb4';
+  const clothes = document.getElementById('avatar-clothes')?.value || '#f97316';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+    <defs><linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:${clothes};stop-opacity:0.15"/><stop offset="100%" style="stop-color:${clothes};stop-opacity:0.05"/></linearGradient></defs>
+    <circle cx="100" cy="100" r="95" fill="url(#bg)"/>
+    <circle cx="100" cy="85" r="55" fill="${hair}"/>
+    <circle cx="100" cy="100" r="45" fill="${skin}"/>
+    <circle cx="80" cy="92" r="8" fill="white"/><circle cx="120" cy="92" r="8" fill="white"/>
+    <circle cx="80" cy="92" r="5" fill="${eyes}"/><circle cx="120" cy="92" r="5" fill="${eyes}"/>
+    <circle cx="80" cy="90" r="1.5" fill="white"/><circle cx="120" cy="90" r="1.5" fill="white"/>
+    <path d="M 85 105 Q 100 115 115 105" stroke="${clothes}" fill="none" stroke-width="2.5" stroke-linecap="round"/>
+    <ellipse cx="100" cy="145" rx="40" ry="25" fill="${clothes}"/>
+  </svg>`;
+  const blob = new Blob([svg], { type: 'image/svg+xml' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'bglabs_avatar.svg';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('⬇ SVG downloaded!');
 };
 
 function renderAvatarList() {
