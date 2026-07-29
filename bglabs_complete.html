@@ -556,6 +556,46 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
   .auth-box { padding: 1.75rem; }
 }
 
+/* ── NEW PAGE STYLES ── */
+.tool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; }
+.tool-card { background: var(--card); border: 1px solid var(--bdr); border-radius: 16px; padding: 1.5rem; cursor: pointer; transition: all .25s; }
+.tool-card:hover { border-color: rgba(249,115,22,.3); transform: translateY(-3px); box-shadow: 0 12px 40px rgba(249,115,22,.07); }
+.tool-card .tc-icon { font-size: 2rem; margin-bottom: .75rem; }
+.tool-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: .4rem; }
+.tool-card p { font-size: .8rem; color: var(--muted2); line-height: 1.5; }
+.ref-code-box { background: var(--card); border: 1px solid var(--bdr2); border-radius: 16px; padding: 2rem; text-align: center; max-width: 500px; margin: 0 auto 2rem; }
+.ref-code { font-size: 2rem; font-weight: 900; font-family: monospace; color: var(--orange); letter-spacing: 4px; margin: 1rem 0; }
+.ref-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; max-width: 600px; margin: 0 auto 2rem; }
+.ref-stat { background: var(--card); border: 1px solid var(--bdr); border-radius: var(--r); padding: 1.25rem; text-align: center; }
+.ref-stat .num { font-size: 1.5rem; font-weight: 900; color: var(--orange); }
+.ref-stat .lbl { font-size: .8rem; color: var(--muted); margin-top: .25rem; }
+.share-btns { display: flex; gap: .5rem; justify-content: center; flex-wrap: wrap; margin-top: 1rem; }
+.space-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+.space-card { background: var(--card); border: 1px solid var(--bdr); border-radius: 16px; padding: 1.5rem; cursor: pointer; transition: all .25s; }
+.space-card:hover { border-color: rgba(249,115,22,.3); transform: translateY(-2px); }
+.space-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: .4rem; }
+.space-card p { font-size: .8rem; color: var(--muted2); }
+.api-endpoint { background: var(--card); border: 1px solid var(--bdr); border-radius: var(--r); padding: 1.25rem; margin-bottom: .75rem; }
+.api-method { display: inline-block; font-size: .7rem; font-weight: 700; padding: .2rem .6rem; border-radius: 6px; margin-right: .5rem; font-family: monospace; }
+.api-method.get { background: rgba(34,197,94,.15); color: var(--green); border: 1px solid rgba(34,197,94,.3); }
+.api-method.post { background: rgba(59,130,246,.15); color: var(--blue); border: 1px solid rgba(59,130,246,.3); }
+.api-method.put { background: rgba(234,179,8,.15); color: #eab308; border: 1px solid rgba(234,179,8,.3); }
+.api-method.del { background: rgba(239,68,68,.15); color: var(--red); border: 1px solid rgba(239,68,68,.3); }
+.api-path { font-family: monospace; font-size: .85rem; color: var(--text); }
+.api-desc { font-size: .8rem; color: var(--muted2); margin-top: .4rem; }
+.avatar-preview { width: 120px; height: 120px; border-radius: 50%; margin: 0 auto 1.5rem; display: flex; align-items: center; justify-content: center; font-size: 3rem; border: 3px solid var(--bdr2); }
+.waveform-display { background: var(--bg2); border: 1px solid var(--bdr); border-radius: var(--r); height: 120px; display: flex; align-items: center; justify-content: center; gap: 2px; padding: 1rem; margin: 1rem 0; overflow: hidden; }
+.waveform-bar { width: 4px; border-radius: 2px; background: var(--orange); opacity: .6; transition: height .2s; }
+.timeline-track { background: var(--bg2); border: 1px solid var(--bdr); border-radius: var(--r); padding: 1rem; margin: .5rem 0; }
+.timeline-scene { display: flex; align-items: center; gap: .75rem; padding: .5rem .75rem; background: rgba(255,255,255,.03); border: 1px solid var(--bdr); border-radius: 8px; margin-bottom: .5rem; }
+.timeline-scene-num { font-size: .7rem; font-weight: 700; color: var(--orange); min-width: 24px; }
+.timeline-scene-text { flex: 1; font-size: .8rem; color: var(--muted2); }
+.gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: .75rem; }
+.gallery-item { background: var(--card); border: 1px solid var(--bdr); border-radius: var(--r); overflow: hidden; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: .8rem; }
+.gallery-item img { width: 100%; height: 100%; object-fit: cover; }
+.plan-compare-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; max-width: 900px; margin: 0 auto; }
+@media (max-width: 768px) { .ref-stats { grid-template-columns: 1fr; } .plan-compare-grid { grid-template-columns: 1fr; } }
+
 </style>
 </head>
 <body>
@@ -816,9 +856,10 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
       <button class="sb-item" data-page="history" onclick="goTo('history')">🕐 History</button>
       <div class="sb-divider"></div>
       <div class="sb-section">Account</div>
-      <button class="sb-item" data-page="pricing" onclick="goTo('pricing')">💎 Upgrade</button>
       <button class="sb-item" data-page="settings" onclick="goTo('settings')">⚙️ Settings</button>
+      <button class="sb-item" data-page="buy-credits" onclick="goTo('buy-credits')">💳 Buy Credits</button>
       <div class="sb-divider"></div>
+      <button class="sb-item" data-page="admin" onclick="goTo('admin')" id="sb-admin" style="display:none">🛡️ Admin</button>
       <button class="sb-item" style="color:#64748b" onclick="doLogout()">🚪 Log out</button>
     </nav>
     <!-- Main content -->
@@ -981,12 +1022,21 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
 <div id="pg-history" class="pg">
   <div class="app-layout">
     <nav class="sidebar">
+      <div class="sb-section">Main</div>
       <button class="sb-item" onclick="goTo('dashboard')">📊 Dashboard</button>
       <button class="sb-item" onclick="goTo('studio')">🎙️ Studio</button>
       <button class="sb-item" onclick="goTo('voices-app')">🔊 Voices</button>
-      <button class="sb-item active">🕐 History</button>
+      <button class="sb-item" onclick="goTo('voice-studio')">🎤 Voice Studio</button>
+      <button class="sb-item" onclick="goTo('audio-editor')">✂️ Audio Editor</button>
+      <div class="sb-divider"></div><div class="sb-section">AI Tools</div>
+      <button class="sb-item" onclick="goTo('image-generator')">🖼️ Image Generator</button>
+      <button class="sb-item" onclick="goTo('script-writer')">📝 Script Writer</button>
+      <button class="sb-item" onclick="goTo('youtube-automation')">🎬 YouTube Auto</button>
+      <div class="sb-divider"></div><div class="sb-section">Account</div>
+      <button class="sb-item" onclick="goTo('settings')">⚙️ Settings</button>
+      <button class="sb-item" onclick="goTo('buy-credits')">💳 Buy Credits</button>
       <div class="sb-divider"></div>
-      <button class="sb-item" onclick="goTo('pricing')">💎 Upgrade</button>
+      <button class="sb-item" style="color:#64748b" onclick="doLogout()">🚪 Log out</button>
     </nav>
     <div class="app-main">
       <div class="page-header"><h1>🕐 Generation History</h1><p>All your generated voices. Play or download anytime.</p></div>
@@ -1161,12 +1211,17 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
 <div id="pg-settings" class="pg">
   <div class="app-layout">
     <nav class="sidebar">
+      <div class="sb-section">Main</div>
       <button class="sb-item" onclick="goTo('dashboard')">📊 Dashboard</button>
       <button class="sb-item" onclick="goTo('studio')">🎙️ Studio</button>
-      <button class="sb-item" onclick="goTo('history')">🕐 History</button>
-      <div class="sb-divider"></div>
+      <button class="sb-item" onclick="goTo('voices-app')">🔊 Voices</button>
+      <div class="sb-divider"></div><div class="sb-section">Account</div>
       <button class="sb-item active">⚙️ Settings</button>
-      <button class="sb-item" onclick="goTo('pricing')">💎 Upgrade</button>
+      <button class="sb-item" onclick="goTo('elevenlabs-settings')">🔗 ElevenLabs</button>
+      <button class="sb-item" onclick="goTo('developer-mode')">🛠️ Developer</button>
+      <button class="sb-item" onclick="goTo('buy-credits')">💳 Buy Credits</button>
+      <div class="sb-divider"></div>
+      <button class="sb-item" style="color:#64748b" onclick="doLogout()">🚪 Log out</button>
     </nav>
     <div class="app-main">
       <div class="page-header"><h1>⚙️ Settings</h1><p>Manage your account and preferences</p></div>
@@ -1176,6 +1231,8 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
           <button class="sn-item" onclick="showSettingsTab('security',this)">🔒 Security</button>
           <button class="sn-item" onclick="showSettingsTab('usage',this)">📊 Usage</button>
           <button class="sn-item" onclick="showSettingsTab('danger',this)">⚠️ Account</button>
+          <button class="sn-item" onclick="goTo('elevenlabs-settings')">🔗 ElevenLabs</button>
+          <button class="sn-item" onclick="goTo('developer-mode')">🛠️ Developer</button>
         </div>
         <div>
           <!-- Profile -->
@@ -1303,6 +1360,706 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
       </div>
     </div>
   </div>
+</div>
+
+<!-- ═══ VOICE LIBRARY ═══ -->
+<div id="pg-voice-library" class="pg">
+  <div class="app-layout">
+    <nav class="sidebar">
+      <div class="sb-section">Main</div>
+      <button class="sb-item" onclick="goTo('dashboard')">📊 Dashboard</button>
+      <button class="sb-item" onclick="goTo('studio')">🎙️ Studio</button>
+      <button class="sb-item" onclick="goTo('voices-app')">🔊 Voices</button>
+      <button class="sb-item" onclick="goTo('voice-studio')">🎤 Voice Studio</button>
+      <button class="sb-item" onclick="goTo('audio-editor')">✂️ Audio Editor</button>
+      <div class="sb-divider"></div><div class="sb-section">AI Tools</div>
+      <button class="sb-item" onclick="goTo('image-generator')">🖼️ Image Generator</button>
+      <button class="sb-item" onclick="goTo('script-writer')">📝 Script Writer</button>
+      <button class="sb-item" onclick="goTo('youtube-automation')">🎬 YouTube Auto</button>
+      <div class="sb-divider"></div><div class="sb-section">Account</div>
+      <button class="sb-item" onclick="goTo('settings')">⚙️ Settings</button>
+      <button class="sb-item" onclick="goTo('buy-credits')">💳 Buy Credits</button>
+      <div class="sb-divider"></div>
+      <button class="sb-item" style="color:#64748b" onclick="doLogout()">🚪 Log out</button>
+    </nav>
+    <div class="app-main">
+      <div class="page-header"><h1>🔊 Voice Library</h1><p>All 22+ Edge TTS voices. Preview, filter, and use any voice.</p></div>
+      <div class="voices-toolbar">
+        <input class="inp" style="flex:1;max-width:320px" placeholder="🔍 Search by name, accent, style…" id="vl-search" oninput="filterVoiceLibrary()"/>
+        <div class="v-filters">
+          <button class="vfb active" onclick="filterVoiceLibrary('all',this)">All</button>
+          <button class="vfb" onclick="filterVoiceLibrary('female',this)">Female</button>
+          <button class="vfb" onclick="filterVoiceLibrary('male',this)">Male</button>
+          <button class="vfb" onclick="filterVoiceLibrary('American',this)">American</button>
+          <button class="vfb" onclick="filterVoiceLibrary('British',this)">British</button>
+        </div>
+      </div>
+      <div class="voices-grid" id="voice-library-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ VOICE STUDIO ═══ -->
+<div id="pg-voice-studio" class="pg">
+  <div class="app-layout">
+    <nav class="sidebar">
+      <div class="sb-section">Main</div>
+      <button class="sb-item" onclick="goTo('dashboard')">📊 Dashboard</button>
+      <button class="sb-item" onclick="goTo('studio')">🎙️ Studio</button>
+      <button class="sb-item" onclick="goTo('voices-app')">🔊 Voices</button>
+      <button class="sb-item active">🎤 Voice Studio</button>
+      <button class="sb-item" onclick="goTo('audio-editor')">✂️ Audio Editor</button>
+      <div class="sb-divider"></div><div class="sb-section">AI Tools</div>
+      <button class="sb-item" onclick="goTo('image-generator')">🖼️ Image Generator</button>
+      <button class="sb-item" onclick="goTo('script-writer')">📝 Script Writer</button>
+      <button class="sb-item" onclick="goTo('youtube-automation')">🎬 YouTube Auto</button>
+      <div class="sb-divider"></div><div class="sb-section">Account</div>
+      <button class="sb-item" onclick="goTo('settings')">⚙️ Settings</button>
+      <button class="sb-item" onclick="goTo('buy-credits')">💳 Buy Credits</button>
+      <div class="sb-divider"></div>
+      <button class="sb-item" style="color:#64748b" onclick="doLogout()">🚪 Log out</button>
+    </nav>
+    <div class="app-main">
+      <div class="page-header"><h1>🎤 Voice Studio</h1><p>Create custom voice profiles from audio samples</p></div>
+      <div class="studio-layout">
+        <div class="studio-main">
+          <div class="inp-group" style="margin-bottom:1.25rem"><label class="inp-label">Voice Profile Name</label><input class="inp" id="vs-name" placeholder="e.g. My Custom Voice"/></div>
+          <div class="inp-group" style="margin-bottom:1.25rem"><label class="inp-label">Upload Audio Sample</label>
+            <div style="border:2px dashed var(--bdr2);border-radius:var(--r);padding:2rem;text-align:center;cursor:pointer;transition:border-color .2s" onclick="document.getElementById('vs-audio-upload').click()" onmouseover="this.style.borderColor='rgba(249,115,22,.4)'" onmouseout="this.style.borderColor=''">
+              <div style="font-size:2rem;margin-bottom:.5rem">📁</div>
+              <div style="font-size:.9rem;color:var(--muted2)">Click to upload audio sample</div>
+              <div style="font-size:.75rem;color:var(--muted);margin-top:.25rem">WAV, MP3, WEBM — 10s to 5min recommended</div>
+            </div>
+            <input type="file" id="vs-audio-upload" accept="audio/*" style="display:none" onchange="handleVoiceUpload(this)"/>
+          </div>
+          <div id="vs-upload-status" style="display:none;margin-bottom:1rem"></div>
+          <div class="inp-group" style="margin-bottom:1.25rem"><label class="inp-label">Description</label><textarea class="inp" id="vs-desc" rows="3" placeholder="Describe this voice…"></textarea></div>
+          <div class="settings-row" style="margin-bottom:1.25rem">
+            <div class="inp-group"><label class="inp-label">Pitch</label><input class="inp" id="vs-pitch" type="range" min="0.5" max="2" step="0.1" value="1" style="accent-color:var(--orange)"/></div>
+            <div class="inp-group"><label class="inp-label">Speed</label><input class="inp" id="vs-speed" type="range" min="0.5" max="2" step="0.1" value="1" style="accent-color:var(--orange)"/></div>
+          </div>
+          <button class="btn btn-primary btn-lg" onclick="saveVoiceProfile()">💾 Save Voice Profile</button>
+        </div>
+        <div class="studio-sidebar">
+          <div class="card" style="padding:1.25rem"><div class="inp-label" style="margin-bottom:.75rem">📋 Your Custom Voices</div><div id="vs-list"></div></div>
+          <div class="card" style="padding:1.25rem"><div class="inp-label" style="margin-bottom:.75rem">💡 Tips</div><ul style="font-size:.8rem;color:#64748b;line-height:1.8;padding-left:1rem"><li>Upload clean audio without background noise</li><li>10-30 seconds is ideal</li><li>Speak naturally in the sample</li><li>Custom voices are saved locally</li></ul></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ AUDIO EDITOR ═══ -->
+<div id="pg-audio-editor" class="pg">
+  <div class="app-layout">
+    <nav class="sidebar">
+      <div class="sb-section">Main</div>
+      <button class="sb-item" onclick="goTo('dashboard')">📊 Dashboard</button>
+      <button class="sb-item" onclick="goTo('studio')">🎙️ Studio</button>
+      <button class="sb-item" onclick="goTo('voices-app')">🔊 Voices</button>
+      <button class="sb-item" onclick="goTo('voice-studio')">🎤 Voice Studio</button>
+      <button class="sb-item active">✂️ Audio Editor</button>
+      <div class="sb-divider"></div><div class="sb-section">AI Tools</div>
+      <button class="sb-item" onclick="goTo('image-generator')">🖼️ Image Generator</button>
+      <button class="sb-item" onclick="goTo('script-writer')">📝 Script Writer</button>
+      <button class="sb-item" onclick="goTo('youtube-automation')">🎬 YouTube Auto</button>
+      <div class="sb-divider"></div><div class="sb-section">Account</div>
+      <button class="sb-item" onclick="goTo('settings')">⚙️ Settings</button>
+      <button class="sb-item" onclick="goTo('buy-credits')">💳 Buy Credits</button>
+      <div class="sb-divider"></div>
+      <button class="sb-item" style="color:#64748b" onclick="doLogout()">🚪 Log out</button>
+    </nav>
+    <div class="app-main">
+      <div class="page-header"><h1>✂️ Audio Editor</h1><p>Edit audio with waveform, trim, speed, and pitch controls</p></div>
+      <div class="card" style="padding:1.5rem;margin-bottom:1.5rem">
+        <div class="inp-group" style="margin-bottom:1rem"><label class="inp-label">Load Audio</label>
+          <div style="display:flex;gap:.75rem;flex-wrap:wrap"><button class="btn btn-outline" onclick="document.getElementById('ae-file').click()">📁 Upload File</button><button class="btn btn-ghost" onclick="loadLastGenerated()">🎙️ Use Last Generated</button></div>
+          <input type="file" id="ae-file" accept="audio/*" style="display:none" onchange="loadAudioFile(this)"/>
+        </div>
+        <div class="waveform-display" id="ae-waveform"><span style="color:var(--muted);font-size:.85rem">Load an audio file to see waveform</span></div>
+        <div class="settings-row" style="margin:1rem 0">
+          <div class="inp-group"><label class="inp-label">Trim Start (s)</label><input class="inp" id="ae-trim-start" type="number" min="0" step="0.1" value="0"/></div>
+          <div class="inp-group"><label class="inp-label">Trim End (s)</label><input class="inp" id="ae-trim-end" type="number" min="0" step="0.1" value="0"/></div>
+        </div>
+        <div class="settings-row" style="margin-bottom:1rem">
+          <div class="inp-group"><label class="inp-label">Speed: <span id="ae-speed-val">1.0</span>x</label><input class="inp" id="ae-speed" type="range" min="0.25" max="4" step="0.05" value="1" oninput="document.getElementById('ae-speed-val').textContent=this.value" style="accent-color:var(--orange)"/></div>
+          <div class="inp-group"><label class="inp-label">Pitch: <span id="ae-pitch-val">1.0</span>x</label><input class="inp" id="ae-pitch" type="range" min="0.25" max="4" step="0.05" value="1" oninput="document.getElementById('ae-pitch-val').textContent=this.value" style="accent-color:var(--orange)"/></div>
+        </div>
+        <div style="display:flex;gap:.75rem;flex-wrap:wrap"><button class="btn btn-primary" onclick="processAudio()">⚡ Process & Download</button><button class="btn btn-ghost" onclick="playProcessedAudio()">▶ Preview</button><button class="btn btn-ghost" onclick="resetAudioEditor()">🔄 Reset</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CREATOR HUB ═══ -->
+<div id="pg-creator-hub" class="pg">
+  <div class="app-layout">
+    <nav class="sidebar">
+      <div class="sb-section">Main</div>
+      <button class="sb-item" onclick="goTo('dashboard')">📊 Dashboard</button>
+      <button class="sb-item" onclick="goTo('studio')">🎙️ Studio</button>
+      <button class="sb-item" onclick="goTo('voices-app')">🔊 Voices</button>
+      <button class="sb-item" onclick="goTo('voice-studio')">🎤 Voice Studio</button>
+      <button class="sb-item" onclick="goTo('audio-editor')">✂️ Audio Editor</button>
+      <div class="sb-divider"></div><div class="sb-section">AI Tools</div>
+      <button class="sb-item" onclick="goTo('image-generator')">🖼️ Image Generator</button>
+      <button class="sb-item" onclick="goTo('script-writer')">📝 Script Writer</button>
+      <button class="sb-item" onclick="goTo('youtube-automation')">🎬 YouTube Auto</button>
+      <div class="sb-divider"></div><div class="sb-section">Community</div>
+      <button class="sb-item" onclick="goTo('referral')">🎁 Referral Rewards</button>
+      <button class="sb-item active">🚀 Creator Hub</button>
+      <button class="sb-item" onclick="goTo('ai-spaces')">📦 AI Spaces</button>
+      <div class="sb-divider"></div><div class="sb-section">Account</div>
+      <button class="sb-item" onclick="goTo('settings')">⚙️ Settings</button>
+      <button class="sb-item" onclick="goTo('buy-credits')">💳 Buy Credits</button>
+      <div class="sb-divider"></div>
+      <button class="sb-item" style="color:#64748b" onclick="doLogout()">🚪 Log out</button>
+    </nav>
+    <div class="app-main">
+      <div class="page-header"><h1>🚀 Creator Hub</h1><p>Your creative workspace dashboard</p></div>
+      <div class="tool-grid" style="margin-bottom:2rem">
+        <div class="tool-card rv" onclick="goTo('studio')"><div class="tc-icon">🎙️</div><h3>Voice Studio</h3><p>Generate AI voices from text</p></div>
+        <div class="tool-card rv" onclick="goTo('voice-library')"><div class="tc-icon">🔊</div><h3>Voice Library</h3><p>Browse all 24+ voices</p></div>
+        <div class="tool-card rv" onclick="goTo('script-writer')"><div class="tc-icon">📝</div><h3>Script Writer</h3><p>AI-powered script generation</p></div>
+        <div class="tool-card rv" onclick="goTo('youtube-automation')"><div class="tc-icon">🎬</div><h3>YouTube Automation</h3><p>Script-to-video workflow</p></div>
+      </div>
+      <div class="card" style="padding:1.5rem"><h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem">📋 Recent Projects</h3><div id="ch-projects"><div class="empty"><div class="empty-icon">📋</div><h3>No projects yet</h3><p>Start creating to see your projects here.</p></div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ YOUTUBE AUTOMATION ═══ -->
+<div id="pg-youtube-automation" class="pg">
+  <div class="app-layout">
+    <nav class="sidebar">
+      <div class="sb-section">Main</div>
+      <button class="sb-item" onclick="goTo('dashboard')">📊 Dashboard</button>
+      <button class="sb-item" onclick="goTo('studio')">🎙️ Studio</button>
+      <button class="sb-item" onclick="goTo('voices-app')">🔊 Voices</button>
+      <button class="sb-item" onclick="goTo('voice-studio')">🎤 Voice Studio</button>
+      <button class="sb-item" onclick="goTo('audio-editor')">✂️ Audio Editor</button>
+      <div class="sb-divider"></div><div class="sb-section">AI Tools</div>
+      <button class="sb-item" onclick="goTo('image-generator')">🖼️ Image Generator</button>
+      <button class="sb-item" onclick="goTo('script-writer')">📝 Script Writer</button>
+      <button class="sb-item active">🎬 YouTube Auto</button>
+      <button class="sb-item" onclick="goTo('long-video')">🎥 Long Video</button>
+      <button class="sb-item" onclick="goTo('avatar-studio')">👤 Avatar Studio</button>
+      <div class="sb-divider"></div><div class="sb-section">Account</div>
+      <button class="sb-item" onclick="goTo('settings')">⚙️ Settings</button>
+      <button class="sb-item" onclick="goTo('buy-credits')">💳 Buy Credits</button>
+      <div class="sb-divider"></div>
+      <button class="sb-item" style="color:#64748b" onclick="doLogout()">🚪 Log out</button>
+    </nav>
+    <div class="app-main">
+      <div class="page-header"><h1>🎬 YouTube Automation</h1><p>Script-to-video workflow: paste script, select voice, generate TTS</p></div>
+      <div class="studio-layout">
+        <div class="studio-main">
+          <div class="inp-group" style="margin-bottom:1.25rem"><label class="inp-label">Video Script</label><textarea class="inp" id="yt-script" rows="8" placeholder="Paste your YouTube script here…&#10;&#10;Each paragraph will become a scene with TTS narration."></textarea></div>
+          <div class="settings-row" style="margin-bottom:1.25rem">
+            <div class="inp-group"><label class="inp-label">Narration Voice</label><select class="inp" id="yt-voice"></select></div>
+            <div class="inp-group"><label class="inp-label">Scene Duration</label><select class="inp" id="yt-duration"><option value="auto">Auto</option><option value="10">10 seconds</option><option value="15">15 seconds</option><option value="30">30 seconds</option></select></div>
+          </div>
+          <button class="btn btn-primary btn-lg" onclick="generateYTWorkflow()">⚡ Generate Storyboard</button>
+          <div id="yt-storyboard" style="margin-top:1.5rem"></div>
+        </div>
+        <div class="studio-sidebar">
+          <div class="card" style="padding:1.25rem"><div class="inp-label" style="margin-bottom:.75rem">📋 Export Options</div><div style="display:flex;flex-direction:column;gap:.5rem"><button class="btn btn-outline btn-sm btn-fw" onclick="toast('Export coming soon!')">⬇ Export Script</button><button class="btn btn-outline btn-sm btn-fw" onclick="toast('Export coming soon!')">🎵 Export All Audio</button><button class="btn btn-ghost btn-sm btn-fw" onclick="toast('Export coming soon!')">📊 Export Storyboard</button></div></div>
+          <div class="card" style="padding:1.25rem"><div class="inp-label" style="margin-bottom:.75rem">💡 Tips</div><ul style="font-size:.8rem;color:#64748b;line-height:1.8;padding-left:1rem"><li>Separate paragraphs for scenes</li><li>Use short, punchy sentences</li><li>Add [PAUSE] for dramatic pauses</li><li>Each scene gets its own TTS audio</li></ul></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ IMAGE GENERATOR ═══ -->
+<div id="pg-image-generator" class="pg">
+  <div class="app-layout">
+    <nav class="sidebar">
+      <div class="sb-section">Main</div>
+      <button class="sb-item" onclick="goTo('dashboard')">📊 Dashboard</button>
+      <button class="sb-item" onclick="goTo('studio')">🎙️ Studio</button>
+      <button class="sb-item" onclick="goTo('voices-app')">🔊 Voices</button>
+      <button class="sb-item" onclick="goTo('voice-studio')">🎤 Voice Studio</button>
+      <button class="sb-item" onclick="goTo('audio-editor')">✂️ Audio Editor</button>
+      <div class="sb-divider"></div><div class="sb-section">AI Tools</div>
+      <button class="sb-item active">🖼️ Image Generator</button>
+      <button class="sb-item" onclick="goTo('script-writer')">📝 Script Writer</button>
+      <button class="sb-item" onclick="goTo('youtube-automation')">🎬 YouTube Auto</button>
+      <button class="sb-item" onclick="goTo('long-video')">🎥 Long Video</button>
+      <button class="sb-item" onclick="goTo('avatar-studio')">👤 Avatar Studio</button>
+      <div class="sb-divider"></div><div class="sb-section">Account</div>
+      <button class="sb-item" onclick="goTo('settings')">⚙️ Settings</button>
+      <button class="sb-item" onclick="goTo('buy-credits')">💳 Buy Credits</button>
+      <div class="sb-divider"></div>
+      <button class="sb-item" style="color:#64748b" onclick="doLogout()">🚪 Log out</button>
+    </nav>
+    <div class="app-main">
+      <div class="page-header"><h1>🖼️ Image Generator</h1><p>Text-to-image using free Pollinations.ai API</p></div>
+      <div class="card" style="padding:1.5rem;margin-bottom:1.5rem">
+        <div class="inp-group" style="margin-bottom:1rem"><label class="inp-label">Prompt</label><textarea class="inp" id="ig-prompt" rows="3" placeholder="Describe the image you want to generate…"></textarea></div>
+        <div class="settings-row" style="margin-bottom:1rem">
+          <div class="inp-group"><label class="inp-label">Style</label><select class="inp" id="ig-style"><option value="realistic">📷 Realistic</option><option value="anime">🎌 Anime</option><option value="oil-painting">🎨 Oil Painting</option><option value="digital-art">💻 Digital Art</option><option value="watercolor">🖌️ Watercolor</option><option value="3d-render">🧊 3D Render</option><option value="pixel-art">👾 Pixel Art</option><option value="cyberpunk">🌃 Cyberpunk</option></select></div>
+          <div class="inp-group"><label class="inp-label">Size</label><select class="inp" id="ig-size"><option value="512x512">512×512</option><option value="768x768">768×768</option><option value="1024x1024">1024×1024</option></select></div>
+        </div>
+        <button class="btn btn-primary btn-lg" id="ig-gen-btn" onclick="generateImage()">🎨 Generate Image</button>
+        <div id="ig-status" style="display:none;margin-top:1rem"></div>
+        <div id="ig-result" style="margin-top:1.5rem;display:none">
+          <div style="background:var(--bg2);border:1px solid var(--bdr);border-radius:var(--r);padding:1rem;text-align:center"><img id="ig-result-img" style="max-width:100%;border-radius:10px;max-height:500px"/></div>
+          <div style="display:flex;gap:.5rem;margin-top:.75rem;justify-content:center"><button class="btn btn-primary btn-sm" onclick="downloadGeneratedImage()">⬇ Download</button><button class="btn btn-ghost btn-sm" onclick="document.getElementById('ig-result').style.display='none'">✕ Close</button></div>
+        </div>
+      </div>
+      <div class="card" style="padding:1.5rem"><h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem">🖼️ Gallery</h3><div class="gallery-grid" id="ig-gallery"><div class="empty" style="grid-column:1/-1"><div class="empty-icon">🖼️</div><h3>No images yet</h3><p>Generate your first image above!</p></div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SCRIPT WRITER ═══ -->
+<div id="pg-script-writer" class="pg">
+  <div class="app-layout">
+    <nav class="sidebar">
+      <div class="sb-section">Main</div>
+      <button class="sb-item" onclick="goTo('dashboard')">📊 Dashboard</button>
+      <button class="sb-item" onclick="goTo('studio')">🎙️ Studio</button>
+      <button class="sb-item" onclick="goTo('voices-app')">🔊 Voices</button>
+      <button class="sb-item" onclick="goTo('voice-studio')">🎤 Voice Studio</button>
+      <button class="sb-item" onclick="goTo('audio-editor')">✂️ Audio Editor</button>
+      <div class="sb-divider"></div><div class="sb-section">AI Tools</div>
+      <button class="sb-item" onclick="goTo('image-generator')">🖼️ Image Generator</button>
+      <button class="sb-item active">📝 Script Writer</button>
+      <button class="sb-item" onclick="goTo('youtube-automation')">🎬 YouTube Auto</button>
+      <button class="sb-item" onclick="goTo('long-video')">🎥 Long Video</button>
+      <button class="sb-item" onclick="goTo('avatar-studio')">👤 Avatar Studio</button>
+      <div class="sb-divider"></div><div class="sb-section">Account</div>
+      <button class="sb-item" onclick="goTo('settings')">⚙️ Settings</button>
+      <button class="sb-item" onclick="goTo('buy-credits')">💳 Buy Credits</button>
+      <div class="sb-divider"></div>
+      <button class="sb-item" style="color:#64748b" onclick="doLogout()">🚪 Log out</button>
+    </nav>
+    <div class="app-main">
+      <div class="page-header"><h1>📝 Script Writer</h1><p>AI-powered script generation with templates</p></div>
+      <div class="studio-layout">
+        <div class="studio-main">
+          <div class="settings-row" style="margin-bottom:1.25rem">
+            <div class="inp-group"><label class="inp-label">Topic / Genre</label><select class="inp" id="sw-genre"><option value="youtube-intro">YouTube Intro</option><option value="youtube-explainer">Explainer Video</option><option value="podcast-intro">Podcast Intro</option><option value="ad-read">Ad Read / Sponsor</option><option value="tutorial">Tutorial / How-To</option><option value="story">Story / Narrative</option><option value="presentation">Presentation</option><option value="news">News / Report</option></select></div>
+            <div class="inp-group"><label class="inp-label">Mood</label><select class="inp" id="sw-mood"><option value="professional">Professional</option><option value="casual">Casual</option><option value="energetic">Energetic</option><option value="calm">Calm</option><option value="humorous">Humorous</option><option value="dramatic">Dramatic</option></select></div>
+          </div>
+          <div class="inp-group" style="margin-bottom:1.25rem"><label class="inp-label">Duration</label><select class="inp" id="sw-duration"><option value="100">Short (~100 words)</option><option value="250" selected>Medium (~250 words)</option><option value="500">Long (~500 words)</option></select></div>
+          <div class="inp-group" style="margin-bottom:1.25rem"><label class="inp-label">Additional Details</label><input class="inp" id="sw-details" placeholder="e.g. about AI technology, target audience is developers"/></div>
+          <button class="btn btn-primary btn-lg" onclick="generateScript()">⚡ Generate Script</button>
+          <div id="sw-result" style="margin-top:1.5rem;display:none">
+            <div class="card" style="padding:1.5rem">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem"><h3 style="font-size:1rem;font-weight:700">Generated Script</h3><button class="btn btn-ghost btn-sm" onclick="copyScript()">📋 Copy</button></div>
+              <div id="sw-output" style="background:var(--bg2);border:1px solid var(--bdr);border-radius:10px;padding:1.25rem;font-size:.9rem;color:var(--muted2);line-height:1.8;white-space:pre-wrap"></div>
+              <div style="display:flex;gap:.5rem;margin-top:1rem"><button class="btn btn-primary btn-sm" onclick="useScriptInStudio()">🎙️ Use in Studio</button><button class="btn btn-ghost btn-sm" onclick="copyScript()">📋 Copy</button></div>
+            </div>
+          </div>
+        </div>
+        <div class="studio-sidebar">
+          <div class="card" style="padding:1.25rem"><div class="inp-label" style="margin-bottom:.75rem">💡 Tips</div><ul style="font-size:.8rem;color:#64748b;line-height:1.8;padding-left:1rem"><li>Be specific in the details field</li><li>Match mood to your content style</li><li>Use shorter scripts for social media</li></ul></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TOOLS HUB ═══ -->
+<div id="pg-tools-hub" class="pg">
+  <div class="app-layout">
+    <nav class="sidebar">
+      <div class="sb-section">Main</div>
+      <button class="sb-item" onclick="goTo('dashboard')">📊 Dashboard</button>
+      <button class="sb-item" onclick="goTo('studio')">🎙️ Studio</button>
+      <button class="sb-item" onclick="goTo('voices-app')">🔊 Voices</button>
+      <button class="sb-item" onclick="goTo('voice-studio')">🎤 Voice Studio</button>
+      <button class="sb-item" onclick="goTo('audio-editor')">✂️ Audio Editor</button>
+      <div class="sb-divider"></div><div class="sb-section">AI Tools</div>
+      <button class="sb-item" onclick="goTo('image-generator')">🖼️ Image Generator</button>
+      <button class="sb-item" onclick="goTo('script-writer')">📝 Script Writer</button>
+      <button class="sb-item" onclick="goTo('youtube-automation')">🎬 YouTube Auto</button>
+      <button class="sb-item" onclick="goTo('long-video')">🎥 Long Video</button>
+      <button class="sb-item" onclick="goTo('avatar-studio')">👤 Avatar Studio</button>
+      <div class="sb-divider"></div><div class="sb-section">Account</div>
+      <button class="sb-item" onclick="goTo('settings')">⚙️ Settings</button>
+      <button class="sb-item" onclick="goTo('buy-credits')">💳 Buy Credits</button>
+      <div class="sb-divider"></div>
+      <button class="sb-item" style="color:#64748b" onclick="doLogout()">🚪 Log out</button>
+    </nav>
+    <div class="app-main">
+      <div class="page-header"><h1>🛠️ Tools Hub</h1><p>All your AI creative tools in one place</p></div>
+      <div class="tool-grid">
+        <div class="tool-card rv" onclick="goTo('studio')"><div class="tc-icon">🎙️</div><h3>Text to Speech</h3><p>Generate AI voices from text using 22+ premium voices</p></div>
+        <div class="tool-card rv" onclick="goTo('voice-studio')"><div class="tc-icon">🎤</div><h3>Voice Clone</h3><p>Create custom voice profiles from audio samples</p></div>
+        <div class="tool-card rv" onclick="goTo('image-generator')"><div class="tc-icon">🖼️</div><h3>Image Generator</h3><p>Text-to-image with multiple styles using Pollinations.ai</p></div>
+        <div class="tool-card rv" onclick="goTo('script-writer')"><div class="tc-icon">📝</div><h3>Script Writer</h3><p>AI-powered script generation for any content type</p></div>
+        <div class="tool-card rv" onclick="goTo('audio-editor')"><div class="tc-icon">✂️</div><h3>Audio Editor</h3><p>Edit audio: trim, speed, pitch controls with waveform</p></div>
+        <div class="tool-card rv" onclick="goTo('youtube-automation')"><div class="tc-icon">🎬</div><h3>YouTube Automation</h3><p>Script-to-video workflow with storyboard generation</p></div>
+        <div class="tool-card rv" onclick="goTo('long-video')"><div class="tc-icon">🎥</div><h3>Long Video Generator</h3><p>Create multi-scene video storyboards with narration</p></div>
+        <div class="tool-card rv" onclick="goTo('avatar-studio')"><div class="tc-icon">👤</div><h3>Avatar Studio</h3><p>Create and customize AI avatars with TTS playback</p></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ AI SPACES ═══ -->
+<div id="pg-ai-spaces" class="pg">
+  <div class="app-layout">
+    <nav class="sidebar">
+      <div class="sb-section">Main</div>
+      <button class="sb-item" onclick="goTo('dashboard')">📊 Dashboard</button>
+      <button class="sb-item" onclick="goTo('studio')">🎙️ Studio</button>
+      <button class="sb-item" onclick="goTo('voices-app')">🔊 Voices</button>
+      <button class="sb-item" onclick="goTo('voice-studio')">🎤 Voice Studio</button>
+      <button class="sb-item" onclick="goTo('audio-editor')">✂️ Audio Editor</button>
+      <div class="sb-divider"></div><div class="sb-section">Community</div>
+      <button class="sb-item" onclick="goTo('referral')">🎁 Referral Rewards</button>
+      <button class="sb-item" onclick="goTo('creator-hub')">🚀 Creator Hub</button>
+      <button class="sb-item active">📦 AI Spaces</button>
+      <div class="sb-divider"></div><div class="sb-section">Account</div>
+      <button class="sb-item" onclick="goTo('settings')">⚙️ Settings</button>
+      <button class="sb-item" onclick="goTo('buy-credits')">💳 Buy Credits</button>
+      <div class="sb-divider"></div>
+      <button class="sb-item" style="color:#64748b" onclick="doLogout()">🚪 Log out</button>
+    </nav>
+    <div class="app-main">
+      <div class="page-header"><h1>📦 AI Spaces</h1><p>Create named workspaces with project files</p>
+        <button class="btn btn-primary" style="margin-top:.75rem" onclick="createNewSpace()">+ Create New Space</button>
+      </div>
+      <div class="space-grid" id="spaces-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ELEVENLABS SETTINGS ═══ -->
+<div id="pg-elevenlabs-settings" class="pg">
+  <div class="app-layout">
+    <nav class="sidebar">
+      <div class="sb-section">Main</div>
+      <button class="sb-item" onclick="goTo('dashboard')">📊 Dashboard</button>
+      <button class="sb-item" onclick="goTo('studio')">🎙️ Studio</button>
+      <button class="sb-item" onclick="goTo('voices-app')">🔊 Voices</button>
+      <div class="sb-divider"></div><div class="sb-section">Account</div>
+      <button class="sb-item" onclick="goTo('settings')">⚙️ Settings</button>
+      <button class="sb-item active">🔗 ElevenLabs</button>
+      <button class="sb-item" onclick="goTo('developer-mode')">🛠️ Developer</button>
+      <button class="sb-item" onclick="goTo('buy-credits')">💳 Buy Credits</button>
+      <div class="sb-divider"></div>
+      <button class="sb-item" style="color:#64748b" onclick="doLogout()">🚪 Log out</button>
+    </nav>
+    <div class="app-main">
+      <div class="page-header"><h1>🔗 ElevenLabs Settings</h1><p>Configure ElevenLabs API for enhanced voice quality</p></div>
+      <div class="settings-section">
+        <h3>API Configuration</h3>
+        <div class="inp-group" style="margin-bottom:1rem"><label class="inp-label">ElevenLabs API Key (Optional)</label><input class="inp" id="el-api-key" type="password" placeholder="sk_xxxxxxxxxxxxxxxxxxxx"/></div>
+        <div class="settings-row" style="margin-bottom:1rem">
+          <div class="inp-group"><label class="inp-label">Model</label><select class="inp" id="el-model"><option value="eleven_monolingual_v1">Monolingual v1</option><option value="eleven_multilingual_v1">Multilingual v1</option><option value="eleven_multilingual_v2">Multilingual v2</option><option value="eleven_turbo_v2">Turbo v2</option></select></div>
+          <div class="inp-group"><label class="inp-label">Stability</label><input class="inp" id="el-stability" type="range" min="0" max="1" step="0.05" value="0.5" style="accent-color:var(--orange)"/></div>
+        </div>
+        <div class="settings-row" style="margin-bottom:1rem">
+          <div class="inp-group"><label class="inp-label">Similarity Boost</label><input class="inp" id="el-similarity" type="range" min="0" max="1" step="0.05" value="0.75" style="accent-color:var(--orange)"/></div>
+          <div class="inp-group"><label class="inp-label">Style</label><input class="inp" id="el-style" type="range" min="0" max="1" step="0.05" value="0" style="accent-color:var(--orange)"/></div>
+        </div>
+        <button class="btn btn-primary" onclick="saveElevenLabsSettings()">💾 Save Settings</button>
+      </div>
+      <div class="settings-section"><h3>Status</h3><div id="el-status" style="font-size:.875rem;color:var(--muted2)">No API key configured. Using free HuggingFace models.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ DEVELOPER MODE ═══ -->
+<div id="pg-developer-mode" class="pg">
+  <div class="app-layout">
+    <nav class="sidebar">
+      <div class="sb-section">Main</div>
+      <button class="sb-item" onclick="goTo('dashboard')">📊 Dashboard</button>
+      <button class="sb-item" onclick="goTo('studio')">🎙️ Studio</button>
+      <button class="sb-item" onclick="goTo('voices-app')">🔊 Voices</button>
+      <div class="sb-divider"></div><div class="sb-section">Account</div>
+      <button class="sb-item" onclick="goTo('settings')">⚙️ Settings</button>
+      <button class="sb-item active">🛠️ Developer</button>
+      <button class="sb-item" onclick="goTo('api-docs')">📚 API Docs</button>
+      <button class="sb-item" onclick="goTo('elevenlabs-settings')">🔗 ElevenLabs</button>
+      <button class="sb-item" onclick="goTo('buy-credits')">💳 Buy Credits</button>
+      <div class="sb-divider"></div>
+      <button class="sb-item" style="color:#64748b" onclick="doLogout()">🚪 Log out</button>
+    </nav>
+    <div class="app-main">
+      <div class="page-header"><h1>🛠️ Developer Mode</h1><p>API keys, usage stats, and integration tools</p></div>
+      <div class="stats-row" style="grid-template-columns:repeat(3,1fr)">
+        <div class="stat-card"><div class="stat-icon">🔑</div><div class="stat-val" id="dev-api-key" style="font-size:1rem;font-family:monospace">bg_••••••••</div><div class="stat-lbl">Your API Key</div><button class="btn btn-ghost btn-sm" style="margin-top:.5rem" onclick="copyApiKey()">📋 Copy Key</button></div>
+        <div class="stat-card"><div class="stat-icon">📊</div><div class="stat-val" id="dev-api-calls">0</div><div class="stat-lbl">API Calls (30d)</div></div>
+        <div class="stat-card"><div class="stat-icon">⚡</div><div class="stat-val" id="dev-rate-limit">60</div><div class="stat-lbl">Rate Limit (req/min)</div></div>
+      </div>
+      <div class="settings-section"><h3>API Key Management</h3>
+        <div class="inp-group" style="margin-bottom:1rem"><label class="inp-label">BG LABS API Key</label><div style="display:flex;gap:.5rem"><input class="inp" id="dev-api-key-input" readonly value="bg_demo_key_12345678"/><button class="btn btn-outline btn-sm" onclick="regenerateApiKey()">🔄 Regenerate</button></div></div>
+        <p style="font-size:.8rem;color:var(--muted)">Use this key in the Authorization header: <code style="color:var(--orange)">Authorization: Bearer YOUR_KEY</code></p>
+      </div>
+      <div class="settings-section"><h3>Quick Code Snippets</h3>
+        <div class="code-block" style="margin-top:0"><span class="c-kw">curl</span> -X POST https://api.bglabs.io/api/studio/generate \\<br>&nbsp;&nbsp;-H <span class="c-str">"Authorization: Bearer YOUR_KEY"</span> \\<br>&nbsp;&nbsp;-H <span class="c-str">"Content-Type: application/json"</span> \\<br>&nbsp;&nbsp;-d <span class="c-str">'{"text":"Hello!","voice":"rachel"}'</span></div>
+        <div class="code-block"><span class="c-kw">const</span> resp = <span class="c-kw">await</span> <span class=\"c-fn\">fetch</span>(<span class="c-str">'https://api.bglabs.io/api/studio/generate'</span>, {<br>&nbsp;&nbsp;method: <span class="c-str">'POST'</span>,<br>&nbsp;&nbsp;headers: {<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-str">'Authorization'</span>: <span class="c-str">'Bearer YOUR_KEY'</span>,<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-str">'Content-Type'</span>: <span class="c-str">'application/json'</span><br>&nbsp;&nbsp;},<br>&nbsp;&nbsp;body: JSON.<span class="c-fn">stringify</span>({text: <span class="c-str">'Hello!'</span>, voice: <span class="c-str">'rachel'</span>})<br>});</div>
+      </div>
+      <div class="settings-section"><h3>Webhooks (Beta)</h3><div class="inp-group" style="margin-bottom:1rem"><label class="inp-label">Webhook URL</label><input class="inp" id="dev-webhook" placeholder="https://your-server.com/webhook"/></div><button class="btn btn-outline" onclick="toast('Webhook settings saved!','success')">Save Webhook</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ AVATAR STUDIO ═══ -->
+<div id="pg-avatar-studio" class="pg">
+  <div class="app-layout">
+    <nav class="sidebar">
+      <div class="sb-section">Main</div>
+      <button class="sb-item" onclick="goTo('dashboard')">📊 Dashboard</button>
+      <button class="sb-item" onclick="goTo('studio')">🎙️ Studio</button>
+      <button class="sb-item" onclick="goTo('voices-app')">🔊 Voices</button>
+      <button class="sb-item" onclick="goTo('voice-studio')">🎤 Voice Studio</button>
+      <button class="sb-item" onclick="goTo('audio-editor')">✂️ Audio Editor</button>
+      <div class="sb-divider"></div><div class="sb-section">AI Tools</div>
+      <button class="sb-item" onclick="goTo('image-generator')">🖼️ Image Generator</button>
+      <button class="sb-item" onclick="goTo('script-writer')">📝 Script Writer</button>
+      <button class="sb-item" onclick="goTo('youtube-automation')">🎬 YouTube Auto</button>
+      <button class="sb-item" onclick="goTo('long-video')">🎥 Long Video</button>
+      <button class="sb-item active">👤 Avatar Studio</button>
+      <div class="sb-divider"></div><div class="sb-section">Account</div>
+      <button class="sb-item" onclick="goTo('settings')">⚙️ Settings</button>
+      <button class="sb-item" onclick="goTo('buy-credits')">💳 Buy Credits</button>
+      <div class="sb-divider"></div>
+      <button class="sb-item" style="color:#64748b" onclick="doLogout()">🚪 Log out</button>
+    </nav>
+    <div class="app-main">
+      <div class="page-header"><h1>👤 Avatar Studio</h1><p>Create and customize AI avatars</p></div>
+      <div class="studio-layout">
+        <div class="studio-main">
+          <div class="avatar-preview" id="avatar-preview" style="background:linear-gradient(135deg,var(--orange),#dc2626)">👤</div>
+          <div class="settings-row" style="margin-bottom:1rem">
+            <div class="inp-group"><label class="inp-label">Base Avatar</label><select class="inp" id="avatar-base" onchange="updateAvatarPreview()"><option value="🧑">🧑 Person</option><option value="👩">👩 Woman</option><option value="👨">👨 Man</option><option value="🧑‍💻">🧑‍💻 Developer</option><option value="🧑‍🎨">🧑‍🎨 Artist</option><option value="🦸">🦸 Superhero</option><option value="🧑‍🔬">🧑‍🔬 Scientist</option></select></div>
+            <div class="inp-group"><label class="inp-label">Hair Color</label><select class="inp" id="avatar-hair" onchange="updateAvatarPreview()"><option value="#1a1a2e">Dark</option><option value="#f59e0b">Blonde</option><option value="#dc2626">Red</option><option value="#94a3b8">Gray</option><option value="#ec4899">Pink</option></select></div>
+          </div>
+          <div class="settings-row" style="margin-bottom:1rem">
+            <div class="inp-group"><label class="inp-label">Eye Color</label><select class="inp" id="avatar-eyes" onchange="updateAvatarPreview()"><option value="#3b82f6">Blue</option><option value="#22c55e">Green</option><option value="#92400e">Brown</option><option value="#6b7280">Gray</option></select></div>
+            <div class="inp-group"><label class="inp-label">Clothing Color</label><select class="inp" id="avatar-clothes" onchange="updateAvatarPreview()"><option value="#f97316">Orange</option><option value="#3b82f6">Blue</option><option value="#22c55e">Green</option><option value="#a855f7">Purple</option><option value="#1f2937">Dark</option></select></div>
+          </div>
+          <div class="inp-group" style="margin-bottom:1rem"><label class="inp-label">Preview Text (TTS)</label><textarea class="inp" id="avatar-text" rows="2" placeholder="Enter text to hear your avatar speak…"></textarea></div>
+          <div style="display:flex;gap:.75rem;flex-wrap:wrap"><button class="btn btn-primary" onclick="playAvatarTTS()">▶ Preview with Voice</button><button class="btn btn-outline" onclick="saveAvatar()">💾 Save Avatar</button></div>
+        </div>
+        <div class="studio-sidebar">
+          <div class="card" style="padding:1.25rem"><div class="inp-label" style="margin-bottom:.75rem">📋 Saved Avatars</div><div id="avatar-list"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ LONG VIDEO GENERATOR ═══ -->
+<div id="pg-long-video" class="pg">
+  <div class="app-layout">
+    <nav class="sidebar">
+      <div class="sb-section">Main</div>
+      <button class="sb-item" onclick="goTo('dashboard')">📊 Dashboard</button>
+      <button class="sb-item" onclick="goTo('studio')">🎙️ Studio</button>
+      <button class="sb-item" onclick="goTo('voices-app')">🔊 Voices</button>
+      <button class="sb-item" onclick="goTo('voice-studio')">🎤 Voice Studio</button>
+      <button class="sb-item" onclick="goTo('audio-editor')">✂️ Audio Editor</button>
+      <div class="sb-divider"></div><div class="sb-section">AI Tools</div>
+      <button class="sb-item" onclick="goTo('image-generator')">🖼️ Image Generator</button>
+      <button class="sb-item" onclick="goTo('script-writer')">📝 Script Writer</button>
+      <button class="sb-item" onclick="goTo('youtube-automation')">🎬 YouTube Auto</button>
+      <button class="sb-item active">🎥 Long Video</button>
+      <button class="sb-item" onclick="goTo('avatar-studio')">👤 Avatar Studio</button>
+      <div class="sb-divider"></div><div class="sb-section">Account</div>
+      <button class="sb-item" onclick="goTo('settings')">⚙️ Settings</button>
+      <button class="sb-item" onclick="goTo('buy-credits')">💳 Buy Credits</button>
+      <div class="sb-divider"></div>
+      <button class="sb-item" style="color:#64748b" onclick="doLogout()">🚪 Log out</button>
+    </nav>
+    <div class="app-main">
+      <div class="page-header"><h1>🎥 Long Video Generator</h1><p>Create multi-scene video storyboards with TTS narration</p></div>
+      <div class="studio-layout">
+        <div class="studio-main">
+          <div class="inp-group" style="margin-bottom:1.25rem"><label class="inp-label">Full Script</label><textarea class="inp" id="lv-script" rows="8" placeholder="Paste your full video script here…&#10;&#10;Each paragraph becomes a scene. Add [SCENE: description] for visual cues."></textarea></div>
+          <div class="settings-row" style="margin-bottom:1.25rem">
+            <div class="inp-group"><label class="inp-label">Narration Voice</label><select class="inp" id="lv-voice"></select></div>
+            <div class="inp-group"><label class="inp-label">Scene Transition</label><select class="inp" id="lv-transition"><option value="fade">Fade</option><option value="slide">Slide</option><option value="cut">Cut</option><option value="dissolve">Dissolve</option></select></div>
+          </div>
+          <button class="btn btn-primary btn-lg" onclick="generateLongVideo()">⚡ Generate Storyboard</button>
+          <div id="lv-timeline" style="margin-top:1.5rem"></div>
+        </div>
+        <div class="studio-sidebar">
+          <div class="card" style="padding:1.25rem"><div class="inp-label" style="margin-bottom:.75rem">📋 Export</div><div style="display:flex;flex-direction:column;gap:.5rem"><button class="btn btn-outline btn-sm btn-fw" onclick="toast('Export coming soon!')">⬇ Export Script</button><button class="btn btn-outline btn-sm btn-fw" onclick="toast('Export coming soon!')">🎵 Export All Audio</button><button class="btn btn-ghost btn-sm btn-fw" onclick="toast('Export coming soon!')">📊 Export Timeline</button></div></div>
+          <div class="card" style="padding:1.25rem"><div class="inp-label" style="margin-bottom:.75rem">💡 Tips</div><ul style="font-size:.8rem;color:#64748b;line-height:1.8;padding-left:1rem"><li>Use [SCENE: description] for visual cues</li><li>Each paragraph = one scene</li><li>Keep scenes under 30 seconds</li><li>Add [PAUSE] for dramatic effect</li></ul></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ BUY CREDITS ═══ -->
+<div id="pg-buy-credits" class="pg">
+  <div class="app-layout">
+    <nav class="sidebar">
+      <div class="sb-section">Main</div>
+      <button class="sb-item" onclick="goTo('dashboard')">📊 Dashboard</button>
+      <button class="sb-item" onclick="goTo('studio')">🎙️ Studio</button>
+      <button class="sb-item" onclick="goTo('voices-app')">🔊 Voices</button>
+      <div class="sb-divider"></div><div class="sb-section">Account</div>
+      <button class="sb-item" onclick="goTo('settings')">⚙️ Settings</button>
+      <button class="sb-item active">💳 Buy Credits</button>
+      <div class="sb-divider"></div>
+      <button class="sb-item" style="color:#64748b" onclick="doLogout()">🚪 Log out</button>
+    </nav>
+    <div class="app-main">
+      <div class="page-header"><h1>💳 Buy Credits</h1><p>Choose a plan that fits your needs</p></div>
+      <div class="plan-compare-grid">
+        <div class="plan-card rv">
+          <div class="plan-name">Free</div>
+          <div class="plan-price">$0<span>/mo</span></div>
+          <ul class="plan-feats"><li>✅ Unlimited basic TTS</li><li>✅ 22+ Voices</li><li>✅ 5 Languages</li><li>✅ MP3 Export</li><li>❌ Voice Cloning</li><li>❌ API Access</li></ul>
+          <button class="btn btn-ghost btn-fw" onclick="goTo('dashboard')">Current Plan</button>
+        </div>
+        <div class="plan-card plan-pop rv">
+          <div class="plan-star">⭐ Most Popular</div>
+          <div class="plan-name">Pro</div>
+          <div class="plan-price">$9.99<span>/mo</span></div>
+          <ul class="plan-feats"><li>✅ Everything in Free</li><li>✅ Unlimited Voices</li><li>✅ 50+ Languages</li><li>✅ Voice Cloning</li><li>✅ API Access</li><li>✅ Priority Support</li></ul>
+          <button class="btn btn-primary btn-fw" onclick="subscribePlan('pro','$9.99/mo')">Get Pro →</button>
+        </div>
+        <div class="plan-card rv">
+          <div class="plan-name">Enterprise</div>
+          <div class="plan-price">$49.99<span>/mo</span></div>
+          <ul class="plan-feats"><li>✅ Everything in Pro</li><li>✅ Unlimited API</li><li>✅ Custom Voices</li><li>✅ Team Access</li><li>✅ SLA Guarantee</li><li>✅ Dedicated Support</li></ul>
+          <button class="btn btn-outline btn-fw" onclick="subscribePlan('enterprise','$49.99/mo')">Get Enterprise →</button>
+        </div>
+      </div>
+      <div class="card" style="padding:1.5rem;text-align:center;margin-top:1rem"><p style="font-size:.875rem;color:var(--muted2)">All plans include unlimited basic TTS generation. No credit card required to start.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CONTACT ═══ -->
+<div id="pg-contact" class="pg">
+  <div class="app-layout">
+    <nav class="sidebar">
+      <div class="sb-section">Main</div>
+      <button class="sb-item" onclick="goTo('dashboard')">📊 Dashboard</button>
+      <button class="sb-item" onclick="goTo('studio')">🎙️ Studio</button>
+      <div class="sb-divider"></div><div class="sb-section">Support</div>
+      <button class="sb-item" onclick="goTo('support')">❓ Support</button>
+      <button class="sb-item active">📧 Contact</button>
+      <button class="sb-item" onclick="goTo('about')">ℹ️ About</button>
+      <div class="sb-divider"></div><div class="sb-section">Account</div>
+      <button class="sb-item" onclick="goTo('settings')">⚙️ Settings</button>
+      <div class="sb-divider"></div>
+      <button class="sb-item" style="color:#64748b" onclick="doLogout()">🚪 Log out</button>
+    </nav>
+    <div class="app-main">
+      <div class="page-header"><h1>📧 Contact Us</h1><p>We'd love to hear from you</p></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem">
+        <div class="card" style="padding:1.75rem">
+          <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:1.25rem">Send a Message</h3>
+          <form onsubmit="event.preventDefault();toast('Message sent! We\\'ll get back to you soon.','success')">
+            <div class="settings-row" style="margin-bottom:1rem"><div class="inp-group"><label class="inp-label">Name</label><input class="inp" placeholder="Your name" required/></div><div class="inp-group"><label class="inp-label">Email</label><input class="inp" type="email" placeholder="you@example.com" required/></div></div>
+            <div class="inp-group" style="margin-bottom:1rem"><label class="inp-label">Subject</label><input class="inp" placeholder="How can we help?" required/></div>
+            <div class="inp-group" style="margin-bottom:1.25rem"><label class="inp-label">Message</label><textarea class="inp" rows="5" placeholder="Your message…" required></textarea></div>
+            <button type="submit" class="btn btn-primary btn-fw">Send Message</button>
+          </form>
+        </div>
+        <div>
+          <div class="card" style="padding:1.5rem;margin-bottom:1rem"><h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem">📍 Office</h3><p style="font-size:.875rem;color:var(--muted2);line-height:1.7">Karachi, Pakistan<br>Remote-first company</p></div>
+          <div class="card" style="padding:1.5rem;margin-bottom:1rem"><h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem">💬 Social</h3><div style="display:flex;gap:.5rem;flex-wrap:wrap"><a href="https://wa.me/923245630622" target="_blank" class="btn btn-outline btn-sm">WhatsApp</a><a href="#" class="btn btn-ghost btn-sm">Twitter / X</a><a href="#" class="btn btn-ghost btn-sm">LinkedIn</a></div></div>
+          <div class="card" style="padding:1.5rem"><h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem">📧 Email</h3><p style="font-size:.875rem;color:var(--orange)">support@bglabs.io</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ REFERRAL REWARDS ═══ -->
+<div id="pg-referral" class="pg">
+  <div class="app-layout">
+    <nav class="sidebar">
+      <div class="sb-section">Main</div>
+      <button class="sb-item" onclick="goTo('dashboard')">📊 Dashboard</button>
+      <button class="sb-item" onclick="goTo('studio')">🎙️ Studio</button>
+      <div class="sb-divider"></div><div class="sb-section">Community</div>
+      <button class="sb-item active">🎁 Referral Rewards</button>
+      <button class="sb-item" onclick="goTo('creator-hub')">🚀 Creator Hub</button>
+      <button class="sb-item" onclick="goTo('ai-spaces')">📦 AI Spaces</button>
+      <div class="sb-divider"></div><div class="sb-section">Account</div>
+      <button class="sb-item" onclick="goTo('settings')">⚙️ Settings</button>
+      <button class="sb-item" onclick="goTo('buy-credits')">💳 Buy Credits</button>
+      <div class="sb-divider"></div>
+      <button class="sb-item" style="color:#64748b" onclick="doLogout()">🚪 Log out</button>
+    </nav>
+    <div class="app-main">
+      <div class="page-header"><h1>🎁 Referral Rewards</h1><p>Invite friends and earn credits</p></div>
+      <div class="ref-code-box">
+        <p style="font-size:.875rem;color:var(--muted2)">Your unique referral code</p>
+        <div class="ref-code" id="ref-code">BGLABS-USER</div>
+        <button class="btn btn-primary" onclick="copyRefCode()">📋 Copy Code</button>
+      </div>
+      <div class="ref-stats">
+        <div class="ref-stat"><div class="num" id="ref-invites">0</div><div class="lbl">Total Invites</div></div>
+        <div class="ref-stat"><div class="num" id="ref-signups">0</div><div class="lbl">Signups</div></div>
+        <div class="ref-stat"><div class="num" id="ref-earned">0</div><div class="lbl">Credits Earned</div></div>
+      </div>
+      <div class="card" style="padding:1.5rem;margin-bottom:1.5rem">
+        <h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem">🏆 Reward Tiers</h3>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem">
+          <div style="text-align:center;padding:1rem;background:rgba(255,255,255,.03);border-radius:10px"><div style="font-size:1.5rem;margin-bottom:.5rem">🥉</div><div style="font-weight:700;font-size:.9rem">Bronze</div><div style="font-size:.8rem;color:var(--muted);margin-top:.25rem">1-5 referrals</div><div style="font-size:.8rem;color:var(--orange);margin-top:.25rem">+100 credits each</div></div>
+          <div style="text-align:center;padding:1rem;background:rgba(255,255,255,.03);border-radius:10px"><div style="font-size:1.5rem;margin-bottom:.5rem">🥈</div><div style="font-weight:700;font-size:.9rem">Silver</div><div style="font-size:.8rem;color:var(--muted);margin-top:.25rem">6-20 referrals</div><div style="font-size:.8rem;color:var(--orange);margin-top:.25rem">+250 credits each</div></div>
+          <div style="text-align:center;padding:1rem;background:rgba(255,255,255,.03);border-radius:10px"><div style="font-size:1.5rem;margin-bottom:.5rem">🥇</div><div style="font-weight:700;font-size:.9rem">Gold</div><div style="font-size:.8rem;color:var(--muted);margin-top:.25rem">21+ referrals</div><div style="font-size:.8rem;color:var(--orange);margin-top:.25rem">+500 credits each</div></div>
+        </div>
+      </div>
+      <div class="card" style="padding:1.5rem">
+        <h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem">📤 Share</h3>
+        <div class="share-btns"><button class="btn btn-outline btn-sm" onclick="shareRef('twitter')">🐦 Twitter</button><button class="btn btn-outline btn-sm" onclick="shareRef('whatsapp')">💬 WhatsApp</button><button class="btn btn-outline btn-sm" onclick="shareRef('copy')">📋 Copy Link</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ API DOCS ═══ -->
+<div id="pg-api-docs" class="pg" style="padding-top:80px">
+  <div class="section" style="max-width:900px">
+    <div class="sec-head"><div class="sec-chip">API</div><h2 class="sec-h2">API <span class="grad">Documentation</span></h2><p class="sec-sub">Integrate BG LABS into your apps with our RESTful API.</p></div>
+    <div class="settings-section"><h3>Authentication</h3><p style="font-size:.875rem;color:var(--muted2);line-height:1.7;margin-bottom:1rem">All API requests require a Bearer token in the Authorization header.</p><div class="code-block" style="margin-top:0">Authorization: Bearer YOUR_API_KEY</div></div>
+    <div class="settings-section"><h3>Endpoints</h3>
+      <div class="api-endpoint"><span class="api-method post">POST</span><span class="api-path">/api/studio/generate</span><div class="api-desc">Generate TTS audio from text. Body: { text, voice, language, temperature, speed }</div></div>
+      <div class="api-endpoint"><span class="api-method get">GET</span><span class="api-path">/api/auth/me</span><div class="api-desc">Get current user profile and credit info.</div></div>
+      <div class="api-endpoint"><span class="api-method post">POST</span><span class="api-path">/api/auth/register</span><div class="api-desc">Register a new user. Body: { email, username, full_name, password }</div></div>
+      <div class="api-endpoint"><span class="api-method post">POST</span><span class="api-path">/api/auth/login</span><div class="api-desc">Login. Body (form-urlencoded): username, password. Returns access_token.</div></div>
+      <div class="api-endpoint"><span class="api-method get">GET</span><span class="api-path">/api/admin/stats</span><div class="api-desc">Admin: Get platform statistics.</div></div>
+      <div class="api-endpoint"><span class="api-method get">GET</span><span class="api-path">/api/admin/users</span><div class="api-desc">Admin: Get all users list.</div></div>
+    </div>
+    <div class="settings-section"><h3>Code Examples</h3>
+      <div class="code-block" style="margin-top:0"><span class="c-kw">curl</span> -X POST https://api.bglabs.io/api/studio/generate \\<br>&nbsp;&nbsp;-H <span class="c-str">"Authorization: Bearer YOUR_KEY"</span> \\<br>&nbsp;&nbsp;-H <span class="c-str">"Content-Type: application/json"</span> \\<br>&nbsp;&nbsp;-d <span class="c-str">'{"text":"Hello from BG LABS!","voice":"rachel"}'</span></div>
+      <div class="code-block"><span class="c-kw">import</span> requests<br><br>resp = requests.<span class="c-fn">post</span>(<br>&nbsp;&nbsp;<span class="c-str">'https://api.bglabs.io/api/studio/generate'</span>,<br>&nbsp;&nbsp;headers={<span class="c-str">'Authorization'</span>: <span class="c-str">'Bearer YOUR_KEY'</span>},<br>&nbsp;&nbsp;json={<span class="c-str">'text'</span>: <span class="c-str">'Hello!'</span>, <span class="c-str">'voice'</span>: <span class="c-str">'rachel'</span>}<br>)</div>
+      <div class="code-block"><span class="c-kw">const</span> resp = <span class="c-kw">await</span> <span class="c-fn">fetch</span>(<span class="c-str">'https://api.bglabs.io/api/studio/generate'</span>, {<br>&nbsp;&nbsp;method: <span class="c-str">'POST'</span>,<br>&nbsp;&nbsp;headers: {<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-str">'Authorization'</span>: <span class="c-str">'Bearer YOUR_KEY'</span>,<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-str">'Content-Type'</span>: <span class="c-str">'application/json'</span><br>&nbsp;&nbsp;},<br>&nbsp;&nbsp;body: JSON.<span class="c-fn">stringify</span>({text: <span class="c-str">'Hello!'</span>, voice: <span class="c-str">'rachel'</span>})<br>});</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ABOUT ═══ -->
+<div id="pg-about" class="pg" style="padding-top:80px">
+  <div class="section" style="max-width:900px">
+    <div class="sec-head"><div class="sec-chip">About</div><h2 class="sec-h2">Powering the future of<br><span class="grad">AI voice technology.</span></h2><p class="sec-sub">BG LABS is Pakistan's leading AI creative platform, making studio-quality voice technology accessible to everyone.</p></div>
+    <div class="settings-section"><h3>🎯 Our Mission</h3><p style="font-size:.9rem;color:var(--muted2);line-height:1.8">We believe premium AI voice technology shouldn't cost $99/month. BG LABS provides ElevenLabs-quality voices at a fraction of the cost, starting from free. Our platform powers content creators, podcasters, agencies, and developers across 120+ countries.</p></div>
+    <div class="tool-grid" style="margin-bottom:2rem">
+      <div class="tool-card"><div class="tc-icon">🎙️</div><h3>Voice Cloning</h3><p>Clone any voice from seconds of audio</p></div>
+      <div class="tool-card"><div class="tc-icon">🔊</div><h3>Text to Speech</h3><p>22+ premium AI voices in 50+ languages</p></div>
+      <div class="tool-card"><div class="tc-icon">🖼️</div><h3>Image Generation</h3><p>AI-powered text-to-image creation</p></div>
+    </div>
+    <div class="settings-section"><h3>👥 Team</h3><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-top:1rem">
+      <div style="text-align:center;padding:1rem"><div style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,var(--orange),#dc2626);margin:0 auto .75rem;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:800;color:#fff">Z</div><div style="font-weight:700;font-size:.9rem">Zain</div><div style="font-size:.75rem;color:var(--muted)">Founder & CEO</div></div>
+      <div style="text-align:center;padding:1rem"><div style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#8b5cf6);margin:0 auto .75rem;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:800;color:#fff">A</div><div style="font-weight:700;font-size:.9rem">AI Team</div><div style="font-size:.75rem;color:var(--muted)">ML Engineers</div></div>
+      <div style="text-align:center;padding:1rem"><div style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#22c55e,#06b6d4);margin:0 auto .75rem;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:800;color:#fff">D</div><div style="font-weight:700;font-size:.9rem">Dev Team</div><div style="font-size:.75rem;color:var(--muted)">Full-Stack Engineers</div></div>
+    </div></div>
+    <div class="settings-section"><h3>📊 By the Numbers</h3><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-top:1rem">
+      <div style="text-align:center"><div style="font-size:2rem;font-weight:900;color:var(--orange)">50K+</div><div style="font-size:.8rem;color:var(--muted)">Active Users</div></div>
+      <div style="text-align:center"><div style="font-size:2rem;font-weight:900;color:var(--orange)">120+</div><div style="font-size:.8rem;color:var(--muted)">Countries</div></div>
+      <div style="text-align:center"><div style="font-size:2rem;font-weight:900;color:var(--orange)">2M+</div><div style="font-size:.8rem;color:var(--muted)">Generations</div></div>
+      <div style="text-align:center"><div style="font-size:2rem;font-weight:900;color:var(--orange)">10</div><div style="font-size:.8rem;color:var(--muted)">HF Models</div></div>
+    </div></div>
+  </div>
+  <footer class="footer"><div class="ft-inner"><div class="ft-brand"><div class="nav-brand" onclick="goTo('home')"><div class="brand-ico">BG</div><span class="brand-txt">BG <b>LABS</b></span></div><p>Pakistan's #1 AI creative platform.</p></div><div class="ft-links"><div><b>Platform</b><a onclick="goTo('studio')">Studio</a><a onclick="goTo('voices-app')">Voices</a><a onclick="goTo('pricing')">Pricing</a></div><div><b>Company</b><a onclick="goTo('about')">About</a><a onclick="goTo('support')">Support</a><a onclick="goTo('contact')">Contact</a></div></div></div><div class="ft-bottom"><span>© 2024 BG LABS · Made in Pakistan 🇵🇰</span></div></footer>
 </div>
 
 <!-- Scripts -->
@@ -1688,14 +2445,27 @@ function showPage(name) {
 }
 window.goTo=function(name) {
   if(['login','signup'].includes(name) && currentUser) { showPage('dashboard'); return; }
-  if(['dashboard','studio','voices-app','history','settings'].includes(name) && !currentUser) { showPage('login'); return; }
+  const authPages = ['dashboard','studio','voices-app','history','settings','voice-studio','voice-library','audio-editor','creator-hub','youtube-automation','image-generator','script-writer','tools-hub','ai-spaces','elevenlabs-settings','developer-mode','avatar-studio','long-video','buy-credits','referral','contact','admin'];
+  if(authPages.includes(name) && !currentUser) { showPage('login'); return; }
   if(name==='admin') { if(!currentUser?.isAdmin) { showPage('login'); return; } renderAdmin(); }
   if(name==='studio') renderStudio();
   if(name==='voices-app') renderVoicesApp();
+  if(name==='voice-library') renderVoiceLibrary();
+  if(name==='voice-studio') renderVoiceStudio();
+  if(name==='audio-editor') initAudioEditor();
   if(name==='history') renderHistory();
   if(name==='settings') renderSettings();
   if(name==='dashboard') renderDashboard();
   if(name==='pricing') renderPricing();
+  if(name==='creator-hub') renderCreatorHub();
+  if(name==='youtube-automation') renderYTVOices();
+  if(name==='image-generator') renderImageGallery();
+  if(name==='ai-spaces') renderSpaces();
+  if(name==='long-video') renderLVVoices();
+  if(name==='avatar-studio') renderAvatarList();
+  if(name==='referral') renderReferral();
+  if(name==='elevenlabs-settings') loadElevenLabsSettings();
+  if(name==='developer-mode') renderDeveloperMode();
   showPage(name);
 };
 
@@ -1715,6 +2485,8 @@ function updateAuthUI() {
     if(av)av.textContent=currentUser.avatar||currentUser.name.slice(0,2).toUpperCase();
     const al=document.getElementById('admin-link');
     if(al)al.style.display=currentUser.isAdmin?'flex':'none';
+    const sb=document.getElementById('sb-admin');
+    if(sb)sb.style.display=currentUser.isAdmin?'flex':'none';
     updateCreditsDisplay();
   } else {
     pub.style.display='block'; app.style.display='none';
@@ -2220,6 +2992,668 @@ window.admShowTab=function(tab,btn){
   document.querySelectorAll('.sb-item').forEach(b=>b.classList.remove('active'));
   document.getElementById('adm-'+tab).style.display='block';
   btn.classList.add('active');
+};
+
+// ── VOICE LIBRARY PAGE ──────────────────────
+function renderVoiceLibrary() {
+  const g = document.getElementById('voice-library-grid');
+  if (!g) return;
+  g.innerHTML = VOICES.map(v => `
+    <div class="voice-card rv" data-g="${v.gender}" data-accent="${v.accent}" onclick="useVoice('${v.id}')">
+      <div class="vc-top">
+        <div class="vc-av" style="background:${v.color}">${v.name.slice(0,1)}</div>
+        <div><div class="vc-name">${v.name}</div><div class="vc-accent">${v.gender} · ${v.accent}</div></div>
+        <div class="badge b-orange" style="margin-left:auto;font-size:.6rem">${v.model}</div>
+      </div>
+      <div class="vc-style-badge">${v.style}</div>
+      <div class="vc-desc">${v.desc}</div>
+      <div class="vc-actions">
+        <button class="btn btn-ghost btn-sm vc-play-btn" onclick="event.stopPropagation();previewV('${v.id}')">▶ Preview</button>
+        <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();useVoice('${v.id}')">Use Voice</button>
+      </div>
+    </div>`).join('');
+  setTimeout(revealAll, 100);
+}
+
+window.filterVoiceLibrary = function(filter, btn) {
+  if (btn) {
+    document.querySelectorAll('#pg-voice-library .vfb').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+  const q = document.getElementById('vl-search')?.value?.toLowerCase() || '';
+  document.querySelectorAll('#pg-voice-library .voice-card').forEach(c => {
+    const name = c.querySelector('.vc-name')?.textContent?.toLowerCase() || '';
+    const accent = c.dataset.accent || '';
+    const gender = c.dataset.g || '';
+    let matchFilter = true;
+    if (filter === 'female' || filter === 'male') matchFilter = gender === filter;
+    else if (filter !== 'all') matchFilter = accent === filter;
+    const matchSearch = !q || name.includes(q) || accent.toLowerCase().includes(q);
+    c.style.display = (matchFilter && matchSearch) ? '' : 'none';
+  });
+};
+
+// ── VOICE STUDIO ────────────────────────────
+function renderVoiceStudio() {
+  const list = document.getElementById('vs-list');
+  if (!list) return;
+  const profiles = JSON.parse(localStorage.getItem('bglabs_voice_profiles') || '[]');
+  if (!profiles.length) {
+    list.innerHTML = '<div class="empty" style="padding:1.5rem"><div class="empty-icon">🎤</div><h3>No custom voices</h3><p>Create your first voice profile!</p></div>';
+    return;
+  }
+  list.innerHTML = profiles.map((p, i) => `
+    <div style="display:flex;align-items:center;gap:.75rem;padding:.75rem;border:1px solid var(--bdr);border-radius:10px;margin-bottom:.5rem">
+      <div style="width:36px;height:36px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:.8rem">${p.name.slice(0,1)}</div>
+      <div style="flex:1"><div style="font-weight:600;font-size:.85rem">${p.name}</div><div style="font-size:.72rem;color:var(--muted)">${p.desc || 'Custom voice'}</div></div>
+      <button class="btn btn-ghost btn-sm" onclick="deleteVoiceProfile(${i})" style="color:var(--red)">🗑</button>
+    </div>`).join('');
+}
+
+window.handleVoiceUpload = function(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const status = document.getElementById('vs-upload-status');
+  status.style.display = 'block';
+  status.className = 'gen-status done';
+  status.innerHTML = `<span>✅ Uploaded: ${file.name} (${(file.size/1024).toFixed(1)} KB)</span>`;
+};
+
+window.saveVoiceProfile = function() {
+  const name = document.getElementById('vs-name')?.value.trim();
+  if (!name) { toast('Please enter a voice name', 'error'); return; }
+  const profiles = JSON.parse(localStorage.getItem('bglabs_voice_profiles') || '[]');
+  profiles.push({
+    name,
+    desc: document.getElementById('vs-desc')?.value || '',
+    pitch: document.getElementById('vs-pitch')?.value || 1,
+    speed: document.getElementById('vs-speed')?.value || 1,
+    createdAt: new Date().toISOString()
+  });
+  localStorage.setItem('bglabs_voice_profiles', JSON.stringify(profiles));
+  document.getElementById('vs-name').value = '';
+  document.getElementById('vs-desc').value = '';
+  renderVoiceStudio();
+  toast('✅ Voice profile saved!', 'success');
+};
+
+window.deleteVoiceProfile = function(i) {
+  if (!confirm('Delete this voice profile?')) return;
+  const profiles = JSON.parse(localStorage.getItem('bglabs_voice_profiles') || '[]');
+  profiles.splice(i, 1);
+  localStorage.setItem('bglabs_voice_profiles', JSON.stringify(profiles));
+  renderVoiceStudio();
+  toast('Deleted');
+};
+
+// ── AUDIO EDITOR ────────────────────────────
+let aeAudioBuffer = null;
+let aeAudioCtx = null;
+
+function initAudioEditor() {
+  aeAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+window.loadAudioFile = async function(input) {
+  const file = input.files[0];
+  if (!file) return;
+  try {
+    if (!aeAudioCtx) aeAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const arrayBuffer = await file.arrayBuffer();
+    aeAudioBuffer = await aeAudioCtx.decodeAudioData(arrayBuffer);
+    document.getElementById('ae-trim-end').value = aeAudioBuffer.duration.toFixed(1);
+    drawWaveform(aeAudioBuffer);
+    toast('✅ Audio loaded!', 'success');
+  } catch(e) { toast('Failed to load audio: ' + e.message, 'error'); }
+};
+
+window.loadLastGenerated = function() {
+  if (lastAudioUrl) {
+    toast('Loading last generated audio...');
+    fetch(lastAudioUrl).then(r => r.arrayBuffer()).then(async buf => {
+      if (!aeAudioCtx) aeAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      aeAudioBuffer = await aeAudioCtx.decodeAudioData(buf);
+      document.getElementById('ae-trim-end').value = aeAudioBuffer.duration.toFixed(1);
+      drawWaveform(aeAudioBuffer);
+      toast('✅ Audio loaded!', 'success');
+    }).catch(e => toast('Failed to load audio', 'error'));
+  } else { toast('No audio generated yet', 'error'); }
+};
+
+function drawWaveform(buffer) {
+  const wf = document.getElementById('ae-waveform');
+  const data = buffer.getChannelData(0);
+  const bars = 80;
+  const step = Math.floor(data.length / bars);
+  let html = '';
+  for (let i = 0; i < bars; i++) {
+    let sum = 0;
+    for (let j = 0; j < step; j++) sum += Math.abs(data[i * step + j] || 0);
+    const h = Math.max(4, (sum / step) * 100);
+    html += `<div class="waveform-bar" style="height:${h}px"></div>`;
+  }
+  wf.innerHTML = html;
+}
+
+window.processAudio = function() {
+  if (!aeAudioBuffer) { toast('Load audio first', 'error'); return; }
+  const speed = parseFloat(document.getElementById('ae-speed')?.value || 1);
+  const pitch = parseFloat(document.getElementById('ae-pitch')?.value || 1);
+  const trimStart = parseFloat(document.getElementById('ae-trim-start')?.value || 0);
+  const trimEnd = parseFloat(document.getElementById('ae-trim-end')?.value || aeAudioBuffer.duration);
+  const offlineCtx = new OfflineAudioContext(1, (trimEnd - trimStart) * aeAudioBuffer.sampleRate / speed, aeAudioBuffer.sampleRate);
+  const source = offlineCtx.createBufferSource();
+  source.buffer = aeAudioBuffer;
+  source.playbackRate.value = speed;
+  source.connect(offlineCtx.destination);
+  source.start(0, trimStart, trimEnd - trimStart);
+  offlineCtx.startRendering().then(renderedBuffer => {
+    const wav = audioBufferToWav(renderedBuffer);
+    const blob = new Blob([wav], { type: 'audio/wav' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'bglabs_edited_audio.wav'; a.click();
+    toast('⬇ Downloaded!', 'success');
+  }).catch(e => toast('Processing failed: ' + e.message, 'error'));
+};
+
+window.playProcessedAudio = function() {
+  if (!aeAudioBuffer) { toast('Load audio first', 'error'); return; }
+  const speed = parseFloat(document.getElementById('ae-speed')?.value || 1);
+  const trimStart = parseFloat(document.getElementById('ae-trim-start')?.value || 0);
+  const trimEnd = parseFloat(document.getElementById('ae-trim-end')?.value || aeAudioBuffer.duration);
+  const offlineCtx = new OfflineAudioContext(1, (trimEnd - trimStart) * aeAudioBuffer.sampleRate / speed, aeAudioBuffer.sampleRate);
+  const source = offlineCtx.createBufferSource();
+  source.buffer = aeAudioBuffer;
+  source.playbackRate.value = speed;
+  source.connect(offlineCtx.destination);
+  source.start(0, trimStart, trimEnd - trimStart);
+  offlineCtx.startRendering().then(buf => {
+    const raw = buf.getChannelData(0);
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const newBuf = ctx.createBuffer(1, raw.length, buf.sampleRate);
+    newBuf.getChannelData(0).set(raw);
+    const src = ctx.createBufferSource();
+    src.buffer = newBuf;
+    src.connect(ctx.destination);
+    src.start();
+    toast('▶ Playing preview...');
+  });
+};
+
+window.resetAudioEditor = function() {
+  aeAudioBuffer = null;
+  document.getElementById('ae-waveform').innerHTML = '<span style="color:var(--muted);font-size:.85rem">Load an audio file to see waveform</span>';
+  document.getElementById('ae-speed').value = 1;
+  document.getElementById('ae-pitch').value = 1;
+  document.getElementById('ae-trim-start').value = 0;
+  document.getElementById('ae-trim-end').value = 0;
+  document.getElementById('ae-speed-val').textContent = '1.0';
+  document.getElementById('ae-pitch-val').textContent = '1.0';
+};
+
+function audioBufferToWav(buffer) {
+  const numChannels = 1, sampleRate = buffer.sampleRate, format = 1, bitDepth = 16;
+  const data = buffer.getChannelData(0);
+  const dataLength = data.length * 2;
+  const buffer2 = new ArrayBuffer(44 + dataLength);
+  const view = new DataView(buffer2);
+  function writeString(offset, string) { for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i)); }
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + dataLength, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, format, true);
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * numChannels * bitDepth / 8, true);
+  view.setUint16(32, numChannels * bitDepth / 8, true);
+  view.setUint16(34, bitDepth, true);
+  writeString(36, 'data');
+  view.setUint32(40, dataLength, true);
+  let offset = 44;
+  for (let i = 0; i < data.length; i++, offset += 2) {
+    const s = Math.max(-1, Math.min(1, data[i]));
+    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+  }
+  return buffer2;
+}
+
+// ── CREATOR HUB ─────────────────────────────
+function renderCreatorHub() {
+  const el = document.getElementById('ch-projects');
+  if (!el) return;
+  const hist = currentUser ? DB.getHistory(currentUser.id).slice(0, 8) : [];
+  if (!hist.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><h3>No projects yet</h3><p>Start creating to see your projects here.</p></div>';
+    return;
+  }
+  el.innerHTML = hist.map(h => {
+    const v = VOICES.find(v2 => v2.id === h.voiceId) || { name: '?', color: '#f97316' };
+    return `<div class="hist-item rv"><div class="hist-av" style="background:${v.color}">${v.name.slice(0,1)}</div><div class="hist-info"><div class="hist-text">${h.text || ''}</div><div class="hist-meta">${v.name} · ${(h.chars||0).toLocaleString()} chars · ${timeAgo(h.createdAt)}</div></div></div>`;
+  }).join('');
+  setTimeout(revealAll, 100);
+}
+
+// ── YOUTUBE AUTOMATION ──────────────────────
+function renderYTVOices() {
+  const sel = document.getElementById('yt-voice');
+  if (sel && !sel.options.length) {
+    VOICES.forEach(v => { const o = document.createElement('option'); o.value = v.id; o.textContent = `${v.name} (${v.gender} · ${v.accent})`; sel.appendChild(o); });
+  }
+}
+
+window.generateYTWorkflow = function() {
+  const script = document.getElementById('yt-script')?.value.trim();
+  if (!script) { toast('Please enter a script', 'error'); return; }
+  const paragraphs = script.split(/\n\s*\n/).filter(p => p.trim());
+  if (!paragraphs.length) { toast('No scenes found. Separate paragraphs with blank lines.', 'error'); return; }
+  const voiceId = document.getElementById('yt-voice')?.value || 'rachel';
+  const voice = VOICES.find(v => v.id === voiceId) || VOICES[0];
+  const sb = document.getElementById('yt-storyboard');
+  sb.innerHTML = `<h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem">📋 Storyboard (${paragraphs.length} scenes)</h3>` +
+    paragraphs.map((p, i) => `
+      <div class="timeline-scene rv">
+        <div class="timeline-scene-num">${i + 1}</div>
+        <div class="timeline-scene-text">${p.trim().slice(0, 120)}${p.length > 120 ? '…' : ''}</div>
+        <div style="display:flex;gap:.25rem;flex-shrink:0">
+          <button class="btn btn-ghost btn-sm btn-icon" title="Generate TTS" onclick="generateSceneTTS(${i},'${voiceId}')">🎙️</button>
+          <button class="btn btn-ghost btn-sm btn-icon" title="Preview">▶</button>
+        </div>
+      </div>`).join('') +
+    `<div style="margin-top:1rem;display:flex;gap:.5rem"><button class="btn btn-primary btn-sm" onclick="generateAllSceneTTS('${voiceId}')">⚡ Generate All TTS</button><button class="btn btn-ghost btn-sm" onclick="toast('Export coming soon!')">⬇ Export All</button></div>`;
+  setTimeout(revealAll, 100);
+  toast(`📋 ${paragraphs.length} scenes created`, 'success');
+};
+
+window.generateSceneTTS = async function(idx, voiceId) {
+  const script = document.getElementById('yt-script')?.value.trim();
+  const paragraphs = script.split(/\n\s*\n/).filter(p => p.trim());
+  const text = paragraphs[idx];
+  if (!text || !currentUser) return;
+  toast('🎙️ Generating TTS for scene ' + (idx + 1) + '...');
+  try {
+    const result = await TTS.generate(text.trim(), voiceId, () => {});
+    DB.addHistory(currentUser.id, { text: text.trim(), voiceId, chars: result.chars, model: result.modelUsed, url: result.url, blob: 'has_audio' });
+    toast('✅ Scene ' + (idx + 1) + ' generated!', 'success');
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+};
+
+window.generateAllSceneTTS = async function(voiceId) {
+  const script = document.getElementById('yt-script')?.value.trim();
+  const paragraphs = script.split(/\n\s*\n/).filter(p => p.trim());
+  if (!currentUser) return;
+  for (let i = 0; i < paragraphs.length; i++) {
+    toast(`🎙️ Generating scene ${i + 1}/${paragraphs.length}...`);
+    try {
+      const result = await TTS.generate(paragraphs[i].trim(), voiceId, () => {});
+      DB.addHistory(currentUser.id, { text: paragraphs[i].trim(), voiceId, chars: result.chars, model: result.modelUsed, url: result.url, blob: 'has_audio' });
+    } catch(e) { console.error('Scene ' + i + ' failed:', e); }
+  }
+  toast('✅ All scenes generated!', 'success');
+};
+
+// ── IMAGE GENERATOR ─────────────────────────
+window.generateImage = function() {
+  const prompt = document.getElementById('ig-prompt')?.value.trim();
+  if (!prompt) { toast('Please enter a prompt', 'error'); return; }
+  const style = document.getElementById('ig-style')?.value || 'realistic';
+  const size = document.getElementById('ig-size')?.value || '512x512';
+  const [w, h] = size.split('x');
+  const styledPrompt = `${prompt}, ${style} style, high quality, detailed`;
+  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(styledPrompt)}?width=${w}&height=${h}&seed=${Date.now()}`;
+  document.getElementById('ig-status').style.display = 'flex';
+  document.getElementById('ig-status').className = 'gen-status generating';
+  document.getElementById('ig-status').innerHTML = '<div class="status-spinner"></div><span>Generating image...</span>';
+  document.getElementById('ig-result').style.display = 'none';
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = function() {
+    document.getElementById('ig-result-img').src = url;
+    document.getElementById('ig-result').style.display = 'block';
+    document.getElementById('ig-status').className = 'gen-status done';
+    document.getElementById('ig-status').innerHTML = '<span>✅ Image generated!</span>';
+    const gallery = JSON.parse(localStorage.getItem('bglabs_gallery') || '[]');
+    gallery.unshift({ url, prompt, style, createdAt: new Date().toISOString() });
+    localStorage.setItem('bglabs_gallery', JSON.stringify(gallery.slice(0, 50)));
+    renderImageGallery();
+  };
+  img.onerror = function() {
+    document.getElementById('ig-status').className = 'gen-status error';
+    document.getElementById('ig-status').innerHTML = '<span>❌ Failed to generate image</span>';
+  };
+  img.src = url;
+};
+
+window.downloadGeneratedImage = function() {
+  const src = document.getElementById('ig-result-img')?.src;
+  if (!src) return;
+  const a = document.createElement('a');
+  a.href = src; a.download = 'bglabs_image.png'; a.target = '_blank';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  toast('⬇ Downloading...');
+};
+
+function renderImageGallery() {
+  const el = document.getElementById('ig-gallery');
+  if (!el) return;
+  const gallery = JSON.parse(localStorage.getItem('bglabs_gallery') || '[]');
+  if (!gallery.length) {
+    el.innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="empty-icon">🖼️</div><h3>No images yet</h3><p>Generate your first image above!</p></div>';
+    return;
+  }
+  el.innerHTML = gallery.map(g => `
+    <div class="gallery-item" onclick="window.open('${g.url}','_blank')">
+      <img src="${g.url}" alt="${g.prompt}" loading="lazy"/>
+    </div>`).join('');
+}
+
+// ── SCRIPT WRITER ───────────────────────────
+const SCRIPT_TEMPLATES = {
+  'youtube-intro': {
+    professional: ['Welcome back to {channel}!', 'Today we\'re diving deep into {topic}.', 'Let\'s get started.'],
+    casual: ['Hey everyone!', 'So today we\'re talking about {topic}.', 'Let\'s jump right in!'],
+    energetic: ['What\'s up guys!', 'Welcome to another amazing video!', 'Today we\'re covering {topic}!', 'Let\'s go!'],
+    calm: ['Hello there.', 'Welcome. Today we\'ll explore {topic}.', 'Let\'s begin.'],
+    humorous: ['Well hello there, beautiful people!', 'Guess what we\'re talking about today?', 'That\'s right — {topic}!', 'Buckle up.'],
+    dramatic: ['In a world full of noise...', 'One topic stands above the rest.', 'Today: {topic}.', 'Let this journey begin.']
+  },
+  'youtube-explainer': {
+    professional: ['In this video, we\'ll explain {topic}.', 'First, let\'s understand the basics.', '{topic} is important because...', 'Here\'s how it works step by step.', 'To summarize, {topic} offers tremendous value.'],
+    casual: ['So you want to know about {topic}?', 'Let me break it down for you.', 'Basically, here\'s what happens...', 'Pretty cool, right?'],
+    energetic: ['Ready to learn about {topic}?', 'This is going to blow your mind!', 'Step one: understand the foundation.', 'Step two: see it in action.', 'And that\'s {topic} in a nutshell!'],
+    calm: ['Let\'s take a moment to understand {topic}.', 'At its core, it\'s quite simple.', 'The key principle is...', 'With this knowledge, you can...'],
+    humorous: ['Alright, let\'s talk about {topic} without falling asleep.', 'Think of it like this — you know when...', 'Yeah, it\'s exactly like that.', 'Mind blown? Mine too.'],
+    dramatic: ['The truth about {topic} has been hidden for too long.', 'Today, we reveal everything.', 'It all starts with...', 'And now you know the secret.']
+  },
+  'podcast-intro': {
+    professional: ['Welcome to the show.', 'I\'m your host, and today we\'re exploring {topic}.', 'Let\'s get into it.'],
+    casual: ['Hey, welcome back!', 'Today\'s episode is all about {topic}.', 'Let\'s chat.'],
+    energetic: ['Welcome welcome welcome!', 'Today we have an incredible topic: {topic}!', 'Let\'s dive in!'],
+    calm: ['Hello and welcome.', 'Today\'s episode: {topic}.', 'Sit back and enjoy.'],
+    humorous: ['You\'re listening to the best podcast ever.', 'Today we tackle {topic}.', 'No pressure.'],
+    dramatic: ['This changes everything.', 'Today\'s episode explores {topic}.', 'Stay tuned.']
+  },
+  'ad-read': {
+    professional: ['This video is sponsored by {brand}.', '{brand} helps you {benefit}.', 'Use code {code} for 20% off.'],
+    casual: ['Quick shoutout to {brand} for sponsoring this video!', 'They make {benefit} super easy.', 'Check them out — link in the description.'],
+    energetic: ['Huge thanks to {brand}!', 'These guys are amazing at {benefit}.', 'Go check them out right now!'],
+    calm: ['A word from our sponsor, {brand}.', 'They specialize in {benefit}.', 'Link in the description below.'],
+    humorous: ['This video is brought to you by {brand}.', 'Because apparently I need to eat.', 'But seriously, they\'re great at {benefit}.'],
+    dramatic: ['In our darkest hour, one brand answers the call.', '{brand}. Masters of {benefit}.', 'Link below. You\'re welcome.']
+  },
+  'tutorial': {
+    professional: ['In this tutorial, you\'ll learn {topic}.', 'Step 1: Set up your environment.', 'Step 2: Follow along with the code.', 'Step 3: Test your implementation.', 'That\'s it! You\'ve successfully learned {topic}.'],
+    casual: ['Alright, let\'s learn {topic}!', 'First things first...', 'Now here\'s where it gets fun...', 'And there you have it!'],
+    energetic: ['Let\'s build something awesome!', 'We\'re learning {topic} today!', 'Follow along step by step!', 'You\'re doing great!', 'Boom! Done!'],
+    calm: ['Let\'s walk through {topic} together.', 'Start by...', 'Next, you\'ll want to...', 'Finally...', 'Take your time with this.'],
+    humorous: ['Time to learn {topic} — no coding experience required. Just kidding.', 'Step 1: Don\'t panic.', 'Step 2: Actually write the code.', 'Step 3: Celebrate like you just won the lottery.'],
+    dramatic: ['The quest for knowledge begins.', 'Our mission: master {topic}.', 'First obstacle...', 'The final challenge...', 'Victory is yours.']
+  },
+  'story': {
+    professional: ['In today\'s story, we explore {topic}.', 'It all began when...', 'The turning point came...', 'And so, the lesson was learned.'],
+    casual: ['So get this — {topic}.', 'One day, everything changed.', 'And that\'s how it happened.'],
+    energetic: ['Buckle up for this one!', 'Picture this: {topic}.', 'Things got wild!', 'What a ride!'],
+    calm: ['Let me tell you a story about {topic}.', 'Once upon a time...', 'And they lived peacefully after.', 'The end.'],
+    humorous: ['This is the story of {topic}.', 'Or at least, how I remember it.', 'Spoiler: there\'s a plot twist.', 'The end. Kind of.'],
+    dramatic: ['In the beginning, there was {topic}.', 'Darkness fell...', 'But hope remained.', 'And the world was changed forever.']
+  },
+  'presentation': {
+    professional: ['Good morning everyone.', 'Today I\'ll be presenting {topic}.', 'Let\'s start with the overview.', 'Here are the key findings.', 'Thank you for your attention.'],
+    casual: ['Hey team!', 'Let me walk you through {topic}.', 'Here\'s what we found.', 'Any questions?'],
+    energetic: ['Alright everyone, let\'s do this!', 'Here\'s the exciting update on {topic}!', 'The results are in!', 'Let\'s crush it!'],
+    calm: ['Good day everyone.', 'Let\'s review {topic}.', 'The data shows...', 'In conclusion...'],
+    humorous: ['Good morning. Coffee first, then {topic}.', 'Here\'s the TL;DR.', 'The short version: it works.', 'Questions? Besides "when\'s lunch?"'],
+    dramatic: ['Ladies and gentlemen.', 'What I\'m about to share will change everything.', '{topic}: the revelation.', 'Thank you.']
+  },
+  'news': {
+    professional: ['Breaking news today on {topic}.', 'Here\'s what we know so far.', 'Sources confirm...', 'We\'ll keep you updated as this develops.'],
+    casual: ['So here\'s the latest on {topic}.', 'Apparently...', 'Wild times, right?'],
+    energetic: ['Breaking! {topic}!', 'This just in!', 'The internet is going crazy!', 'Stay tuned for more!'],
+    calm: ['Today\'s news covers {topic}.', 'According to reports...', 'The situation is developing.'],
+    humorous: ['Breaking: {topic}.', 'We\'re as surprised as you are.', 'More at 11. Or whenever.'],
+    dramatic: ['URGENT: {topic}.', 'The world watches...', 'History unfolds before our eyes.', 'This is not a drill.']
+  }
+};
+
+window.generateScript = function() {
+  const genre = document.getElementById('sw-genre')?.value || 'youtube-intro';
+  const mood = document.getElementById('sw-mood')?.value || 'professional';
+  const wordCount = parseInt(document.getElementById('sw-duration')?.value || '250');
+  const details = document.getElementById('sw-details')?.value || '';
+  const topic = details || 'this topic';
+  const templates = SCRIPT_TEMPLATES[genre]?.[mood] || SCRIPT_TEMPLATES['youtube-intro']['professional'];
+  let script = templates.map(t => t.replace(/\{topic\}/g, topic).replace(/\{channel\}/g, details || 'our channel').replace(/\{brand\}/g, 'our sponsor').replace(/\{benefit\}/g, 'amazing things').replace(/\{code\}/g, 'BG20').join(' ')).join('\n\n');
+  const currentLen = script.split(/\s+/).length;
+  if (currentLen < wordCount) {
+    const extraSentences = [
+      `This is something many people overlook when it comes to ${topic}.`,
+      `Let me share an interesting perspective on ${topic}.`,
+      `One key insight about ${topic} is that it continues to evolve.`,
+      `When we think about ${topic}, we should consider the broader context.`,
+      `The impact of ${topic} cannot be overstated in today's world.`,
+      `Many experts agree that ${topic} will only grow in importance.`,
+      `Here's what most people get wrong about ${topic}.`,
+      `The future of ${topic} looks incredibly promising.`
+    ];
+    let additional = '';
+    while (additional.split(/\s+/).length < wordCount - currentLen) {
+      additional += extraSentences[Math.floor(Math.random() * extraSentences.length)] + ' ';
+    }
+    script += '\n\n' + additional.trim();
+  }
+  document.getElementById('sw-output').textContent = script;
+  document.getElementById('sw-result').style.display = 'block';
+  toast('✅ Script generated!', 'success');
+};
+
+window.copyScript = function() {
+  const text = document.getElementById('sw-output')?.textContent || '';
+  navigator.clipboard.writeText(text).then(() => toast('📋 Copied!', 'success')).catch(() => toast('Copy failed', 'error'));
+};
+
+window.useScriptInStudio = function() {
+  const text = document.getElementById('sw-output')?.textContent || '';
+  if (!currentUser) { goTo('login'); return; }
+  goTo('studio');
+  setTimeout(() => { document.getElementById('studio-text').value = text; }, 300);
+  toast('📝 Script loaded in Studio');
+};
+
+// ── AI SPACES ───────────────────────────────
+function renderSpaces() {
+  const grid = document.getElementById('spaces-grid');
+  if (!grid) return;
+  const spaces = JSON.parse(localStorage.getItem('bglabs_spaces') || '[]');
+  if (!spaces.length) {
+    grid.innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="empty-icon">📦</div><h3>No spaces yet</h3><p>Create your first workspace to organize projects.</p></div>';
+    return;
+  }
+  grid.innerHTML = spaces.map((s, i) => `
+    <div class="space-card rv" onclick="openSpace(${i})">
+      <h3>📦 ${s.name}</h3>
+      <p>${s.description || 'No description'}</p>
+      <div style="font-size:.72rem;color:var(--muted);margin-top:.5rem">${(s.files || []).length} files · Created ${timeAgo(s.createdAt)}</div>
+    </div>`).join('');
+  setTimeout(revealAll, 100);
+}
+
+window.createNewSpace = function() {
+  const name = prompt('Space name:');
+  if (!name) return;
+  const spaces = JSON.parse(localStorage.getItem('bglabs_spaces') || '[]');
+  spaces.push({ name, description: '', files: [], createdAt: new Date().toISOString() });
+  localStorage.setItem('bglabs_spaces', JSON.stringify(spaces));
+  renderSpaces();
+  toast('✅ Space created!', 'success');
+};
+
+window.openSpace = function(i) {
+  const spaces = JSON.parse(localStorage.getItem('bglabs_spaces') || '[]');
+  const space = spaces[i];
+  if (!space) return;
+  toast(`📦 Opened: ${space.name}`);
+};
+
+// ── ELEVENLABS SETTINGS ─────────────────────
+window.loadElevenLabsSettings = function() {
+  const key = localStorage.getItem('bglabs_el_api_key') || '';
+  const model = localStorage.getItem('bglabs_el_model') || 'eleven_monolingual_v1';
+  const stability = localStorage.getItem('bglabs_el_stability') || '0.5';
+  const similarity = localStorage.getItem('bglabs_el_similarity') || '0.75';
+  const style = localStorage.getItem('bglabs_el_style') || '0';
+  document.getElementById('el-api-key').value = key;
+  document.getElementById('el-model').value = model;
+  document.getElementById('el-stability').value = stability;
+  document.getElementById('el-similarity').value = similarity;
+  document.getElementById('el-style').value = style;
+  document.getElementById('el-status').innerHTML = key ? '<span style="color:var(--green)">✅ API key configured. Using ElevenLabs models.</span>' : 'No API key configured. Using free HuggingFace models.';
+};
+
+window.saveElevenLabsSettings = function() {
+  localStorage.setItem('bglabs_el_api_key', document.getElementById('el-api-key').value);
+  localStorage.setItem('bglabs_el_model', document.getElementById('el-model').value);
+  localStorage.setItem('bglabs_el_stability', document.getElementById('el-stability').value);
+  localStorage.setItem('bglabs_el_similarity', document.getElementById('el-similarity').value);
+  localStorage.setItem('bglabs_el_style', document.getElementById('el-style').value);
+  loadElevenLabsSettings();
+  toast('✅ Settings saved!', 'success');
+};
+
+// ── DEVELOPER MODE ──────────────────────────
+function renderDeveloperMode() {
+  if (!currentUser) return;
+  const apiKey = 'bg_' + currentUser.id?.slice(0, 8) + '_' + Math.random().toString(36).slice(2, 10);
+  document.getElementById('dev-api-key-input').value = localStorage.getItem('bglabs_dev_api_key') || apiKey;
+  document.getElementById('dev-api-key').textContent = (localStorage.getItem('bglabs_dev_api_key') || apiKey).slice(0, 12) + '…';
+  const hist = DB.getHistory(currentUser.id);
+  document.getElementById('dev-api-calls').textContent = hist.length;
+}
+
+window.copyApiKey = function() {
+  const key = document.getElementById('dev-api-key-input')?.value || '';
+  navigator.clipboard.writeText(key).then(() => toast('📋 API key copied!', 'success')).catch(() => toast('Copy failed', 'error'));
+};
+
+window.regenerateApiKey = function() {
+  const newKey = 'bg_' + Math.random().toString(36).slice(2, 10) + '_' + Math.random().toString(36).slice(2, 10);
+  localStorage.setItem('bglabs_dev_api_key', newKey);
+  renderDeveloperMode();
+  toast('🔄 API key regenerated!', 'success');
+};
+
+// ── AVATAR STUDIO ───────────────────────────
+window.updateAvatarPreview = function() {
+  const base = document.getElementById('avatar-base')?.value || '🧑';
+  document.getElementById('avatar-preview').textContent = base;
+  const clothesColor = document.getElementById('avatar-clothes')?.value || '#f97316';
+  document.getElementById('avatar-preview').style.background = `linear-gradient(135deg, ${clothesColor}, ${clothesColor}88)`;
+};
+
+window.playAvatarTTS = function() {
+  const text = document.getElementById('avatar-text')?.value.trim();
+  if (!text) { toast('Enter text for your avatar to speak', 'error'); return; }
+  const synth = window.speechSynthesis;
+  synth?.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  synth?.speak(u);
+  toast('▶ Avatar speaking...');
+};
+
+window.saveAvatar = function() {
+  const avatar = {
+    base: document.getElementById('avatar-base')?.value || '🧑',
+    hair: document.getElementById('avatar-hair')?.value || '#1a1a2e',
+    eyes: document.getElementById('avatar-eyes')?.value || '#3b82f6',
+    clothes: document.getElementById('avatar-clothes')?.value || '#f97316',
+    createdAt: new Date().toISOString()
+  };
+  const avatars = JSON.parse(localStorage.getItem('bglabs_avatars') || '[]');
+  avatars.push(avatar);
+  localStorage.setItem('bglabs_avatars', JSON.stringify(avatars));
+  renderAvatarList();
+  toast('✅ Avatar saved!', 'success');
+};
+
+function renderAvatarList() {
+  const el = document.getElementById('avatar-list');
+  if (!el) return;
+  const avatars = JSON.parse(localStorage.getItem('bglabs_avatars') || '[]');
+  if (!avatars.length) {
+    el.innerHTML = '<div class="empty" style="padding:1rem"><div class="empty-icon">👤</div><h3>No avatars yet</h3></div>';
+    return;
+  }
+  el.innerHTML = avatars.map((a, i) => `
+    <div style="display:flex;align-items:center;gap:.75rem;padding:.75rem;border:1px solid var(--bdr);border-radius:10px;margin-bottom:.5rem">
+      <div style="width:36px;height:36px;border-radius:50%;background:${a.clothes};display:flex;align-items:center;justify-content:center;font-size:1.2rem">${a.base}</div>
+      <div style="flex:1;font-size:.85rem;font-weight:600">Avatar ${i + 1}</div>
+      <button class="btn btn-ghost btn-sm" onclick="deleteAvatar(${i})" style="color:var(--red)">🗑</button>
+    </div>`).join('');
+}
+
+window.deleteAvatar = function(i) {
+  if (!confirm('Delete this avatar?')) return;
+  const avatars = JSON.parse(localStorage.getItem('bglabs_avatars') || '[]');
+  avatars.splice(i, 1);
+  localStorage.setItem('bglabs_avatars', JSON.stringify(avatars));
+  renderAvatarList();
+  toast('Deleted');
+};
+
+// ── LONG VIDEO GENERATOR ────────────────────
+function renderLVVoices() {
+  const sel = document.getElementById('lv-voice');
+  if (sel && !sel.options.length) {
+    VOICES.forEach(v => { const o = document.createElement('option'); o.value = v.id; o.textContent = `${v.name} (${v.gender})`; sel.appendChild(o); });
+  }
+}
+
+window.generateLongVideo = function() {
+  const script = document.getElementById('lv-script')?.value.trim();
+  if (!script) { toast('Please enter a script', 'error'); return; }
+  const paragraphs = script.split(/\n\s*\n/).filter(p => p.trim());
+  if (!paragraphs.length) { toast('Separate scenes with blank lines', 'error'); return; }
+  const transition = document.getElementById('lv-transition')?.value || 'fade';
+  const tl = document.getElementById('lv-timeline');
+  tl.innerHTML = `<h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem">🎬 Timeline (${paragraphs.length} scenes)</h3><div class="timeline-track">` +
+    paragraphs.map((p, i) => {
+      const sceneText = p.match(/\[SCENE:\s*(.*?)\]/)?.[1] || p.trim().slice(0, 80);
+      const narration = p.replace(/\[SCENE:.*?\]/g, '').trim();
+      return `<div class="timeline-scene rv">
+        <div class="timeline-scene-num">${i + 1}</div>
+        <div style="flex:1"><div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem">Scene ${i + 1}: ${sceneText}</div><div style="font-size:.75rem;color:var(--muted)">${narration.slice(0, 100)}${narration.length > 100 ? '…' : ''}</div></div>
+        <span class="badge b-blue" style="font-size:.6rem">${transition}</span>
+      </div>`;
+    }).join('') + '</div>' +
+    `<div style="margin-top:1rem;display:flex;gap:.5rem"><button class="btn btn-primary btn-sm" onclick="toast('TTS generation coming soon!')">🎙️ Generate Narration</button><button class="btn btn-ghost btn-sm" onclick="toast('Export coming soon!')">⬇ Export</button></div>`;
+  setTimeout(revealAll, 100);
+  toast(`🎬 ${paragraphs.length} scenes created`, 'success');
+};
+
+// ── REFERRAL ────────────────────────────────
+function renderReferral() {
+  if (!currentUser) return;
+  const code = 'BGLABS-' + (currentUser.name || 'USER').toUpperCase().slice(0, 6);
+  document.getElementById('ref-code').textContent = code;
+  const refData = JSON.parse(localStorage.getItem('bglabs_ref_' + currentUser.id) || '{"invites":0,"signups":0,"earned":0}');
+  document.getElementById('ref-invites').textContent = refData.invites;
+  document.getElementById('ref-signups').textContent = refData.signups;
+  document.getElementById('ref-earned').textContent = refData.earned;
+}
+
+window.copyRefCode = function() {
+  const code = document.getElementById('ref-code')?.textContent || '';
+  navigator.clipboard.writeText(code).then(() => toast('📋 Referral code copied!', 'success')).catch(() => toast('Copy failed', 'error'));
+};
+
+window.shareRef = function(platform) {
+  const code = document.getElementById('ref-code')?.textContent || 'BGLABS';
+  const url = `https://bglabs.io/signup?ref=${code}`;
+  const text = 'Join BG LABS with my referral code and get free credits!';
+  if (platform === 'twitter') window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`);
+  else if (platform === 'whatsapp') window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`);
+  else { navigator.clipboard.writeText(url).then(() => toast('📋 Link copied!', 'success')); }
 };
 
 // ── FAQ ──────────────────────────────────────
