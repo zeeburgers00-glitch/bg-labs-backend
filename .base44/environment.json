@@ -2,5 +2,8 @@
   "previewPort": 3000,
   "healthPath": "/health",
   "startCommand": "docker compose -f docker-compose.base44.yml up -d",
-  "secrets": []
+  "secrets": [
+    {"name": "F5_TTS_API_URL", "description": "Base URL of your running F5-TTS GPU inference service (exposes POST /generate and GET /health).", "requiredAtBoot": false},
+    {"name": "F5_TTS_API_KEY", "description": "API key / bearer token your F5-TTS service requires. Leave empty if no auth.", "requiredAtBoot": false}
+  ]
 }

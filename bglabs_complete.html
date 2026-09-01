@@ -701,6 +701,7 @@ input[type="range"]::-moz-range-thumb {
       <button class="app-nl" data-page="dashboard" onclick="goTo('dashboard')">Dashboard</button>
       <button class="app-nl" data-page="studio" onclick="goTo('studio')">Studio</button>
       <button class="app-nl" data-page="voices-app" onclick="goTo('voices-app')">Voices</button>
+      <button class="app-nl" onclick="goTo('clone-voice')">Clone</button>
       <button class="app-nl" data-page="history" onclick="goTo('history')">History</button>
       <button class="app-nl" data-page="pricing" onclick="goTo('pricing')">Pricing</button>
     </div>
@@ -1362,6 +1363,56 @@ input[type="range"]::-moz-range-thumb {
   </div>
 </div>
 
+<!-- ═══ CLONE VOICE PAGE ═══ -->
+<div id="pg-clone-voice" class="pg">
+  <div class="app-layout">
+    <nav class="sidebar">
+      <div class="sb-section">Main</div>
+      <button class="sb-item" onclick="goTo('dashboard')">📊 Dashboard</button>
+      <button class="sb-item" onclick="goTo('studio')">🎙️ Studio</button>
+      <button class="sb-item" onclick="goTo('voices-app')">🔊 Voices</button>
+      <button class="sb-item active" onclick="goTo('clone-voice')">🎤 Clone Voice</button>
+      <div class="sb-divider"></div><div class="sb-section">Account</div>
+      <button class="sb-item" onclick="goTo('settings')">⚙️ Settings</button>
+      <div class="sb-divider"></div>
+      <button class="sb-item" style="color:#64748b" onclick="doLogout()">🚪 Log out</button>
+    </nav>
+    <div class="app-main">
+      <div class="page-header"><h1>🎤 Clone Your Voice</h1><p>Upload a clean reference sample, type the transcript, and create a private cloned voice powered by F5-TTS.</p></div>
+      <div class="studio-layout">
+        <div class="studio-main">
+          <div class="card" style="padding:1.5rem">
+            <h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem">Create Cloned Voice</h3>
+            <div class="settings-row">
+              <div class="inp-group"><label class="inp-label">Voice Name *</label><input class="inp" id="cv-name" placeholder="e.g. My Voice"/></div>
+              <div class="inp-group"><label class="inp-label">Language</label><select class="inp" id="cv-lang"><option value="en">English</option><option value="ur">Urdu</option><option value="hi">Hindi</option><option value="ar">Arabic</option><option value="es">Spanish</option><option value="fr">French</option><option value="de">German</option></select></div>
+            </div>
+            <div class="inp-group" style="margin-top:1rem"><label class="inp-label">Description</label><input class="inp" id="cv-desc" placeholder="Optional description"/></div>
+            <div class="inp-group" style="margin-top:1rem">
+              <label class="inp-label">Reference Audio (mp3, wav, m4a — max 10MB) *</label>
+              <input class="inp" type="file" id="cv-file" accept="audio/*"/>
+              <button class="btn btn-ghost btn-sm" style="margin-top:.5rem" onclick="cvValidate()">🔎 Validate Audio</button>
+              <div id="cv-file-msg" style="font-size:.78rem;margin-top:.4rem"></div>
+            </div>
+            <div class="inp-group" style="margin-top:1rem"><label class="inp-label">Reference Transcript * <span style="color:var(--muted)">(what is spoken in the audio)</span></label><textarea class="inp" id="cv-text" rows="3" placeholder="Type the exact words spoken in your reference audio…"></textarea></div>
+            <label style="display:flex;align-items:flex-start;gap:.6rem;margin-top:1rem;font-size:.82rem;color:var(--muted2);cursor:pointer">
+              <input type="checkbox" id="cv-consent" style="margin-top:.2rem"/>
+              <span>I confirm I own this voice or have permission to use it. I will not use it to impersonate others.</span>
+            </label>
+            <button class="btn btn-primary btn-fw" style="margin-top:1.25rem" id="cv-create-btn" onclick="cvCreate()">🎤 Create Cloned Voice</button>
+          </div>
+        </div>
+        <div class="studio-sidebar">
+          <div class="card" style="padding:1.25rem">
+            <h3 style="font-size:.95rem;font-weight:700;margin-bottom:.85rem">My Cloned Voices</h3>
+            <div id="cv-my-voices"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ ADMIN PANEL ═══ -->
 <div id="pg-admin" class="pg">
   <!-- Admin Lock Screen -->
@@ -1377,9 +1428,9 @@ input[type="range"]::-moz-range-thumb {
         <button type="submit" class="btn btn-primary btn-fw" id="adm-login-btn">Access Admin Panel</button>
       </form>
       <div style="margin-top:1.5rem;padding:1rem;background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.15);border-radius:10px;font-size:.8rem;color:#94a3b8;text-align:left">
-        <div style="font-weight:700;color:#f97316;margin-bottom:.5rem">Default Admin Credentials:</div>
+        <div style="font-weight:700;color:#f97316;margin-bottom:.5rem">Admin Credentials:</div>
         <div>📧 Email: <code style="color:#fbbf24">admin@bglabs.io</code></div>
-        <div>🔑 Password: <code style="color:#fbbf24">BgLabs@Admin2024</code></div>
+        <div>🔑 Password: <code style="color:#fbbf24">BgLabs#Admin2026!</code></div>
       </div>
     </div>
   </div>
@@ -1390,47 +1441,59 @@ input[type="range"]::-moz-range-thumb {
       <div class="sb-section">Admin</div>
       <button class="sb-item active" onclick="admShowTab('dashboard',this)">📊 Dashboard</button>
       <button class="sb-item" onclick="admShowTab('users',this)">👥 Users</button>
-      <button class="sb-item" onclick="admShowTab('requests',this)">📋 Requests</button>
+      <button class="sb-item" onclick="admShowTab('voices',this)">🎙️ Voices</button>
+      <button class="sb-item" onclick="admShowTab('generations',this)">🔊 Generations</button>
+      <button class="sb-item" onclick="admShowTab('queue',this)">📚 Queue</button>
+      <button class="sb-item" onclick="admShowTab('f5tts',this)">🤖 F5-TTS</button>
+      <button class="sb-item" onclick="admShowTab('settings',this)">⚙️ Settings</button>
       <div class="sb-divider"></div>
       <button class="sb-item" onclick="doLogout()">🚪 Exit Admin</button>
     </nav>
     <div class="admin-main">
-      <!-- Admin Dashboard -->
+      <!-- Dashboard -->
       <div class="adm-section" id="adm-dashboard">
-        <div class="page-header"><h1>🛡️ Admin Dashboard</h1><p>Platform overview and management</p></div>
-        <div class="admin-stats">
-          <div class="admin-stat"><div class="num" id="adm-total-users">-</div><div class="lbl">Total Users</div></div>
-          <div class="admin-stat"><div class="num" id="adm-active-users">-</div><div class="lbl">Active Users</div></div>
-          <div class="admin-stat"><div class="num" id="adm-pending">-</div><div class="lbl">Pending Requests</div></div>
-          <div class="admin-stat"><div class="num" id="adm-blocked">-</div><div class="lbl">Blocked Users</div></div>
-          <div class="admin-stat"><div class="num" id="adm-total-gens">-</div><div class="lbl">Total Generations</div></div>
-          <div class="admin-stat"><div class="num" id="adm-total-chars">-</div><div class="lbl">Total Chars Generated</div></div>
-        </div>
-        <div class="card" style="padding:1.5rem">
-          <h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem">🚀 Quick Actions</h3>
-          <div style="display:flex;gap:.85rem;flex-wrap:wrap">
-            <button class="btn btn-primary" onclick="admShowTab('users',document.querySelector('.sb-item:nth-child(4)'))">👥 Manage Users</button>
-            <button class="btn btn-outline" onclick="admShowTab('requests',document.querySelector('.sb-item:nth-child(5)'))">📋 View Requests</button>
-          </div>
+        <div class="page-header"><h1>🛡️ Admin Dashboard</h1><p>Real-time platform overview</p></div>
+        <div class="admin-stats" id="adm-stats-grid">Loading…</div>
+        <div class="card" style="padding:1.5rem;margin-top:1rem">
+          <h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem">🩺 System Status</h3>
+          <div id="adm-system-status" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.75rem"></div>
         </div>
       </div>
       <!-- Users -->
       <div class="adm-section" id="adm-users" style="display:none">
-        <div class="page-header"><h1>👥 User Management</h1><p>Block, assign plans, and send credits</p></div>
+        <div class="page-header"><h1>👥 Users</h1><p>Search, suspend, and inspect users</p></div>
         <div class="users-table">
-          <div class="ut-header">
-            <h3>All Users</h3>
-            <input class="inp" style="max-width:280px" placeholder="🔍 Search users…" oninput="admSearchUsers(this.value)"/>
-          </div>
+          <div class="ut-header"><h3>All Users</h3><input class="inp" style="max-width:280px" placeholder="🔍 Search…" oninput="admSearchUsers(this.value)"/></div>
           <div id="adm-users-list"></div>
         </div>
       </div>
-      <!-- Requests -->
-      <div class="adm-section" id="adm-requests" style="display:none">
-        <div class="page-header"><h1>📋 Pricing Requests</h1><p>Approve or reject plan subscription requests</p></div>
-        <div class="users-table">
-          <div class="ut-header"><h3>All Requests</h3></div>
-          <div id="adm-req-list"></div>
+      <!-- Voices -->
+      <div class="adm-section" id="adm-voices" style="display:none">
+        <div class="page-header"><h1>🎙️ Voices</h1><p>All cloned voices — disable, change visibility, delete</p></div>
+        <div class="users-table"><div class="ut-header"><h3>Cloned Voices</h3></div><div id="adm-voices-list"></div></div>
+      </div>
+      <!-- Generations -->
+      <div class="adm-section" id="adm-generations" style="display:none">
+        <div class="page-header"><h1>🔊 Generations</h1><p>All generation jobs across the platform</p></div>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem" id="adm-gen-filters"></div>
+        <div class="users-table"><div class="ut-header"><h3>Jobs</h3></div><div id="adm-gens-list"></div></div>
+      </div>
+      <!-- Queue -->
+      <div class="adm-section" id="adm-queue" style="display:none">
+        <div class="page-header"><h1>📚 Queue</h1><p>Job queue health and actions</p></div>
+        <div class="admin-stats" id="adm-queue-stats"></div>
+        <div class="users-table" style="margin-top:1rem"><div class="ut-header"><h3>Active & Failed Jobs</h3></div><div id="adm-jobs-list"></div></div>
+      </div>
+      <!-- F5-TTS -->
+      <div class="adm-section" id="adm-f5tts" style="display:none">
+        <div class="page-header"><h1>🤖 F5-TTS Worker</h1><p>External GPU inference monitoring (live)</p></div>
+        <div id="adm-f5tts-panel"></div>
+      </div>
+      <!-- Settings -->
+      <div class="adm-section" id="adm-settings" style="display:none">
+        <div class="page-header"><h1>⚙️ System Settings</h1><p>Configurable platform limits</p></div>
+        <div class="card" style="padding:1.5rem"><div id="adm-settings-form"></div>
+          <button class="btn btn-primary" style="margin-top:1rem" onclick="admSaveSettings()">💾 Save Settings</button>
         </div>
       </div>
     </div>
@@ -2206,7 +2269,7 @@ const DB = {
         email: 'admin@bglabs.io',
         username: 'admin',
         full_name: 'Admin',
-        password_hash: DB._hash('BgLabs@Admin2024'),
+        password_hash: DB._hash('BgLabs#Admin2026!'),
         role: 'admin',
         credits: 999999,
         is_active: true,
@@ -2234,7 +2297,7 @@ const DB = {
       if (!r.ok) { const e = await r.json(); throw new Error(e.error || 'Registration failed'); }
       const data = await r.json();
       localStorage.setItem('bglabs_token', data.access_token);
-      return { ...data.user, name: data.user.full_name, avatar: (data.user.full_name || data.user.username).slice(0,2).toUpperCase(), plan: 'free', planCredits: 999999, charsUsed: 0, isBlocked: false, isAdmin: data.user.role === 'admin' };
+      return { ...data.user, name: data.user.full_name, avatar: (data.user.full_name || data.user.username).slice(0,2).toUpperCase(), plan: 'free', planCredits: 999999, charsUsed: 0, isBlocked: false, isAdmin: (data.user.role === 'admin' || data.user.role === 'super_admin') };
     } catch (err) {
       // Fallback to localStorage if API fails
       const users = DB._getUsers();
@@ -2257,7 +2320,7 @@ const DB = {
       if (!r.ok) { const e = await r.json(); throw new Error(e.error || 'Login failed'); }
       const data = await r.json();
       localStorage.setItem('bglabs_token', data.access_token);
-      return { ...data.user, name: data.user.full_name || data.user.username, avatar: (data.user.full_name || data.user.username).slice(0,2).toUpperCase(), plan: 'free', planCredits: 999999, charsUsed: 0, isBlocked: false, isAdmin: data.user.role === 'admin' };
+      return { ...data.user, name: data.user.full_name || data.user.username, avatar: (data.user.full_name || data.user.username).slice(0,2).toUpperCase(), plan: 'free', planCredits: 999999, charsUsed: 0, isBlocked: false, isAdmin: (data.user.role === 'admin' || data.user.role === 'super_admin') };
     } catch (err) {
       // Fallback to localStorage
       const users = DB._getUsers();
@@ -2265,7 +2328,7 @@ const DB = {
       if (!user) throw new Error('Invalid email or password');
       if (!user.is_active) throw new Error('Account has been blocked');
       localStorage.setItem('bglabs_token', user.id);
-      return { ...user, name: user.full_name || user.username, avatar: (user.full_name || user.username).slice(0,2).toUpperCase(), plan: user.plan || 'free', planCredits: user.planCredits || 999999, charsUsed: user.total_credits_used || 0, isBlocked: !user.is_active, isAdmin: user.role === 'admin' };
+      return { ...user, name: user.full_name || user.username, avatar: (user.full_name || user.username).slice(0,2).toUpperCase(), plan: user.plan || 'free', planCredits: user.planCredits || 999999, charsUsed: user.total_credits_used || 0, isBlocked: !user.is_active, isAdmin: (user.role === 'admin' || user.role === 'super_admin') };
     }
   },
 
@@ -2351,7 +2414,7 @@ const DB = {
       if (r.ok) { const d = await r.json(); return d.users || []; }
     } catch(e) {}
     const users = DB._getUsers();
-    return users.map(u => ({ ...u, name: u.full_name || u.username, avatar: (u.full_name || u.username).slice(0,2).toUpperCase(), plan: u.plan || 'free', isBlocked: u.is_active === false, isAdmin: u.role === 'admin' }));
+    return users.map(u => ({ ...u, name: u.full_name || u.username, avatar: (u.full_name || u.username).slice(0,2).toUpperCase(), plan: u.plan || 'free', isBlocked: u.is_active === false, isAdmin: (u.role === 'admin' || u.role === 'super_admin') }));
   }
 };
 
@@ -2798,7 +2861,7 @@ function showPage(name) {
 }
 window.goTo=function(name) {
   if(['login','signup'].includes(name) && currentUser) { showPage('dashboard'); return; }
-  const authPages = ['dashboard','studio','voices-app','history','settings','voice-studio','voice-library','audio-editor','creator-hub','youtube-automation','image-generator','script-writer','tools-hub','ai-spaces','elevenlabs-settings','developer-mode','avatar-studio','long-video','buy-credits','referral','contact','admin'];
+  const authPages = ['dashboard','studio','voices-app','history','settings','voice-studio','voice-library','audio-editor','creator-hub','youtube-automation','image-generator','script-writer','tools-hub','ai-spaces','elevenlabs-settings','developer-mode','avatar-studio','long-video','buy-credits','referral','contact','admin','clone-voice'];
   if(authPages.includes(name) && !currentUser) { showPage('login'); return; }
   if(name==='admin') { if(!currentUser?.isAdmin) { showPage('login'); return; } renderAdmin(); }
   if(name==='studio') renderStudio();
@@ -2819,6 +2882,7 @@ window.goTo=function(name) {
   if(name==='referral') renderReferral();
   if(name==='elevenlabs-settings') loadElevenLabsSettings();
   if(name==='developer-mode') renderDeveloperMode();
+  if(name==='clone-voice') renderCloneVoice();
   showPage(name);
 };
 
@@ -2958,8 +3022,7 @@ function renderStudio() {
       cc.className='char-count';
     });
   }
-  buildVoiceDropdown();
-  setSelectedVoice(selectedVoiceId);
+  loadClonedVoicesForStudio().then(()=>{ buildVoiceDropdown(); setSelectedVoice(selectedVoiceId); });
 
   // Rate/Pitch slider handlers
   const rateSlider = document.getElementById('rate-slider');
@@ -2997,7 +3060,14 @@ window.applyEmotion = function(emotion) {
 function buildVoiceDropdown() {
   const dd=document.getElementById('voice-dropdown');
   if(!dd) return;
-  dd.innerHTML=VOICES.map(v=>{
+  const cloneHtml=(clonedVoices||[]).length?('<div style="font-size:.7rem;color:var(--muted);padding:.5rem .85rem 0;text-transform:uppercase;letter-spacing:.1em">My Cloned (F5-TTS)</div>'+
+    clonedVoices.map(v=>`
+    <div class="vd-item${('clone:'+v.id)===selectedVoiceId?' selected':''}" onclick="selectClonedVoice(${v.id})">
+      <div class="vd-av" style="background:linear-gradient(135deg,#f97316,#dc2626)">${(v.name||'V').slice(0,1)}</div>
+      <div class="vd-info"><b>🎤 ${v.name}</b><span>cloned · ${v.language}</span></div>
+      <div class="vd-style">F5</div>
+    </div>`).join('')+'<div style="height:.5rem"></div>'):'';
+  dd.innerHTML=cloneHtml+VOICES.map(v=>{
     const flag = LANG_FLAGS[v.lang] || '';
     return `
     <div class="vd-item${v.id===selectedVoiceId?' selected':''}" onclick="selectVoice('${v.id}')">
@@ -3007,6 +3077,7 @@ function buildVoiceDropdown() {
     </div>`;
   }).join('');
 }
+window.selectClonedVoice=function(id){ selectedVoiceId='clone:'+id; const v=clonedVoices.find(x=>x.id===id); setSelectedClonedVoice(v?v.name:'Cloned',id); document.getElementById('voice-dropdown')?.classList.remove('open'); buildVoiceDropdown(); }
 
 window.toggleVoiceDropdown=function(){
   document.getElementById('voice-dropdown')?.classList.toggle('open');
@@ -3028,23 +3099,54 @@ window.doGenerate=async function() {
   if(!currentUser){toast('Please login first','error');return;}
   const text=document.getElementById('studio-text')?.value.trim();
   if(!text){toast('Please enter some text','error');return;}
-
   const btn=document.getElementById('gen-btn');
   btn.disabled=true; btn.classList.add('spinning');
-  showGenStatus('generating','⚡ Generating voice…');
-
+  showGenStatus('generating','⚡ Preparing…');
   const rateEl = document.getElementById('rate-slider');
   const pitchEl = document.getElementById('pitch-slider');
   const rate = rateEl ? (rateEl.value >= 0 ? '+' + rateEl.value + '%' : rateEl.value + '%') : '+0%';
   const pitch = pitchEl ? (pitchEl.value >= 0 ? '+' + pitchEl.value + 'Hz' : pitchEl.value + 'Hz') : '+0Hz';
-
+  const vi=getSelectedVoiceInfo();
   try {
-    const result=await TTS.generate(text, selectedVoiceId, (state,msg)=>{showGenStatus(state,msg);}, rate, pitch);
-    DB.addHistory(currentUser.id,{text,voiceId:selectedVoiceId,chars:result.chars,model:result.modelUsed,url:result.url,blob:'has_audio'});
-    lastAudioUrl=result.url; lastAudioBlob=result.blob;
-    showAudioPlayer(text, selectedVoiceId, result.modelUsed, result.url);
+    const body={text, engine:vi.engine};
+    if(vi.engine==='f5-tts'){ body.voice_id=vi.voice_id; }
+    else { body.voice_key=vi.voice_key; body.voice_name=vi.voice_name; body.rate=rate; body.pitch=pitch; }
+    let jobId=null;
+    try{
+      const r=await fetch(API_BASE+'/generations',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+DB.getToken()},body:JSON.stringify(body)});
+      const d=await r.json();
+      if(!r.ok) throw new Error(d.error?.message||d.error_message||'Generation rejected');
+      jobId=d.job.id;
+    }catch(qErr){
+      // Fallback to legacy edge/browser generation (preserves existing behaviour)
+      if(vi.engine==='f5-tts') throw qErr;
+      const result=await TTS.generate(text, selectedVoiceId, (state,msg)=>{showGenStatus(state,msg);}, rate, pitch);
+      DB.addHistory(currentUser.id,{text,voiceId:selectedVoiceId,chars:result.chars,model:result.modelUsed,url:result.url,blob:'has_audio'});
+      lastAudioUrl=result.url; lastAudioBlob=result.blob;
+      showAudioPlayer(text, selectedVoiceId, result.modelUsed, result.url);
+      updateCreditsDisplay();
+      toast('✅ Voice generated! '+ result.chars+' credits used','success');
+      return;
+    }
+    let gen=null;
+    for(let i=0;i<180;i++){
+      await new Promise(r=>setTimeout(r,1000));
+      const pr=await fetch(API_BASE+'/generations/'+jobId,{headers:{'Authorization':'Bearer '+DB.getToken()}});
+      const pd=await pr.json();
+      gen=pd.generation||pd;
+      if(gen.status==='queued') showGenStatus('generating','📚 Queued…');
+      else if(gen.status==='processing') showGenStatus('generating','🎙️ Generating with '+(vi.engine==='f5-tts'?'F5-TTS · GPU':'Edge-TTS')+'…');
+      else if(gen.status==='completed') break;
+      else if(gen.status==='failed'||gen.status==='cancelled') throw new Error(gen.error_message||'Generation failed');
+    }
+    if(!gen||gen.status!=='completed') throw new Error('Generation timed out');
+    const url=gen.audio_url;
+    DB.addHistory(currentUser.id,{text,voiceId:selectedVoiceId,chars:gen.chars||text.length,model:vi.engine,url:url,blob:'has_audio'});
+    lastAudioUrl=url; lastAudioBlob=null;
+    showAudioPlayer(text, selectedVoiceId, vi.engine, url);
     updateCreditsDisplay();
-    toast('✅ Voice generated! '+ result.chars+' credits used','success');
+    showGenStatus('done','✅ Done · '+vi.engine+' · '+(gen.chars||text.length)+' chars');
+    toast('✅ Voice generated!','success');
   } catch(err) {
     showGenStatus('error','❌ '+err.message);
     toast(err.message,'error');
@@ -3062,7 +3164,7 @@ function showGenStatus(state,msg) {
 }
 
 function showAudioPlayer(text, voiceId, model, url) {
-  const v=VOICES.find(x=>x.id===voiceId)||VOICES[0];
+  const vi=(voiceId&&voiceId.startsWith&&voiceId.startsWith('clone:'))?getSelectedVoiceInfo():(VOICES.find(x=>x.id===voiceId)||VOICES[0]);
   const ap=document.getElementById('audio-player');
   if(!ap)return;
   ap.style.display='block';
@@ -3270,138 +3372,305 @@ function renderAdmin(){
   if(!currentUser?.isAdmin){document.getElementById('admin-lock').style.display='flex';document.getElementById('admin-content').style.display='none';return;}
   document.getElementById('admin-lock').style.display='none';
   document.getElementById('admin-content').style.display='grid';
-  renderAdminStats();
-  renderAdminUsers();
-  renderAdminRequests();
+  admShowTab('dashboard', document.querySelector('#admin-content .sb-item'));
+}
+
+function _admAuthHeaders(){ return {'Authorization':'Bearer '+DB.getToken()}; }
+
+async function _admGet(path){
+  const r=await fetch(API_BASE+path,{headers:_admAuthHeaders()});
+  const d=await r.json();
+  if(!r.ok) throw new Error(d.error?.message||d.error_message||d.detail||'Request failed');
+  return d;
+}
+async function _admPost(path,body){
+  const r=await fetch(API_BASE+path,{method:'POST',headers:{..._admAuthHeaders(),'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
+  const d=await r.json();
+  if(!r.ok) throw new Error(d.error?.message||d.error_message||d.detail||'Request failed');
+  return d;
+}
+async function _admPatch(path,body){
+  const r=await fetch(API_BASE+path,{method:'PATCH',headers:{..._admAuthHeaders(),'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const d=await r.json();
+  if(!r.ok) throw new Error(d.error?.message||d.error_message||d.detail||'Request failed');
+  return d;
+}
+async function _admPut(path,body){
+  const r=await fetch(API_BASE+path,{method:'PUT',headers:{..._admAuthHeaders(),'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const d=await r.json();
+  if(!r.ok) throw new Error(d.error?.message||d.error_message||d.detail||'Request failed');
+  return d;
+}
+async function _admDelete(path){
+  const r=await fetch(API_BASE+path,{method:'DELETE',headers:_admAuthHeaders()});
+  const d=await r.json();
+  if(!r.ok) throw new Error(d.error?.message||d.error_message||d.detail||'Request failed');
+  return d;
 }
 
 async function renderAdminStats(){
-  const s=await DB.getStats();
-  document.getElementById('adm-total-users')&&(document.getElementById('adm-total-users').textContent=s.totalUsers);
-  document.getElementById('adm-active-users')&&(document.getElementById('adm-active-users').textContent=s.activeUsers);
-  document.getElementById('adm-total-gens')&&(document.getElementById('adm-total-gens').textContent=s.totalGenerations.toLocaleString());
-  document.getElementById('adm-total-chars')&&(document.getElementById('adm-total-chars').textContent=s.totalCharsGenerated.toLocaleString());
-  document.getElementById('adm-pending')&&(document.getElementById('adm-pending').textContent=s.pendingRequests);
-  document.getElementById('adm-blocked')&&(document.getElementById('adm-blocked').textContent=s.blockedUsers);
+  const el=document.getElementById('adm-stats-grid'); if(!el)return;
+  el.textContent='Loading…';
+  try{
+    const d=await _admGet('/admin/dashboard');
+    const s=d.stats, st=d.system_status;
+    const cards=[
+      ['👥 Total Users',s.total_users],['✅ Active',s.active_users],['🚫 Blocked',s.blocked_users],
+      ['🎙️ Voices',s.total_voices],['🔊 Generations',s.total_generations],['📅 Today',s.today_generations],
+      ['⏳ Queued',s.queued_jobs],['⚙️ Processing',s.processing_jobs],['❌ Failed',s.failed_generations],
+      ['⏱️ Audio (sec)',Math.round(s.audio_seconds)],['🔡 Total Chars',s.total_chars]
+    ];
+    el.innerHTML=cards.map(c=>`<div class="admin-stat"><div class="num">${(c[1]??0).toLocaleString()}</div><div class="lbl">${c[0]}</div></div>`).join('');
+    const ss=document.getElementById('adm-system-status');
+    const labels={backend:'Backend',database:'Database',storage:'Storage',queue:'Queue',f5_tts:'F5-TTS'};
+    ss.innerHTML=Object.keys(labels).map(k=>{
+      const v=st[k]||'unknown'; const ok=v==='healthy';
+      return `<div class="card" style="padding:.85rem 1rem;display:flex;align-items:center;gap:.6rem"><span class="status-dot ${ok?'active':'blocked'}"></span><div><div style="font-weight:700;font-size:.85rem">${labels[k]}</div><div style="font-size:.75rem;color:var(--muted)">${v}</div></div></div>`;
+    }).join('');
+  }catch(e){ el.innerHTML=`<div class="empty"><p>${e.message}</p></div>`; }
 }
 
+let _admUsersCache=[];
 async function renderAdminUsers(filter=''){
-  const el=document.getElementById('adm-users-list');
-  if(!el)return;
-  let users=await DB.getAllUsers();
-  if(filter)users=users.filter(u=>(u.name||'').toLowerCase().includes(filter)||(u.email||'').toLowerCase().includes(filter));
-  el.innerHTML=users.map(u=>`
-    <div class="user-row" id="ur-${u.id}">
-      <div class="status-dot ${u.isBlocked?'blocked':'active'}"></div>
-      <div class="ur-av">${u.avatar||'U'}</div>
-      <div class="ur-info">
-        <div class="ur-name">${u.name||u.username}${u.isAdmin?'<span style="color:var(--orange);font-size:.7rem;margin-left:.4rem">ADMIN</span>':''}</div>
-        <div class="ur-email">${u.email}</div>
-      </div>
-      <span class="ur-plan">${u.plan||'free'}</span>
-      <span class="ur-credits">${(u.credits||0).toLocaleString()} cr</span>
-      <div style="display:flex;gap:.4rem;flex-shrink:0">
-        <button class="btn btn-ghost btn-sm" onclick="admSendCredits('${u.id}','${u.name||u.username}')">💳 Credits</button>
-        <button class="btn btn-ghost btn-sm" onclick="admAssignPlan('${u.id}','${u.name||u.username}')">📋 Plan</button>
-        ${!u.isAdmin?`<button class="btn ${u.isBlocked?'btn-green':'btn-red'} btn-sm" onclick="admToggleBlock('${u.id}')">
-          ${u.isBlocked?'✅ Unblock':'🚫 Block'}</button>`:''}
-      </div>
-    </div>`).join('')||'<div class="empty"><p>No users found.</p></div>';
+  const el=document.getElementById('adm-users-list'); if(!el)return;
+  el.textContent='Loading…';
+  try{
+    const d=await _admGet('/admin/users');
+    _admUsersCache=d.users||[];
+    let users=_admUsersCache;
+    if(filter)users=users.filter(u=>((u.name||'')+(u.email||'')).toLowerCase().includes(filter));
+    el.innerHTML=users.map(u=>`
+      <div class="user-row">
+        <div class="status-dot ${u.is_active?'active':'blocked'}"></div>
+        <div class="ur-av">${(u.name||'U').slice(0,1).toUpperCase()}</div>
+        <div class="ur-info">
+          <div class="ur-name">${u.name||u.username}${u.is_admin?'<span style="color:var(--orange);font-size:.7rem;margin-left:.4rem">ADMIN</span>':''}</div>
+          <div class="ur-email">${u.email}</div>
+        </div>
+        <span class="ur-credits">${u.generations_count??0} gen</span>
+        <span class="ur-credits">${(u.total_used||0).toLocaleString()} chars</span>
+        <div style="display:flex;gap:.4rem;flex-shrink:0">
+          ${!u.is_admin?`<button class="btn ${u.is_active?'btn-red':'btn-green'} btn-sm" onclick="admToggleBlock(${u.id})">${u.is_active?'🚫 Suspend':'✅ Activate'}</button>`:''}
+        </div>
+      </div>`).join('')||'<div class="empty"><p>No users found.</p></div>';
+  }catch(e){ el.innerHTML=`<div class="empty"><p>${e.message}</p></div>`; }
 }
 
-function renderAdminRequests(){
-  const el=document.getElementById('adm-req-list');
-  if(!el)return;
-  const reqs=DB.getRequests();
-  el.innerHTML=reqs.map(r=>`
-    <div class="req-row" id="rr-${r.id}">
-      <div class="req-info">
-        <div class="req-plan">📦 ${r.plan.toUpperCase()} — ${r.price||''} ${r.credits?'('+parseInt(r.credits).toLocaleString()+' chars)':''}</div>
-        <div class="req-email">👤 ${r.userName} · ${r.userEmail} · ${timeAgo(r.createdAt)}</div>
-      </div>
-      <span class="req-status rs-${r.status}">${r.status.toUpperCase()}</span>
-      ${r.status==='pending'?`
-        <button class="btn btn-green btn-sm" onclick="admApproveReq('${r.id}')">✅ Approve</button>
-        <button class="btn btn-red btn-sm" onclick="admRejectReq('${r.id}')">❌ Reject</button>`:''}
-    </div>`).join('')||'<div class="empty"><p>No requests yet.</p></div>';
+async function renderAdminVoices(){
+  const el=document.getElementById('adm-voices-list'); if(!el)return;
+  el.textContent='Loading…';
+  try{
+    const d=await _admGet('/admin/voices');
+    el.innerHTML=(d.items||[]).map(v=>`
+      <div class="user-row">
+        <div class="status-dot ${v.status==='ready'?'active':'blocked'}"></div>
+        <div class="ur-info" style="flex:1">
+          <div class="ur-name">${v.name} <span style="font-size:.7rem;color:var(--muted)">· ${v.engine}</span></div>
+          <div class="ur-email">${v.owner||'—'} · ${v.language} · ${v.visibility} · ${v.generation_count} gens</div>
+        </div>
+        <div style="display:flex;gap:.4rem;flex-shrink:0">
+          <button class="btn btn-ghost btn-sm" onclick="admVoiceVis(${v.id},'${v.visibility==='public'?'private':'public'}')">${v.visibility==='public'?'🔒 Make Private':'🌍 Make Public'}</button>
+          <button class="btn ${v.status==='ready'?'btn-red':'btn-green'} btn-sm" onclick="admVoiceStatus(${v.id},'${v.status==='ready'?'disabled':'ready'}')">${v.status==='ready'?'🚫 Disable':'✅ Enable'}</button>
+          <button class="btn btn-red btn-sm" onclick="admVoiceDelete(${v.id})">🗑</button>
+        </div>
+      </div>`).join('')||'<div class="empty"><p>No cloned voices yet.</p></div>';
+  }catch(e){ el.innerHTML=`<div class="empty"><p>${e.message}</p></div>`; }
 }
+
+let _admGenFilter='';
+async function renderAdminGenerations(){
+  const fEl=document.getElementById('adm-gen-filters');
+  const el=document.getElementById('adm-gens-list'); if(!el)return;
+  const filters=['','queued','processing','completed','failed','cancelled'];
+  fEl.innerHTML=filters.map(f=>`<button class="vfb ${_admGenFilter===f?'active':''}" onclick="_admGenFilter='${f}';renderAdminGenerations()">${f||'All'}</button>`).join('');
+  el.textContent='Loading…';
+  try{
+    const qs=_admGenFilter?`&status=${_admGenFilter}`:'';
+    const d=await _admGet('/admin/generations?page=1&limit=50'+qs);
+    el.innerHTML=(d.items||[]).map(g=>`
+      <div class="user-row">
+        <div class="status-dot ${g.status==='completed'?'active':g.status==='failed'?'blocked':''}"></div>
+        <div class="ur-info" style="flex:1">
+          <div class="ur-name">#${g.id} ${g.voice||''} <span class="badge b-${g.status==='completed'?'green':g.status==='failed'?'red':g.status==='queued'?'yellow':'blue'}" style="margin-left:.4rem">${g.status}</span></div>
+          <div class="ur-email">${g.user||'—'} · ${g.engine} · ${g.chars} chars · ${g.duration?s:''}${g.duration||0}s ${g.processing_time?'· '+g.processing_time.toFixed(1)+'s':''}</div>
+          ${g.error?`<div style="font-size:.72rem;color:var(--red);margin-top:.2rem">${g.error}</div>`:''}
+        </div>
+        <div style="font-size:.72rem;color:var(--muted);flex-shrink:0">${timeAgo(g.created_at)}</div>
+      </div>`).join('')||'<div class="empty"><p>No generations found.</p></div>';
+  }catch(e){ el.innerHTML=`<div class="empty"><p>${e.message}</p></div>`; }
+}
+
+async function renderAdminQueue(){
+  const sEl=document.getElementById('adm-queue-stats'); const lEl=document.getElementById('adm-jobs-list');
+  if(!sEl)return;
+  sEl.textContent='Loading…';
+  try{
+    const d=await _admGet('/admin/jobs');
+    const s=d.stats||{};
+    sEl.innerHTML=[['Queued',s.queued],['Processing',s.processing],['Completed',s.completed],['Failed',s.failed],['Avg time (s)',(s.avg_processing_time||0).toFixed(1)]].map(c=>`<div class="admin-stat"><div class="num">${c[1]}</div><div class="lbl">${c[0]}</div></div>`).join('');
+    lEl.innerHTML=(d.items||[]).map(j=>`
+      <div class="user-row">
+        <div class="status-dot ${j.status==='queued'?'blocked':j.status==='processing'?'active':''}"></div>
+        <div class="ur-info" style="flex:1"><div class="ur-name">#${j.id} ${j.voice||''} <span class="badge b-${j.status==='failed'?'red':'yellow'}" style="margin-left:.4rem">${j.status}</span></div>
+        <div class="ur-email">${j.engine} · retries ${j.retry_count||0} · ${timeAgo(j.created_at)}</div></div>
+        <div style="display:flex;gap:.4rem;flex-shrink:0">
+          ${j.status==='failed'?`<button class="btn btn-green btn-sm" onclick="admRetryJob(${j.id})">↻ Retry</button>`:''}
+          ${['queued','processing'].includes(j.status)?`<button class="btn btn-red btn-sm" onclick="admCancelJob(${j.id})">✕ Cancel</button>`:''}
+        </div>
+      </div>`).join('')||'<div class="empty"><p>Queue is empty.</p></div>';
+  }catch(e){ sEl.innerHTML=`<div class="empty"><p>${e.message}</p></div>`; }
+}
+
+async function renderAdminF5(){
+  const el=document.getElementById('adm-f5tts-panel'); if(!el)return;
+  el.textContent='Checking F5-TTS service…';
+  try{
+    const d=await _admGet('/admin/workers');
+    const w=d.worker||{};
+    const ok=w.status==='healthy';
+    const rows=[
+      ['F5-TTS Status', w.status||'unknown'],
+      ['Model', w.model||'F5-TTS'],
+      ['GPU Available', w.gpu?'Yes ✅':'No ❌'],
+      ['Queue Length', w.queue_length||0],
+      ['Avg Generation (s)', (w.avg_generation_time||0).toFixed(2)],
+      ['Total Jobs', w.total_jobs||0],
+      ['Failed Jobs', w.failed_jobs||0],
+      ['Last Heartbeat', w.last_heartbeat?timeAgo(w.last_heartbeat):'—']
+    ];
+    el.innerHTML=`
+      <div class="card" style="padding:1.5rem;margin-bottom:1rem;display:flex;align-items:center;gap:.75rem">
+        <span class="status-dot ${ok?'active':'blocked'}" style="width:12px;height:12px"></span>
+        <h3 style="font-size:1.1rem;font-weight:800">${ok?'F5-TTS ONLINE':'F5-TTS '+(w.status||'OFFLINE').toUpperCase()}</h3>
+      </div>
+      <div class="admin-stats" style="grid-template-columns:repeat(2,1fr)">${rows.map(r=>`<div class="admin-stat" style="text-align:left"><div style="font-size:.75rem;color:var(--muted)">${r[0]}</div><div style="font-size:1.1rem;font-weight:800;margin-top:.2rem">${r[1]}</div></div>`).join('')}</div>
+      ${w.detail?`<div class="card" style="padding:1rem;margin-top:1rem;font-size:.8rem;color:var(--muted2)">ℹ️ ${w.detail}</div>`:''}
+      <div class="card" style="padding:1rem;margin-top:1rem;font-size:.78rem;color:var(--muted)">GPU utilization/VRAM metrics: Unavailable (not provided by the F5-TTS service).</div>`;
+  }catch(e){ el.innerHTML=`<div class="empty"><p>${e.message}</p></div>`; }
+}
+
+async function renderAdminSettings(){
+  const el=document.getElementById('adm-settings-form'); if(!el)return;
+  el.textContent='Loading…';
+  try{
+    const d=await _admGet('/admin/settings');
+    const s=d.settings||{};
+    const fields=[['max_text_length','Max text length'],['max_reference_audio_size','Max ref audio size (bytes)'],['max_reference_audio_duration','Max ref audio duration (sec)'],['max_voices_per_user','Max voices per user'],['max_generations_per_minute','Generations per minute'],['max_generations_per_day','Generations per day'],['default_language','Default language'],['default_audio_format','Default audio format'],['queue_retry_count','Queue retry count'],['generation_timeout','Generation timeout (sec)']];
+    el.innerHTML=`<div class="settings-row">${fields.map(f=>`<div class="inp-group"><label class="inp-label">${f[1]}</label><input class="inp" data-k="${f[0]}" value="${s[f[0]]??''}"/></div>`).join('')}</div>`;
+  }catch(e){ el.innerHTML=`<div class="empty"><p>${e.message}</p></div>`; }
+}
+window.admSaveSettings=async function(){
+  const inputs=document.querySelectorAll('#adm-settings-form input[data-k]');
+  const body={}; inputs.forEach(i=>{ if(i.value) body[i.dataset.k]=i.value; });
+  try{ await _admPut('/admin/settings',body); toast('✅ Settings saved','success'); }
+  catch(e){ toast(e.message,'error'); }
+};
 
 window.admSearchUsers=q=>renderAdminUsers(q.toLowerCase());
-
 window.admToggleBlock=async function(uid){
-  const users = DB._getUsers();
-  const i = users.findIndex(u => u.id === uid);
-  if (i >= 0) {
-    users[i].is_active = !users[i].is_active;
-    DB._setUsers(users);
-    renderAdminUsers(); renderAdminStats();
-    toast('User status updated','success');
-  }
+  const u=_admUsersCache.find(x=>x.id===uid); if(!u)return;
+  try{ await _admPost('/admin/users/'+uid+'/status',{active:!u.is_active}); toast('User status updated','success'); renderAdminUsers(); }
+  catch(e){ toast(e.message,'error'); }
 };
+window.admVoiceVis=async function(id,vis){ try{ await _admPatch('/admin/voices/'+id,{visibility:vis}); renderAdminVoices(); }catch(e){toast(e.message,'error');} };
+window.admVoiceStatus=async function(id,st){ try{ await _admPatch('/admin/voices/'+id,{status:st}); renderAdminVoices(); }catch(e){toast(e.message,'error');} };
+window.admVoiceDelete=async function(id){ if(!confirm('Delete this voice?'))return; try{ await _admDelete('/admin/voices/'+id); renderAdminVoices(); }catch(e){toast(e.message,'error');} };
+window.admRetryJob=async function(id){ try{ await _admPost('/admin/jobs/'+id+'/retry'); renderAdminQueue(); }catch(e){toast(e.message,'error');} };
+window.admCancelJob=async function(id){ try{ await _admPost('/admin/jobs/'+id+'/cancel'); renderAdminQueue(); }catch(e){toast(e.message,'error');} };
 
-window.admSendCredits=function(uid,name){
-  showModal(`
-    <h3>💳 Send Credits to ${name}</h3>
-    <div class="inp-group" style="margin-top:1.25rem">
-      <label class="inp-label">Amount</label>
-      <input class="inp" id="credit-amount" type="number" placeholder="e.g. 5000" min="1"/>
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="confirmSendCredits('${uid}','${name}')">Send Credits</button>
-    </div>`);
-};
-window.confirmSendCredits=function(uid,name){
-  const amt=parseInt(document.getElementById('credit-amount')?.value);
-  if(!amt||amt<1){toast('Enter valid amount','error');return;}
-  DB.addCredits(uid,amt);
-  closeModal(); renderAdminUsers(); renderAdminStats();
-  toast(`✅ Sent ${amt.toLocaleString()} credits to ${name}`,'success');
-};
-
-window.admAssignPlan=function(uid,name){
-  showModal(`
-    <h3>📋 Assign Plan to ${name}</h3>
-    <div class="inp-group" style="margin-top:1.25rem">
-      <label class="inp-label">Plan</label>
-      <select class="inp" id="assign-plan">
-        <option value="free">Free</option>
-        <option value="creator">Creator ($29/mo)</option>
-        <option value="pro">Pro ($79/mo)</option>
-        <option value="enterprise">Enterprise ($299/mo)</option>
-      </select>
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="confirmAssignPlan('${uid}','${name}')">Assign Plan</button>
-    </div>`);
-};
-window.confirmAssignPlan=function(uid,name){
-  const plan=document.getElementById('assign-plan')?.value;
-  DB.assignPlan(uid,plan);
-  closeModal(); renderAdminUsers(); renderAdminStats();
-  toast(`✅ Assigned ${plan} plan to ${name}`,'success');
-};
-
-window.admApproveReq=function(rid){
-  const reqs=DB.getRequests();
-  const req=reqs.find(r=>r.id===rid);
-  if(!req)return;
-  DB.updateRequest(rid,{status:'approved'});
-  renderAdminRequests(); renderAdminStats();
-  toast('✅ Request approved','success');
-};
-window.admRejectReq=function(rid){
-  DB.updateRequest(rid,{status:'rejected'});
-  renderAdminRequests(); renderAdminStats();
-  toast('Request rejected','error');
-};
 window.admShowTab=function(tab,btn){
   document.querySelectorAll('.adm-section').forEach(s=>s.style.display='none');
-  document.querySelectorAll('.sb-item').forEach(b=>b.classList.remove('active'));
-  document.getElementById('adm-'+tab).style.display='block';
-  btn.classList.add('active');
+  document.querySelectorAll('#admin-content .sb-item').forEach(b=>b.classList.remove('active'));
+  const sec=document.getElementById('adm-'+tab); if(sec) sec.style.display='block';
+  if(btn) btn.classList.add('active');
+  if(tab==='dashboard') renderAdminStats();
+  if(tab==='users') renderAdminUsers();
+  if(tab==='voices') renderAdminVoices();
+  if(tab==='generations') renderAdminGenerations();
+  if(tab==='queue') renderAdminQueue();
+  if(tab==='f5tts') renderAdminF5();
+  if(tab==='settings') renderAdminSettings();
 };
+
+// ── CLONE VOICE ──────────────────────────────
+function renderCloneVoice(){ cvLoadMine(); }
+async function cvLoadMine(){
+  const el=document.getElementById('cv-my-voices'); if(!el)return;
+  try{
+    const r=await fetch(API_BASE+'/voices/my',{headers:{'Authorization':'Bearer '+DB.getToken()}});
+    if(!r.ok){el.innerHTML='<p style="font-size:.8rem;color:var(--muted)">Sign in to see your voices.</p>';return;}
+    const d=await r.json();
+    const vs=d.voices||[];
+    clonedVoices=vs;
+    el.innerHTML=vs.length?vs.map(v=>`
+      <div style="display:flex;align-items:center;gap:.6rem;padding:.6rem;border:1px solid var(--bdr);border-radius:10px;margin-bottom:.5rem">
+        <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--orange),#dc2626);display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff">${(v.name||'V').slice(0,1)}</div>
+        <div style="flex:1;min-width:0"><div style="font-size:.85rem;font-weight:600">${v.name}</div><div style="font-size:.72rem;color:var(--muted)">${v.language} · ${v.status}</div></div>
+        <button class="btn btn-primary btn-sm" onclick="useClonedVoice(${v.id},'${(v.name||'').replace(/'/g,'')}')">Use</button>
+        <button class="btn btn-red btn-sm" onclick="cvDelete(${v.id})">🗑</button>
+      </div>`).join(''):'<p style="font-size:.8rem;color:var(--muted)">No cloned voices yet.</p>';
+  }catch(e){ el.innerHTML='<p style="font-size:.8rem;color:var(--muted)">'+e.message+'</p>'; }
+}
+window.useClonedVoice=function(id,name){ selectedVoiceId='clone:'+id; goTo('studio'); setSelectedClonedVoice(name,id); toast('🎙️ '+name+' selected (F5-TTS)','success'); }
+window.cvDelete=async function(id){ if(!confirm('Delete this voice?'))return; try{ await fetch(API_BASE+'/voices/'+id,{method:'DELETE',headers:{'Authorization':'Bearer '+DB.getToken()}}); cvLoadMine(); toast('Voice deleted'); }catch(e){toast(e.message,'error');} }
+window.cvValidate=async function(){
+  const f=document.getElementById('cv-file').files[0]; if(!f){toast('Choose an audio file','error');return;}
+  const msg=document.getElementById('cv-file-msg'); msg.textContent='Validating…';
+  try{
+    const fd=new FormData(); fd.append('file',f);
+    const r=await fetch(API_BASE+'/voices/validate-audio',{method:'POST',headers:{'Authorization':'Bearer '+DB.getToken()},body:fd});
+    const d=await r.json();
+    if(r.ok&&d.valid){ msg.style.color='var(--green)'; msg.textContent='✅ Valid audio ('+Math.round(d.size/1024)+'KB)'; }
+    else { msg.style.color='var(--red)'; msg.textContent='❌ '+(d.error?.message||d.error_message||'Invalid audio'); }
+  }catch(e){ msg.style.color='var(--red)'; msg.textContent='❌ '+e.message; }
+}
+window.cvCreate=async function(){
+  const name=document.getElementById('cv-name').value.trim();
+  const lang=document.getElementById('cv-lang').value;
+  const desc=document.getElementById('cv-desc').value.trim();
+  const text=document.getElementById('cv-text').value.trim();
+  const consent=document.getElementById('cv-consent').checked;
+  const file=document.getElementById('cv-file').files[0];
+  if(!name){toast('Enter a voice name','error');return;}
+  if(!file){toast('Choose reference audio','error');return;}
+  if(!text){toast('Enter the reference transcript','error');return;}
+  if(!consent){toast('Consent confirmation required','error');return;}
+  const btn=document.getElementById('cv-create-btn'); btn.classList.add('spinning');
+  try{
+    const fd=new FormData();
+    fd.append('name',name); fd.append('description',desc); fd.append('language',lang);
+    fd.append('reference_text',text); fd.append('consent_confirmed','true'); fd.append('visibility','private'); fd.append('file',file);
+    const r=await fetch(API_BASE+'/voices',{method:'POST',headers:{'Authorization':'Bearer '+DB.getToken()},body:fd});
+    const d=await r.json();
+    if(!r.ok) throw new Error(d.error?.message||d.error_message||'Creation failed');
+    toast('✅ Voice created! Select it in Studio','success');
+    document.getElementById('cv-name').value=''; document.getElementById('cv-text').value=''; document.getElementById('cv-consent').checked=false; document.getElementById('cv-file').value=''; document.getElementById('cv-file-msg').textContent='';
+    cvLoadMine();
+  }catch(e){ toast(e.message,'error'); }
+  finally{ btn.classList.remove('spinning'); }
+};
+
+// ── CLONED VOICES IN STUDIO ──────────────────
+let clonedVoices=[];
+async function loadClonedVoicesForStudio(){
+  try{
+    const r=await fetch(API_BASE+'/voices/my',{headers:{'Authorization':'Bearer '+DB.getToken()}});
+    if(r.ok){ const d=await r.json(); clonedVoices=d.voices||[]; }
+  }catch(e){}
+}
+function setSelectedClonedVoice(name,id){
+  const sv=document.querySelector('.selected-voice');
+  if(sv){ sv.querySelector('.sv-info b').textContent=name+' (F5-TTS)'; sv.querySelector('.sv-info span').textContent='Cloned voice · GPU'; }
+}
+function getSelectedVoiceInfo(){
+  if(selectedVoiceId&&selectedVoiceId.startsWith('clone:')){
+    const id=parseInt(selectedVoiceId.split(':')[1]);
+    const v=clonedVoices.find(x=>x.id===id)||{name:'Cloned',color:'#f97316'};
+    return {engine:'f5-tts',voice_id:id,voice_name:v.name,name:v.name,color:'#f97316',key:''};
+  }
+  const v=VOICES.find(x=>x.id===selectedVoiceId)||VOICES[0];
+  return {engine:'edge-tts',voice_key:v.key,voice_name:v.name,name:v.name,color:v.color,key:v.key};
+}
 
 // ── VOICE LIBRARY PAGE ──────────────────────
 const LANG_FLAGS = {
@@ -4138,7 +4407,7 @@ function boot(){
   if (token && sess) {
     DB.getUserById(sess.id).then(u => {
       if (u && u.is_active !== false) {
-        currentUser = { ...u, name: u.full_name || u.username, avatar: (u.full_name || u.username).slice(0,2).toUpperCase(), plan: u.plan || 'free', planCredits: u.planCredits || 999999, charsUsed: u.total_credits_used || 0, isBlocked: u.is_active === false, isAdmin: u.role === 'admin' };
+        currentUser = { ...u, name: u.full_name || u.username, avatar: (u.full_name || u.username).slice(0,2).toUpperCase(), plan: u.plan || 'free', planCredits: u.planCredits || 999999, charsUsed: u.total_credits_used || 0, isBlocked: u.is_active === false, isAdmin: (u.role === 'admin' || u.role === 'super_admin') };
         DB.setSession(currentUser);
         updateAuthUI();
         if(currentPage === 'home') { renderDashboard(); showPage('dashboard'); }

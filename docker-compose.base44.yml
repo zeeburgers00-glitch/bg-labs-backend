@@ -17,11 +17,16 @@ services:
     image: python:3.11-slim
     working_dir: /app
     command: >-
-      sh -c "pip install --disable-pip-version-check -r requirements.txt &&
+      sh -c "apt-get update && apt-get install -y --no-install-recommends ffmpeg &&
+      pip install --disable-pip-version-check -r requirements.txt &&
       uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+    env_file:
+      - /run/base44/app.env
     environment:
       DATABASE_URL: postgresql://bglabs:bglabs_dev@db:5432/bglabs
       SECRET_KEY: base44-local-development-key
+      ADMIN_EMAIL: admin@bglabs.io
+      ADMIN_PASSWORD: BgLabs#Admin2026!
       PYTHONUNBUFFERED: "1"
       WATCHFILES_FORCE_POLLING: "true"
     volumes:
