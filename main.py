@@ -33,6 +33,17 @@ from tts_engine import (
     EDGE_VOICES,
 )
 
+import core
+import schema
+import secure_storage
+import job_queue
+from voice_routes import router as voice_router
+from generation_routes import router as generation_router
+from admin_routes import router as admin_router
+from system_routes import router as system_router
+from ai_studio_routes import router as ai_studio_router
+import ai_studio_service
+
 load_dotenv()
 
 logger = logging.getLogger("bglabs")
@@ -216,9 +227,15 @@ def generate_avatar_svg(hair_color: str = "#333", eye_color: str = "#333", skin_
 async def lifespan(app: FastAPI):
     try:
         await init_db()
+        if pool:
+            core.set_pool(pool)
+            secure_storage.ensure_dirs()
+            await schema.migrate(pool)
+            job_queue.start_worker()
     except Exception as e:
         logger.error(f"Startup error: {e}")
     yield
+    job_queue.stop_worker()
 
 app = FastAPI(title="BG LABS API", version="9.0.0", lifespan=lifespan)
 
@@ -234,6 +251,13 @@ try:
     app.mount("/api/storage", StaticFiles(directory=str(STORAGE_DIR)), name="storage")
 except Exception:
     pass
+
+# ── New platform routers (F5-TTS, voice cloning, generations queue, admin, system) ──
+core.register_error_handler(app)
+app.include_router(voice_router)
+app.include_router(generation_router)
+app.include_router(admin_router)
+app.include_router(system_router)
 
 # ============================================================
 # ROOT
@@ -600,31 +624,8 @@ async def write_script(request: Request):
     return {"script": script, "topic": topic, "genre": genre, "mood": mood, "length": length, "word_count": len(script.split())}
 
 # ============================================================
-# ADMIN
+# ADMIN routes now provided by admin_routes router (richer, real data)
 # ============================================================
-@app.get("/api/admin/stats")
-async def admin_stats(request: Request):
-    user = await get_current_user(request)
-    if user["role"] != "admin":
-        raise HTTPException(403, "Admin only")
-    if not pool:
-        return {"total_users": 0, "total_voices": len(EDGE_VOICES), "total_audio": 0, "total_images": 0}
-    async with pool.acquire() as conn:
-        users = await conn.fetchval("SELECT COUNT(*) FROM users")
-        audio_count = await conn.fetchval("SELECT COUNT(*) FROM audio_history")
-        image_count = await conn.fetchval("SELECT COUNT(*) FROM image_history")
-    return {"total_users": users, "total_voices": len(EDGE_VOICES), "total_audio": audio_count, "total_images": image_count}
-
-@app.get("/api/admin/users")
-async def admin_users(request: Request):
-    user = await get_current_user(request)
-    if user["role"] != "admin":
-        raise HTTPException(403, "Admin only")
-    if not pool:
-        return []
-    async with pool.acquire() as conn:
-        rows = await conn.fetch("SELECT * FROM users ORDER BY created_at DESC")
-    return [dict(r) for r in rows]
 
 # ============================================================
 # BILLING / REFERRAL

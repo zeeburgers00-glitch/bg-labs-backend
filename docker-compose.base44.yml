@@ -1,0 +1,49 @@
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: bglabs
+      POSTGRES_PASSWORD: bglabs_dev
+      POSTGRES_DB: bglabs
+    volumes:
+      - base44_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bglabs -d bglabs"]
+      interval: 2s
+      timeout: 5s
+      retries: 20
+
+  web:
+    image: python:3.11-slim
+    working_dir: /app
+    command: >-
+      sh -c "apt-get update && apt-get install -y --no-install-recommends ffmpeg &&
+      pip install --disable-pip-version-check -r requirements.txt &&
+      uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+    env_file:
+      - /run/base44/app.env
+    environment:
+      DATABASE_URL: postgresql://bglabs:bglabs_dev@db:5432/bglabs
+      SECRET_KEY: base44-local-development-key
+      ADMIN_EMAIL: admin@bglabs.io
+      ADMIN_PASSWORD: BgLabs#Admin2026!
+      PYTHONUNBUFFERED: "1"
+      WATCHFILES_FORCE_POLLING: "true"
+    volumes:
+      - .:/app
+      - base44_pip_cache:/root/.cache/pip
+    ports:
+      - "3000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+volumes:
+  base44_postgres_data:
+  base44_pip_cache:
