@@ -2,7 +2,7 @@
 
 The upstream web server appends ``main_agent.py`` to the configured command.
 Using ``python -m vimax_skills.agent_entry`` preserves all original behavior and
-only adds three read-only ToolSpecs after ViMax has built its existing runtime.
+only adds selected read-only ToolSpecs after ViMax has built its existing runtime.
 """
 from __future__ import annotations
 

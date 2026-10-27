@@ -1,6 +1,6 @@
 'use strict';
 const $ = (id) => document.getElementById(id);
-const state = {catalog: [], system: null, job: null, timer: null};
+const state = {catalog: [], system: null, job: null, timer: null, sceneOperation: false};
 
 async function json(url, options = {}) {
   let response;
@@ -26,11 +26,13 @@ function element(tag, text, className = '') {
 }
 function statusFor(entry) {
   if (entry.status === 'unavailable') return 'Unavailable — not installed';
-  if (entry.status === 'reviewed') return 'Assessed only — not installed';
+  if (entry.status === 'reference') return 'Reference only — not connected';
+  if (entry.status === 'reviewed') return entry.review_level === 'surface' ? 'Surface triage only — not installed' : 'Assessed only — not installed';
   if (!state.system) return 'Selected adapter included · local service offline';
   if (!state.system.local_only) return 'Adapter included · local setup required';
   if (entry.name === 'rhasspy/piper') return state.system.piper_installed && state.system.voices.some(v => v.available) ? 'Piper adapter ready locally' : 'Piper adapter included · voice or runtime missing';
   if (entry.name === 'FFmpeg/FFmpeg') return state.system.ffmpeg_installed ? 'FFmpeg adapter ready locally' : 'FFmpeg adapter included · binary missing';
+  if (entry.name === 'Breakthrough/PySceneDetect' || entry.name === 'opencv/opencv') return state.system.scene_detection_installed ? 'Scene-cut adapter ready locally' : 'Scene-cut adapter included · dependencies missing';
   return 'Selected tools ready locally';
 }
 function renderCatalog() {
@@ -47,9 +49,11 @@ function renderCatalog() {
     for (const [label, value] of [['License', item.license], ['Requirements', item.requirements], ['Features', item.features.join(', ')], ['Platform', item.platform], ['Security / limits', item.security]]) {
       dl.append(element('dt', label), element('dd', value));
     }
-    const link = element('a', 'View source on GitHub ↗');
-    const url = new URL(item.source);
-    if (url.protocol === 'https:' && url.hostname === 'github.com') { link.href = url.href; link.target = '_blank'; link.rel = 'noopener noreferrer'; }
+    const pinned = item.status !== 'reference' && item.revision && item.readme;
+    const link = element('a', item.status === 'reference' ? 'Open reference ↗' : pinned ? 'View assessed README ↗' : 'View source on GitHub ↗');
+    const url = new URL(pinned ? `${item.source}/blob/${item.revision}/${item.readme}` : item.source);
+    const allowedHosts = ['github.com', 'developers.google.com', 'developers.tiktok.com', 'developers.facebook.com'];
+    if (url.protocol === 'https:' && allowedHosts.includes(url.hostname)) { link.href = url.href; link.target = '_blank'; link.rel = 'noopener noreferrer'; }
     card.append(dl, link); container.append(card);
   }
 }
@@ -84,7 +88,7 @@ async function loadSystem() {
     $('notice').classList.add('ready');
     $('notice').textContent = 'Single-user local mode. Your script and notes remain on this computer. This path uses text cards, not AI-generated visuals; no online research, translation, or YouTube upload is included.';
     setupVoices(system); $('create-button').disabled = !system.ready_for_video; $('analysis-button').disabled = false;
-    $('hardware').textContent = `${system.hardware.logical_cpus || '?'} logical CPUs · ${system.hardware.memory_gib ?? '?'} GiB RAM · ${system.hardware.home_disk_free_gib ?? '?'} GiB free on home drive · ${system.hardware.nvidia_gpu || 'No NVIDIA GPU detected'} · FFmpeg ${system.ffmpeg_installed ? 'available' : 'missing'} · Piper ${system.piper_installed ? 'available' : 'missing'}. ${system.warnings.join(' ')}`;
+    $('hardware').textContent = `${system.hardware.logical_cpus || '?'} logical CPUs · ${system.hardware.memory_gib ?? '?'} GiB RAM · ${system.hardware.home_disk_free_gib ?? '?'} GiB free on home drive · ${system.hardware.nvidia_gpu || 'No NVIDIA GPU detected'} · FFmpeg ${system.ffmpeg_installed ? 'available' : 'missing'} · Piper ${system.piper_installed ? 'available' : 'missing'} · Scene detection ${system.scene_detection_installed ? 'available' : 'missing'}. ${system.warnings.join(' ')}`;
     renderCatalog();
     const prior = await json('/api/skills/jobs');
     if (prior.jobs.length) showJob(prior.jobs[0]);
@@ -97,6 +101,10 @@ function fileLink(job, filename, label) {
   const a = element('a', label); a.href = `/api/skills/jobs/${encodeURIComponent(job.id)}/files/${encodeURIComponent(filename)}`; a.target = '_blank'; a.rel = 'noopener'; return a;
 }
 function showJob(job) {
+  if (state.job?.id !== job.id) {
+    $('scene-result').textContent = 'Analyzes this generated video on your computer; no media is uploaded.';
+    $('clip-result').textContent = 'Exports up to 30 seconds. A new clip replaces the previous one.';
+  }
   state.job = job; $('job-empty').hidden = true; $('job-result').hidden = false;
   $('job-badge').textContent = job.status.replaceAll('_', ' '); $('job-attempts').textContent = `Attempt ${job.attempts} / ${job.max_attempts}`;
   $('job-cost').textContent = `Estimated API cost: $${Number(job.estimated_api_cost_usd).toFixed(2)} · Local compute/electricity not included`;
@@ -107,6 +115,10 @@ function showJob(job) {
   const logs = $('job-events'); logs.replaceChildren();
   for (const ev of job.events) logs.append(element('li', `${ev.stage}: ${ev.message}`));
   const completed = (job.status === 'awaiting_review' || job.status === 'approved') && job.result;
+  $('scene-tools').hidden = !completed;
+  $('clip-tools').hidden = !completed || !job.result.files?.scene_detection;
+  $('scene-button').disabled = state.sceneOperation || !state.system?.scene_detection_installed;
+  $('clip-button').disabled = state.sceneOperation || !state.system?.ffmpeg_installed;
   $('video-preview').hidden = !completed; $('thumbnail-preview').hidden = !completed; $('output-links').replaceChildren();
   if (completed) {
     const prefix = `/api/skills/jobs/${encodeURIComponent(job.id)}/files/`;
@@ -115,6 +127,8 @@ function showJob(job) {
     $('caption-track').srclang = job.input.language;
     $('thumbnail-preview').src = `${prefix}thumbnail.png`;
     for (const [filename, label] of [['video.mp4','Video'], ['thumbnail.png','Thumbnail'], ['subtitles.srt','SRT'], ['storyboard.json','Storyboard'], ['narration.wav','Narration'], ['script.txt','Script'], ['research.txt','Notes']]) $('output-links').append(fileLink(job, filename, label));
+    if (job.result.files?.scene_detection) $('output-links').append(fileLink(job, 'scene-detection.json', 'Visual cuts (JSON)'));
+    if (job.result.files?.scene_clip) $('output-links').append(fileLink(job, 'scene-clip.mp4', 'Scene clip'));
   } else { $('video-preview').removeAttribute('src'); $('thumbnail-preview').removeAttribute('src'); }
   clearTimeout(state.timer);
   if (job.status === 'queued' || job.status === 'running') state.timer = setTimeout(() => refreshJob(job.id), 1500);
@@ -132,6 +146,52 @@ $('approve-button').addEventListener('click', async () => {
   if (!confirm('Have you reviewed this video and its rights? This records approval locally and does not upload it.')) return;
   try { showJob(await json(`/api/skills/jobs/${encodeURIComponent(state.job.id)}/approve`, {method:'POST',body:JSON.stringify({confirmed:true})})); }
   catch (error) { $('job-error').textContent = error.message; }
+});
+$('scene-button').addEventListener('click', async () => {
+  const jobId = state.job?.id;
+  const threshold = Number($('scene-threshold').value);
+  if (!jobId || !$('scene-threshold').value || !Number.isFinite(threshold) || threshold < 0.1 || threshold > 100) {
+    $('scene-result').textContent = 'Choose a threshold from 0.1 to 100.'; return;
+  }
+  state.sceneOperation = true; $('scene-button').disabled = true; $('clip-button').disabled = true;
+  $('scene-result').textContent = 'Analyzing video frames locally…';
+  try {
+    const result = await json(`/api/skills/jobs/${encodeURIComponent(jobId)}/scene-detection`, {method:'POST',body:JSON.stringify({threshold})});
+    if (state.job?.id !== jobId) return;
+    const updated = await json(`/api/skills/jobs/${encodeURIComponent(jobId)}`);
+    showJob(updated);
+    const lines = result.scenes.slice(0, 10).map(scene => `Scene ${scene.number}: ${scene.start_seconds.toFixed(2)}s – ${scene.end_seconds.toFixed(2)}s`);
+    if (result.scene_count > lines.length) lines.push('More scenes are in the downloadable JSON.');
+    $('scene-result').textContent = `${result.scene_count} detected scene(s). ${result.notice}\n${lines.join('\n')}`;
+  } catch (error) {
+    if (state.job?.id === jobId) $('scene-result').textContent = error.message;
+  } finally {
+    state.sceneOperation = false;
+    $('scene-button').disabled = !state.system?.scene_detection_installed;
+    $('clip-button').disabled = !state.system?.ffmpeg_installed;
+  }
+});
+$('clip-button').addEventListener('click', async () => {
+  const jobId = state.job?.id;
+  const number = Number($('clip-scene').value);
+  if (!jobId || !Number.isInteger(number) || number < 1 || number > 1000) {
+    $('clip-result').textContent = 'Enter a valid detected scene number.'; return;
+  }
+  state.sceneOperation = true; $('scene-button').disabled = true; $('clip-button').disabled = true;
+  $('clip-result').textContent = 'Exporting clip locally…';
+  try {
+    const clip = await json(`/api/skills/jobs/${encodeURIComponent(jobId)}/scene-clip`, {method:'POST',body:JSON.stringify({scene_number:number})});
+    if (state.job?.id !== jobId) return;
+    const updated = await json(`/api/skills/jobs/${encodeURIComponent(jobId)}`);
+    showJob(updated);
+    $('clip-result').textContent = `Scene ${clip.scene_number}: ${clip.duration_seconds.toFixed(2)}s exported. ${clip.limited_to_30_seconds ? 'Trimmed to 30 seconds. ' : ''}Use the Scene clip link above. A new export replaces this clip.`;
+  } catch (error) {
+    if (state.job?.id === jobId) $('clip-result').textContent = error.message;
+  } finally {
+    state.sceneOperation = false;
+    $('scene-button').disabled = !state.system?.scene_detection_installed;
+    $('clip-button').disabled = !state.system?.ffmpeg_installed;
+  }
 });
 $('analysis-form').addEventListener('submit', async event => {
   event.preventDefault(); $('analysis-error').textContent = '';

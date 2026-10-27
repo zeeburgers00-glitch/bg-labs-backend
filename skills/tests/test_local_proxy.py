@@ -53,7 +53,11 @@ def test_local_proxy_routes_real_vimax_and_private_skills(tmp_path):
         base = f'http://127.0.0.1:{public}'
         with httpx.Client(base_url=base, timeout=15, trust_env=False) as client:
             assert client.get('/skills/').status_code == 200
-            assert len(client.get('/skills/catalog.json').json()['entries']) == 28
+            entries = client.get('/skills/catalog.json').json()['entries']
+            assert len(entries) >= 149
+            assert any(entry['name'] == 'Breakthrough/PySceneDetect' for entry in entries)
+            audit = client.get('/skills/requested-sources-triage.md')
+            assert audit.status_code == 200 and 'text/markdown' in audit.headers['content-type']
             assert client.get('/api/sessions').status_code == 200
             assert client.get('/api/skills/system').json()['ready_for_video'] is True
             assert client.get('/api/sessions', headers={'Host':f'evil.example:{public}'}).status_code == 403
@@ -77,6 +81,12 @@ def test_local_proxy_routes_real_vimax_and_private_skills(tmp_path):
             assert job['status'] == 'awaiting_review', job.get('error')
             video = client.get(f'/api/skills/jobs/{job_id}/files/video.mp4')
             assert video.status_code == 200 and b'ftyp' in video.content[:32]
+            cuts = client.post(f'/api/skills/jobs/{job_id}/scene-detection', headers={'Origin':base}, json={})
+            assert cuts.status_code == 200 and cuts.json()['scene_count'] >= 1
+            clip = client.post(f'/api/skills/jobs/{job_id}/scene-clip', headers={'Origin':base}, json={'scene_number':1})
+            assert clip.status_code == 200, clip.text
+            clip_file = client.get(f'/api/skills/jobs/{job_id}/files/scene-clip.mp4')
+            assert clip_file.status_code == 200 and b'ftyp' in clip_file.content[:32]
             approve = client.post(f'/api/skills/jobs/{job_id}/approve', headers={'Origin':base}, json={'confirmed':True})
             assert approve.status_code == 200 and approve.json()['status'] == 'approved'
     finally:

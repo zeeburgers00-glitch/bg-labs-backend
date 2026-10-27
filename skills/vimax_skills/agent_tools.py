@@ -2,8 +2,11 @@
 from __future__ import annotations
 
 import json
+import os
+from pathlib import Path
 
 from .analyzers import lint_title, score_hook, score_idea
+from .scene_analysis import detect_scenes, generated_video
 
 
 def build_skill_specs():
@@ -18,7 +21,13 @@ def build_skill_specs():
                 return ToolResult(name, True, json.dumps(value, ensure_ascii=False), {"advisory_only": True})
             except (ValueError, TypeError) as exc:
                 return ToolResult(name, False, str(exc), {"error_type": "invalid_input"})
+            except RuntimeError as exc:
+                return ToolResult(name, False, str(exc), {"error_type": "unavailable"})
         return handler
+
+    def scene_analysis(args):
+        root = Path(os.environ.get("VIMAX_SKILLS_OUTPUT", str(Path.home() / ".vimax-skills" / "jobs")))
+        return detect_scenes(generated_video(root, args["job_id"]))
 
     return [
         ToolSpec(
@@ -41,5 +50,12 @@ def build_skill_specs():
             handler=wrap("yt_title_thumbnail_lint", lambda a: lint_title(a["title"], a.get("thumbnail", ""))),
             schema={"title": ToolArgumentSchema(str, required=True), "thumbnail": ToolArgumentSchema(str, default="")},
             permission_mode="read-only", concurrency_safe=True,
+        ),
+        ToolSpec(
+            name="video_scene_cuts",
+            description="Estimate visual cuts in a completed local ViMax job's generated video using PySceneDetect. Accepts a job ID, not arbitrary paths; does not publish or upload.",
+            handler=wrap("video_scene_cuts", scene_analysis),
+            schema={"job_id": ToolArgumentSchema(str, required=True)},
+            permission_mode="read-only", concurrency_safe=False,
         ),
     ]

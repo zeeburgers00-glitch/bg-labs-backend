@@ -12,9 +12,10 @@ from uuid import uuid4
 
 from .health import ffmpeg_executable, load_voices
 from .renderer import render_job
+from .scene_analysis import generated_video
 
 JOB_ID = re.compile(r"^[a-f0-9]{32}$")
-GENERATED = re.compile(r"^(?:scene-\d{3}\.png|voice-\d{3}\.wav|video(?:\.partial)?\.mp4|thumbnail\.png|narration\.wav|subtitles\.(?:srt|vtt)|storyboard\.json|script\.txt|research\.txt|scenes\.ffconcat)$")
+GENERATED = re.compile(r"^(?:scene-\d{3}\.png|voice-\d{3}\.wav|video(?:\.partial)?\.mp4|scene-clip\.mp4|thumbnail\.png|narration\.wav|subtitles\.(?:srt|vtt)|storyboard\.json|scene-detection\.json|script\.txt|research\.txt|scenes\.ffconcat)$")
 
 
 def now() -> str:
@@ -98,6 +99,51 @@ class JobManager:
     def list(self) -> list[dict]:
         with self.lock:
             return [self._copy(job) for job in sorted(self.jobs.values(), key=lambda j: j.get("created_at", ""), reverse=True)[:30]]
+
+    def save_scene_analysis(self, job_id: str, analysis: dict) -> dict:
+        """Persist an on-demand analysis for a completed local video."""
+        with self.lock:
+            job = self.jobs.get(job_id)
+            if not job:
+                raise KeyError("Job not found.")
+            if job["status"] not in {"awaiting_review", "approved"} or not job.get("result"):
+                raise ValueError("Scene detection requires a completed video.")
+            directory = generated_video(self.root, job_id).parent
+            temp = directory / f".scene-detection-{uuid4().hex}.tmp"
+            try:
+                with temp.open("x", encoding="utf-8") as stream:
+                    json.dump(analysis, stream, ensure_ascii=False, indent=2)
+                    stream.write("\n")
+                try:
+                    temp.chmod(0o600)
+                except OSError:
+                    pass
+                os.replace(temp, directory / "scene-detection.json")
+            finally:
+                temp.unlink(missing_ok=True)
+            job["result"]["files"]["scene_detection"] = "scene-detection.json"
+            self._log(job, "scene_detection", f"Detected {analysis['scene_count']} visual scene(s) locally.")
+            self._save(job)
+            return self._copy(job)
+
+    def save_scene_clip(self, job_id: str, temporary: Path, metadata: dict) -> dict:
+        """Publish a locally rendered temporary clip, replacing the previous one."""
+        with self.lock:
+            job = self.jobs.get(job_id)
+            if not job:
+                raise KeyError("Job not found.")
+            if job["status"] not in {"awaiting_review", "approved"} or not job.get("result"):
+                raise ValueError("Clip export requires a completed video.")
+            directory = self.root / job_id
+            if (directory.is_symlink() or temporary.parent.resolve() != directory.resolve() or temporary.is_symlink()
+                    or not re.fullmatch(r"\.scene-clip-[0-9a-f]{32}\.mp4", temporary.name) or not temporary.is_file()):
+                raise ValueError("Clip output is not in the local job directory.")
+            os.replace(temporary, directory / "scene-clip.mp4")
+            job["result"]["files"]["scene_clip"] = "scene-clip.mp4"
+            job["result"]["scene_clip"] = metadata
+            self._log(job, "clip_export", f"Exported scene {metadata['scene_number']} locally (up to 30 seconds).")
+            self._save(job)
+            return self._copy(job)
 
     def retry(self, job_id: str) -> dict:
         with self.lock:

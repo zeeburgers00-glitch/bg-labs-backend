@@ -256,8 +256,11 @@ def render_job(spec: dict, directory: Path, voice: Voice, ffmpeg: str, progress:
     temporary = directory / "video.partial.mp4"
     output = directory / "video.mp4"
     if temporary.exists(): temporary.unlink()
+    # Expand still-image timestamps into real constant-rate frames *before*
+    # applying the output duration. Output `-r` alone can leave the video
+    # stream ending early while the audio/container still reports full length.
     command = [ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-f", "concat", "-safe", "1", "-i", "scenes.ffconcat",
-               "-i", "narration.wav", "-t", str(duration), "-r", "24", "-c:v", "libx264", "-preset", "veryfast",
+               "-i", "narration.wav", "-vf", "fps=24", "-t", str(duration), "-c:v", "libx264", "-preset", "veryfast",
                "-crf", "28" if spec["quality"] == "draft" else "23", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "96k",
                "-movflags", "+faststart", str(temporary)]
     _run(command, cwd=directory, timeout=max(180, duration * 8))

@@ -162,7 +162,7 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch} =
       }
       if (method === 'GET' && path === '/api/skills/system') {
         await databaseReady();
-        return json({local_only:false, database_connected:true, ready_for_video:false, piper_installed:false, ffmpeg_installed:false,
+        return json({local_only:false, database_connected:true, ready_for_video:false, piper_installed:false, ffmpeg_installed:false, scene_detection_installed:false,
           voices:[], hardware:{logical_cpus:null, memory_gib:null, home_disk_free_gib:null, nvidia_gpu:null}, warnings:[AGENT_UNAVAILABLE]});
       }
       if (method === 'GET' && path === '/api/cloud/session') {

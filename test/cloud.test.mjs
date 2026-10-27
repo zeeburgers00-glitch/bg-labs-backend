@@ -54,7 +54,7 @@ test('health truthfully distinguishes connected database from missing agent and 
   const sessions = await (await bridge.fetch(request('/api/bridge?__vimax_path=sessions'))).json();
   assert.deepEqual(sessions.sessions, []); assert.match(sessions.warning, /not connected/);
   const system = await (await bridge.fetch(request('/api/skills/system'))).json();
-  assert.equal(system.database_connected, true); assert.equal(system.ready_for_video, false);
+  assert.equal(system.database_connected, true); assert.equal(system.ready_for_video, false); assert.equal(system.scene_detection_installed, false);
   assert.ok(fake.calls.every(call => !call.path.includes('service_role')));
 });
 

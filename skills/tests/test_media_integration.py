@@ -7,6 +7,7 @@ import wave
 from fastapi.testclient import TestClient
 import pytest
 from PIL import Image
+import cv2
 
 from vimax_skills.health import ffmpeg_executable
 from vimax_skills.service import create_app
@@ -36,6 +37,31 @@ def test_actual_local_video_pipeline_and_review(format, dimensions, tmp_path, mo
         assert dimensions in metadata and 'Video: h264' in metadata and 'Audio: aac' in metadata and '00:00:08.00' in metadata
         decoded = subprocess.run([ffmpeg_executable(), '-v', 'error', '-i', str(video), '-f', 'null', '-'], capture_output=True, text=True)
         assert decoded.returncode == 0, decoded.stderr
+        # Container/audio duration alone can be 8s even when video frames end early.
+        capture = cv2.VideoCapture(str(video))
+        assert capture.isOpened()
+        fps = capture.get(cv2.CAP_PROP_FPS)
+        frames = capture.get(cv2.CAP_PROP_FRAME_COUNT)
+        assert fps == 24 and abs(frames / fps - 8) < .05
+        ok, first_frame = capture.read()
+        assert ok and first_frame is not None
+        capture.set(cv2.CAP_PROP_POS_FRAMES, int(frames) - 1)
+        ok, final_frame = capture.read()
+        assert ok and final_frame is not None
+        # Different script scenes must still be present at the end of the stream.
+        assert cv2.absdiff(first_frame, final_frame).max() > 20
+        capture.release()
+        analysis = client.post(f'/api/skills/jobs/{job_id}/scene-detection', headers=HEADERS, json={})
+        assert analysis.status_code == 200, analysis.text
+        assert analysis.json()['scene_count'] >= 2  # the two text cards differ even though the background is stable
+        assert abs(analysis.json()['scenes'][-1]['end_seconds'] - 8) < .05
+        assert client.get(f'/api/skills/jobs/{job_id}/files/scene-detection.json', headers=HEADERS).status_code == 200
+        clip = client.post(f'/api/skills/jobs/{job_id}/scene-clip', headers=HEADERS, json={'scene_number': 1})
+        assert clip.status_code == 200, clip.text
+        clip_path = tmp_path / job_id / 'scene-clip.mp4'
+        clip_metadata = subprocess.run([ffmpeg_executable(), '-hide_banner', '-i', str(clip_path)], capture_output=True, text=True).stderr
+        assert 'Video: h264' in clip_metadata and 'Audio: aac' in clip_metadata
+        assert client.get(f'/api/skills/jobs/{job_id}/files/scene-clip.mp4', headers=HEADERS).status_code == 200
         with wave.open(str(tmp_path / job_id / 'narration.wav')) as narration:
             assert narration.getnframes() == 8 * narration.getframerate()
         with Image.open(tmp_path / job_id / 'thumbnail.png') as thumbnail:

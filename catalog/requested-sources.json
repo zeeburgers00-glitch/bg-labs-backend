@@ -1,0 +1,518 @@
+{
+  "repositories": [
+    {
+      "name": "darkzOGx/youtube-automation-agent",
+      "category": "YouTube automation",
+      "source": "https://github.com/darkzOGx/youtube-automation-agent"
+    },
+    {
+      "name": "metiutek/tube-assistant",
+      "category": "YouTube automation",
+      "source": "https://github.com/metiutek/tube-assistant"
+    },
+    {
+      "name": "harry0703/MoneyPrinterTurbo",
+      "category": "YouTube automation",
+      "source": "https://github.com/harry0703/MoneyPrinterTurbo"
+    },
+    {
+      "name": "FujiwaraChoki/MoneyPrinter",
+      "category": "YouTube automation",
+      "source": "https://github.com/FujiwaraChoki/MoneyPrinter"
+    },
+    {
+      "name": "linyqh/NarratoAI",
+      "category": "YouTube automation",
+      "source": "https://github.com/linyqh/NarratoAI"
+    },
+    {
+      "name": "RayVentura/ShortGPT",
+      "category": "YouTube automation",
+      "source": "https://github.com/RayVentura/ShortGPT"
+    },
+    {
+      "name": "Huanshere/VideoLingo",
+      "category": "YouTube automation",
+      "source": "https://github.com/Huanshere/VideoLingo"
+    },
+    {
+      "name": "elebumm/RedditVideoMakerBot",
+      "category": "YouTube automation",
+      "source": "https://github.com/elebumm/RedditVideoMakerBot"
+    },
+    {
+      "name": "calesthio/OpenMontage",
+      "category": "YouTube automation",
+      "source": "https://github.com/calesthio/OpenMontage"
+    },
+    {
+      "name": "heygen-com/hyperframes",
+      "category": "YouTube automation",
+      "source": "https://github.com/heygen-com/hyperframes"
+    },
+    {
+      "name": "langchain-ai/langgraph",
+      "category": "AI agents & automation",
+      "source": "https://github.com/langchain-ai/langgraph"
+    },
+    {
+      "name": "microsoft/autogen",
+      "category": "AI agents & automation",
+      "source": "https://github.com/microsoft/autogen"
+    },
+    {
+      "name": "microsoft/agent-framework",
+      "category": "AI agents & automation",
+      "source": "https://github.com/microsoft/agent-framework"
+    },
+    {
+      "name": "crewAIInc/crewAI",
+      "category": "AI agents & automation",
+      "source": "https://github.com/crewAIInc/crewAI"
+    },
+    {
+      "name": "openai/openai-agents-js",
+      "category": "AI agents & automation",
+      "source": "https://github.com/openai/openai-agents-js"
+    },
+    {
+      "name": "OpenHands/OpenHands",
+      "category": "AI agents & automation",
+      "source": "https://github.com/OpenHands/OpenHands"
+    },
+    {
+      "name": "openclaw/openclaw",
+      "category": "AI agents & automation",
+      "source": "https://github.com/openclaw/openclaw"
+    },
+    {
+      "name": "langgenius/dify",
+      "category": "AI agents & automation",
+      "source": "https://github.com/langgenius/dify"
+    },
+    {
+      "name": "FlowiseAI/Flowise",
+      "category": "AI agents & automation",
+      "source": "https://github.com/FlowiseAI/Flowise"
+    },
+    {
+      "name": "n8n-io/n8n",
+      "category": "AI agents & automation",
+      "source": "https://github.com/n8n-io/n8n"
+    },
+    {
+      "name": "modelcontextprotocol/servers",
+      "category": "AI agents & automation",
+      "source": "https://github.com/modelcontextprotocol/servers"
+    },
+    {
+      "name": "modelcontextprotocol/typescript-sdk",
+      "category": "AI agents & automation",
+      "source": "https://github.com/modelcontextprotocol/typescript-sdk"
+    },
+    {
+      "name": "punkpeye/awesome-mcp-servers",
+      "category": "AI agents & automation",
+      "source": "https://github.com/punkpeye/awesome-mcp-servers"
+    },
+    {
+      "name": "ComposioHQ/composio",
+      "category": "AI agents & automation",
+      "source": "https://github.com/ComposioHQ/composio"
+    },
+    {
+      "name": "VoltAgent/awesome-agent-skills",
+      "category": "AI agents & automation",
+      "source": "https://github.com/VoltAgent/awesome-agent-skills"
+    },
+    {
+      "name": "Shubhamsaboo/awesome-llm-apps",
+      "category": "AI agents & automation",
+      "source": "https://github.com/Shubhamsaboo/awesome-llm-apps"
+    },
+    {
+      "name": "rhasspy/piper",
+      "category": "Voice & speech",
+      "source": "https://github.com/rhasspy/piper"
+    },
+    {
+      "name": "coqui-ai/TTS",
+      "category": "Voice & speech",
+      "source": "https://github.com/coqui-ai/TTS"
+    },
+    {
+      "name": "ggml-org/whisper.cpp",
+      "category": "Voice & speech",
+      "source": "https://github.com/ggml-org/whisper.cpp"
+    },
+    {
+      "name": "SYSTRAN/faster-whisper",
+      "category": "Voice & speech",
+      "source": "https://github.com/SYSTRAN/faster-whisper"
+    },
+    {
+      "name": "fishaudio/fish-speech",
+      "category": "Voice & speech",
+      "source": "https://github.com/fishaudio/fish-speech"
+    },
+    {
+      "name": "RVC-Boss/GPT-SoVITS",
+      "category": "Voice & speech",
+      "source": "https://github.com/RVC-Boss/GPT-SoVITS"
+    },
+    {
+      "name": "myshell-ai/OpenVoice",
+      "category": "Voice & speech",
+      "source": "https://github.com/myshell-ai/OpenVoice"
+    },
+    {
+      "name": "FunAudioLLM/CosyVoice",
+      "category": "Voice & speech",
+      "source": "https://github.com/FunAudioLLM/CosyVoice"
+    },
+    {
+      "name": "SWivid/F5-TTS",
+      "category": "Voice & speech",
+      "source": "https://github.com/SWivid/F5-TTS"
+    },
+    {
+      "name": "k2-fsa/sherpa-onnx",
+      "category": "Voice & speech",
+      "source": "https://github.com/k2-fsa/sherpa-onnx"
+    },
+    {
+      "name": "Comfy-Org/ComfyUI",
+      "category": "AI video generation",
+      "source": "https://github.com/Comfy-Org/ComfyUI"
+    },
+    {
+      "name": "Wan-Video/Wan2.2",
+      "category": "AI video generation",
+      "source": "https://github.com/Wan-Video/Wan2.2"
+    },
+    {
+      "name": "Wan-Video/Wan2.1",
+      "category": "AI video generation",
+      "source": "https://github.com/Wan-Video/Wan2.1"
+    },
+    {
+      "name": "Lightricks/LTX-Video",
+      "category": "AI video generation",
+      "source": "https://github.com/Lightricks/LTX-Video"
+    },
+    {
+      "name": "THUDM/CogVideo",
+      "category": "AI video generation",
+      "source": "https://github.com/THUDM/CogVideo"
+    },
+    {
+      "name": "Tencent-Hunyuan/HunyuanVideo",
+      "category": "AI video generation",
+      "source": "https://github.com/Tencent-Hunyuan/HunyuanVideo"
+    },
+    {
+      "name": "hpcaitech/Open-Sora",
+      "category": "AI video generation",
+      "source": "https://github.com/hpcaitech/Open-Sora"
+    },
+    {
+      "name": "PKU-YuanGroup/Open-Sora-Plan",
+      "category": "AI video generation",
+      "source": "https://github.com/PKU-YuanGroup/Open-Sora-Plan"
+    },
+    {
+      "name": "guoyww/AnimateDiff",
+      "category": "AI video generation",
+      "source": "https://github.com/guoyww/AnimateDiff"
+    },
+    {
+      "name": "AILab-CVC/VideoCrafter",
+      "category": "AI video generation",
+      "source": "https://github.com/AILab-CVC/VideoCrafter"
+    },
+    {
+      "name": "Doubiiu/DynamiCrafter",
+      "category": "AI video generation",
+      "source": "https://github.com/Doubiiu/DynamiCrafter"
+    },
+    {
+      "name": "genmoai/models",
+      "category": "AI video generation",
+      "source": "https://github.com/genmoai/models"
+    },
+    {
+      "name": "SkyworkAI/SkyReels-V2",
+      "category": "AI video generation",
+      "source": "https://github.com/SkyworkAI/SkyReels-V2"
+    },
+    {
+      "name": "modelscope/DiffSynth-Studio",
+      "category": "AI video generation",
+      "source": "https://github.com/modelscope/DiffSynth-Studio"
+    },
+    {
+      "name": "deepbeepmeep/Wan2GP",
+      "category": "AI video generation",
+      "source": "https://github.com/deepbeepmeep/Wan2GP"
+    },
+    {
+      "name": "AUTOMATIC1111/stable-diffusion-webui",
+      "category": "Images & thumbnails",
+      "source": "https://github.com/AUTOMATIC1111/stable-diffusion-webui"
+    },
+    {
+      "name": "lllyasviel/Fooocus",
+      "category": "Images & thumbnails",
+      "source": "https://github.com/lllyasviel/Fooocus"
+    },
+    {
+      "name": "invoke-ai/InvokeAI",
+      "category": "Images & thumbnails",
+      "source": "https://github.com/invoke-ai/InvokeAI"
+    },
+    {
+      "name": "Acly/krita-ai-diffusion",
+      "category": "Images & thumbnails",
+      "source": "https://github.com/Acly/krita-ai-diffusion"
+    },
+    {
+      "name": "huggingface/diffusers",
+      "category": "Images & thumbnails",
+      "source": "https://github.com/huggingface/diffusers"
+    },
+    {
+      "name": "lllyasviel/ControlNet",
+      "category": "Images & thumbnails",
+      "source": "https://github.com/lllyasviel/ControlNet"
+    },
+    {
+      "name": "tencent-ailab/IP-Adapter",
+      "category": "Images & thumbnails",
+      "source": "https://github.com/tencent-ailab/IP-Adapter"
+    },
+    {
+      "name": "xinntao/Real-ESRGAN",
+      "category": "Images & thumbnails",
+      "source": "https://github.com/xinntao/Real-ESRGAN"
+    },
+    {
+      "name": "opencv/opencv",
+      "category": "Images & thumbnails",
+      "source": "https://github.com/opencv/opencv"
+    },
+    {
+      "name": "Breakthrough/PySceneDetect",
+      "category": "Images & thumbnails",
+      "source": "https://github.com/Breakthrough/PySceneDetect"
+    },
+    {
+      "name": "FFmpeg/FFmpeg",
+      "category": "Video editing",
+      "source": "https://github.com/FFmpeg/FFmpeg"
+    },
+    {
+      "name": "Zulko/moviepy",
+      "category": "Video editing",
+      "source": "https://github.com/Zulko/moviepy"
+    },
+    {
+      "name": "remotion-dev/remotion",
+      "category": "Video editing",
+      "source": "https://github.com/remotion-dev/remotion"
+    },
+    {
+      "name": "shotcut/shotcut",
+      "category": "Video editing",
+      "source": "https://github.com/shotcut/shotcut"
+    },
+    {
+      "name": "openshot/openshot-qt",
+      "category": "Video editing",
+      "source": "https://github.com/openshot/openshot-qt"
+    },
+    {
+      "name": "KDE/kdenlive",
+      "category": "Video editing",
+      "source": "https://github.com/KDE/kdenlive"
+    },
+    {
+      "name": "hzwer/ECCV2022-RIFE",
+      "category": "Video editing",
+      "source": "https://github.com/hzwer/ECCV2022-RIFE"
+    },
+    {
+      "name": "ManimCommunity/manim",
+      "category": "Video editing",
+      "source": "https://github.com/ManimCommunity/manim"
+    },
+    {
+      "name": "TMElyralab/MuseTalk",
+      "category": "Video editing",
+      "source": "https://github.com/TMElyralab/MuseTalk"
+    },
+    {
+      "name": "KwaiVGI/LivePortrait",
+      "category": "Video editing",
+      "source": "https://github.com/KwaiVGI/LivePortrait"
+    },
+    {
+      "name": "ollama/ollama",
+      "category": "Local AI models",
+      "source": "https://github.com/ollama/ollama"
+    },
+    {
+      "name": "ggml-org/llama.cpp",
+      "category": "Local AI models",
+      "source": "https://github.com/ggml-org/llama.cpp"
+    },
+    {
+      "name": "huggingface/transformers",
+      "category": "Local AI models",
+      "source": "https://github.com/huggingface/transformers"
+    },
+    {
+      "name": "QwenLM/Qwen3-VL",
+      "category": "Local AI models",
+      "source": "https://github.com/QwenLM/Qwen3-VL"
+    },
+    {
+      "name": "vllm-project/vllm",
+      "category": "Local AI models",
+      "source": "https://github.com/vllm-project/vllm"
+    },
+    {
+      "name": "chroma-core/chroma",
+      "category": "Local AI models",
+      "source": "https://github.com/chroma-core/chroma"
+    },
+    {
+      "name": "run-llama/llama_index",
+      "category": "Local AI models",
+      "source": "https://github.com/run-llama/llama_index"
+    },
+    {
+      "name": "microsoft/markitdown",
+      "category": "Local AI models",
+      "source": "https://github.com/microsoft/markitdown"
+    },
+    {
+      "name": "OpenInterpreter/open-interpreter",
+      "category": "Local AI models",
+      "source": "https://github.com/OpenInterpreter/open-interpreter"
+    },
+    {
+      "name": "bytedance/UI-TARS-desktop",
+      "category": "Local AI models",
+      "source": "https://github.com/bytedance/UI-TARS-desktop"
+    },
+    {
+      "name": "electron/electron",
+      "category": "Windows & computer control",
+      "source": "https://github.com/electron/electron"
+    },
+    {
+      "name": "facebook/react",
+      "category": "Windows & computer control",
+      "source": "https://github.com/facebook/react"
+    },
+    {
+      "name": "electron-vite/electron-vite",
+      "category": "Windows & computer control",
+      "source": "https://github.com/electron-vite/electron-vite"
+    },
+    {
+      "name": "electron-userland/electron-builder",
+      "category": "Windows & computer control",
+      "source": "https://github.com/electron-userland/electron-builder"
+    },
+    {
+      "name": "microsoft/playwright",
+      "category": "Windows & computer control",
+      "source": "https://github.com/microsoft/playwright"
+    },
+    {
+      "name": "browser-use/browser-use",
+      "category": "Windows & computer control",
+      "source": "https://github.com/browser-use/browser-use"
+    },
+    {
+      "name": "browser-use/desktop",
+      "category": "Windows & computer control",
+      "source": "https://github.com/browser-use/desktop"
+    },
+    {
+      "name": "CopilotKit/OpenDots",
+      "category": "Windows & computer control",
+      "source": "https://github.com/CopilotKit/OpenDots"
+    },
+    {
+      "name": "elie222/rakazo",
+      "category": "Windows & computer control",
+      "source": "https://github.com/elie222/rakazo"
+    },
+    {
+      "name": "tailwindlabs/tailwindcss",
+      "category": "Windows & computer control",
+      "source": "https://github.com/tailwindlabs/tailwindcss"
+    },
+    {
+      "name": "googleapis/google-api-nodejs-client",
+      "category": "Platform APIs",
+      "source": "https://github.com/googleapis/google-api-nodejs-client"
+    },
+    {
+      "name": "public-apis/public-apis",
+      "category": "Discovery collections",
+      "source": "https://github.com/public-apis/public-apis"
+    },
+    {
+      "name": "sindresorhus/awesome",
+      "category": "Discovery collections",
+      "source": "https://github.com/sindresorhus/awesome"
+    }
+  ],
+  "topic_pages": [
+    "https://github.com/topics/ai-agents",
+    "https://github.com/topics/ai-agent",
+    "https://github.com/topics/voice-assistant",
+    "https://github.com/topics/speech-recognition",
+    "https://github.com/topics/text-to-speech",
+    "https://github.com/topics/desktop-automation",
+    "https://github.com/topics/computer-automation",
+    "https://github.com/topics/browser-automation",
+    "https://github.com/topics/youtube-automation",
+    "https://github.com/topics/youtube-agent",
+    "https://github.com/topics/video-generation",
+    "https://github.com/topics/ai-video-generator",
+    "https://github.com/topics/image-generation",
+    "https://github.com/topics/stable-diffusion",
+    "https://github.com/topics/local-ai",
+    "https://github.com/topics/llm",
+    "https://github.com/topics/social-media-automation",
+    "https://github.com/topics/social-media-scheduler",
+    "https://github.com/topics/instagram-api",
+    "https://github.com/topics/tiktok-api",
+    "https://github.com/topics/facebook-graph-api",
+    "https://github.com/topics/artificial-intelligence",
+    "https://github.com/topics/machine-learning",
+    "https://github.com/topics/generative-ai",
+    "https://github.com/topics/automation",
+    "https://github.com/topics/awesome-list"
+  ],
+  "official_docs": [
+    "https://developers.google.com/youtube/v3/docs",
+    "https://developers.google.com/youtube/v3/guides/uploading_a_video",
+    "https://developers.google.com/youtube/analytics",
+    "https://developers.tiktok.com/",
+    "https://developers.tiktok.com/doc/content-posting-api-get-started/",
+    "https://developers.facebook.com/docs/instagram-platform/",
+    "https://developers.facebook.com/docs/instagram-platform/content-publishing/",
+    "https://developers.facebook.com/docs/graph-api/",
+    "https://developers.facebook.com/docs/pages-api/"
+  ],
+  "discovery_pages": [
+    "https://github.com/explore",
+    "https://github.com/collections",
+    "https://github.com/trending"
+  ]
+}

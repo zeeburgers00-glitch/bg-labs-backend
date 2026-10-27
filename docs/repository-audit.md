@@ -1,6 +1,6 @@
 # ViMax skills: repository triage and licensing
 
-Assessed 2026-10-27 from the linked README, GitHub license metadata, root dependency manifests when present, and topic searches. Links below pin the default-branch revision reviewed. This is a **triage**, not a full security audit or legal opinion. Only the explicitly named vendored scripts were reviewed line by line. No third-party install script was run. Missing information is unknown, not proof of safety.
+Assessed 2026-10-27 from the linked README, GitHub license metadata, root dependency manifests when present, and topic searches. Links below pin the default-branch revision reviewed. This is a **triage**, not a full security audit or legal opinion. Only the explicitly named vendored scripts were reviewed line by line. No third-party install script was run. Missing information is unknown, not proof of safety. The later, machine-assisted inventory of additional requested sources is in [requested-sources-triage.md](requested-sources-triage.md).
 
 “Partial” means only the named adapter/operations are supplied; it does not mean the whole upstream repository is installed. The original Piper project is archived; the tested `piper-tts` 1.8.0 successor is GPL-3.0-or-later. Voice weights have separate terms. FFmpeg licensing depends on build configuration. The selected Linux imageio-ffmpeg binary reports `--enable-gpl --enable-version3` (GPL v3); assess each Windows binary separately.
 

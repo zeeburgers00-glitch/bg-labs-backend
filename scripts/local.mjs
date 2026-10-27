@@ -104,7 +104,7 @@ function forward(req, res, target, bounded) {
   } else req.pipe(remote);
 }
 const types = {'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8',
-  '.json':'application/json; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.ico':'image/x-icon','.woff2':'font/woff2'};
+  '.json':'application/json; charset=utf-8','.md':'text/markdown; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.ico':'image/x-icon','.woff2':'font/woff2'};
 proxy = createServer(async (req, res) => {
   const host = (req.headers.host || '').toLowerCase();
   if (![ `127.0.0.1:${port}`, `localhost:${port}` ].includes(host)) return reply(res, 403, 'Invalid local host.');

@@ -31,8 +31,11 @@ def test_service_token_validation_and_catalog(tmp_path):
         assert client.get("/api/skills/catalog").status_code == 403
         assert client.get("/api/skills/catalog", headers={"x-vimax-local-token":"wrong"}).status_code == 403
         entries = client.get("/api/skills/catalog", headers=HEADERS).json()["entries"]
-        assert len(entries) == 28
-        assert sum(x["status"] == "unavailable" for x in entries) == 1
+        assert len(entries) >= 149
+        assert {x["name"] for x in entries if x["status"] == "unavailable"} >= {
+            "Sarim78/Claude-YouTube-Agent-Skill", "shotcut/shotcut", "electron-vite/electron-vite"}
+        assert any(x["name"] == "Breakthrough/PySceneDetect" and x["status"] == "partial" for x in entries)
+        assert any(x["status"] == "reference" for x in entries)
         assert client.get("/openapi.json", headers=HEADERS).status_code == 404
         response = client.post("/api/skills/analyze", headers=HEADERS, json={"idea":"How to grow 5 herbs at home", "hook":""})
         assert response.status_code == 200 and response.json()["idea"]["score"] == 51

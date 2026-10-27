@@ -54,7 +54,7 @@
     </section>
 
     <section id="studio" class="section">
-      <div class="section-heading"><div><div class="eyebrow">01 / LOCAL STUDIO</div><h2>A small video, made for review.</h2><p>Provide the facts and script. Piper narrates locally and FFmpeg assembles original text cards with captions.</p></div><span class="tag">CPU · NO API CALLS</span></div>
+      <div class="section-heading"><div><div class="eyebrow">01 / LOCAL STUDIO</div><h2>A small video, made for review.</h2><p>Provide the facts and script. Piper narrates locally and FFmpeg assembles text cards with captions. After rendering, detect visual cuts and export a short scene clip on your own computer.</p></div><span class="tag">CPU · NO API CALLS</span></div>
       <div class="studio-grid">
         <form id="job-form" class="panel form-panel">
           <div class="panel-heading"><div><h3>Start a project</h3><p>No automatic research, AI imagery or translation in this workflow.</p></div><span class="step-number">01</span></div>
@@ -83,6 +83,16 @@
             <img id="thumbnail-preview" alt="Generated thumbnail preview" hidden>
             <div id="output-links" class="output-links"></div>
             <p class="path" id="output-path"></p>
+            <div id="scene-tools" class="scene-tools" hidden>
+              <label>Visual cut threshold <small>Lower is more sensitive. 0.1 suits text cards but may over-detect; increase it if needed.</small><input type="number" id="scene-threshold" value="0.1" min="0.1" max="100" step="0.1"></label>
+              <button class="button secondary-button" type="button" id="scene-button">Detect visual cuts locally</button>
+              <p class="form-note" id="scene-result" role="status">Analyzes this generated video on your computer; no media is uploaded.</p>
+              <div id="clip-tools" hidden>
+                <label>Detected scene number <input type="number" id="clip-scene" value="1" min="1" max="1000" step="1"></label>
+                <button class="button secondary-button" type="button" id="clip-button">Export scene clip</button>
+                <p class="form-note" id="clip-result" role="status">Exports up to 30 seconds. A new clip replaces the previous one.</p>
+              </div>
+            </div>
             <div class="actions"><button class="button secondary-button" type="button" id="retry-button" hidden>Retry failed job</button><button class="button primary" type="button" id="approve-button" hidden>I reviewed and approve</button></div>
             <p class="form-note">YouTube upload is not implemented; approval does not publish anything.</p>
             <ol id="job-events" class="events" aria-live="polite"></ol>
@@ -108,11 +118,11 @@
     </section>
 
     <section id="catalog" class="section catalog-section">
-      <div class="section-heading"><div><div class="eyebrow">03 / SKILLS &amp; AGENTS</div><h2>Know what’s connected.</h2><p>Repository triage, dependencies and license notes. Assessed does not mean installed or verified.</p></div><span class="tag" id="catalog-count">28 SOURCES</span></div>
+      <div class="section-heading"><div><div class="eyebrow">03 / SKILLS &amp; AGENTS</div><h2>Know what’s connected.</h2><p>Repository triage, dependencies and license notes. Surface triage is not a security audit, and assessed does not mean installed.</p></div><span class="tag" id="catalog-count">LOADING SOURCES</span></div>
       <div class="catalog-controls"><label class="search"><span aria-hidden="true">⌕</span><input id="catalog-search" type="search" placeholder="Search skills, features, licenses…" aria-label="Search catalog"></label>
-        <select id="catalog-filter" aria-label="Filter by status"><option value="all">All statuses</option><option value="partial">Selected adapters only</option><option value="reviewed">Assessed, not integrated</option><option value="unavailable">Unavailable</option></select></div>
+        <select id="catalog-filter" aria-label="Filter by status"><option value="all">All statuses</option><option value="partial">Selected adapters only</option><option value="reviewed">Assessed, not integrated</option><option value="reference">Reference links only</option><option value="unavailable">Unavailable</option></select></div>
       <div id="catalog-list" class="catalog-grid" aria-live="polite"></div>
-      <p class="form-note">Catalog assessment: 27 October 2026. Model weights and third-party binaries can have separate terms. See the repository audit in the local setup guide.</p>
+      <p class="form-note">Catalog assessment: 27 October 2026. Model weights and third-party binaries can have separate terms. Read the <a href="/skills/repository-audit.md" target="_blank" rel="noopener">original triage</a> and <a href="/skills/requested-sources-triage.md" target="_blank" rel="noopener">expanded source inventory</a>.</p>
     </section>
     <footer><span>ViMax · Skills &amp; Agents</span><span>No artificial engagement. Automatic publishing is not connected.</span></footer>
   </main>

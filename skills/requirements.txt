@@ -6,3 +6,7 @@ uvicorn==0.30.6
 Pillow==11.3.0
 imageio-ffmpeg==0.6.0
 piper-tts==1.8.0
+# Local visual-cut analysis (CPU; no model downloads).
+scenedetect-headless==0.7.2
+opencv-python-headless==4.13.0.92
+numpy==2.2.6

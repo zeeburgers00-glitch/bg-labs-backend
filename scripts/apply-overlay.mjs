@@ -43,4 +43,8 @@ export async function applyOverlay(web) {
   await mkdir(destination, {recursive: true});
   await cp(path.join(project, 'frontend', 'skills'), destination, {recursive: true});
   await cp(path.join(project, 'catalog', 'catalog.json'), path.join(destination, 'catalog.json'));
+  // The public catalog's assessment reports contain only public-source triage,
+  // not local job data or credentials.
+  await cp(path.join(project, 'docs', 'repository-audit.md'), path.join(destination, 'repository-audit.md'));
+  await cp(path.join(project, 'docs', 'requested-sources-triage.md'), path.join(destination, 'requested-sources-triage.md'));
 }

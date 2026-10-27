@@ -37,11 +37,13 @@ def test_skill_specs_use_real_vimax_registry_when_source_is_available():
     registry = ToolRegistry([existing])
     for spec in build_skill_specs(): registry.register(spec)
     assert registry.get_spec("existing") is existing
-    assert {x["name"] for x in registry.list_tools()} >= {"existing", "yt_idea_heuristic", "yt_hook_heuristic", "yt_title_thumbnail_lint"}
+    assert {x["name"] for x in registry.list_tools()} >= {"existing", "yt_idea_heuristic", "yt_hook_heuristic", "yt_title_thumbnail_lint", "video_scene_cuts"}
     result = asyncio.run(registry.execute("yt_idea_heuristic", {"idea":"How to grow 5 herbs at home"}))
     assert result.ok and json.loads(result.content)["score"] == 51
     result = asyncio.run(registry.execute("yt_hook_heuristic", {"hook":""}))
     assert not result.ok and "required" in result.content
+    result = asyncio.run(registry.execute("video_scene_cuts", {"job_id":"../../etc/passwd"}))
+    assert not result.ok and "Invalid job id" in result.content
 
 
 def test_runtime_wrapper_adds_without_replacing_and_rejects_collisions(monkeypatch):

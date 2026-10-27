@@ -11,6 +11,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+from threading import BoundedSemaphore
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Request
@@ -18,13 +19,16 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field, field_validator
 
 from .analyzers import lint_title, score_hook, score_idea
-from .health import capabilities, ffmpeg_executable, load_voices
+from .clips import extract_clip
+from .health import capabilities, ffmpeg_executable, load_voices, scene_detection_available
 from .jobs import JobManager
+from .scene_analysis import detect_scenes, generated_video
 
 CATALOG = Path(__file__).resolve().parents[2] / "catalog" / "catalog.json"
 FILE_TYPES = {"video.mp4": "video/mp4", "thumbnail.png": "image/png", "subtitles.srt": "application/x-subrip",
               "subtitles.vtt": "text/vtt", "storyboard.json": "application/json", "script.txt": "text/plain; charset=utf-8",
-              "research.txt": "text/plain; charset=utf-8", "narration.wav": "audio/wav"}
+              "research.txt": "text/plain; charset=utf-8", "narration.wav": "audio/wav", "scene-detection.json": "application/json",
+              "scene-clip.mp4": "video/mp4"}
 
 
 class AnalysisInput(BaseModel):
@@ -65,12 +69,21 @@ class ApprovalInput(BaseModel):
     confirmed: bool = False
 
 
+class SceneDetectionInput(BaseModel):
+    threshold: float = Field(default=0.1, ge=0.1, le=100)
+
+
+class SceneClipInput(BaseModel):
+    scene_number: int = Field(ge=1, le=1000)
+
+
 def create_app(*, token: str | None = None, output_root: Path | None = None) -> FastAPI:
     token = token or os.environ.get("VIMAX_SKILLS_INTERNAL_TOKEN", "")
     if len(token) < 32:
         raise RuntimeError("A random VIMAX_SKILLS_INTERNAL_TOKEN of at least 32 characters is required.")
     root = output_root or Path(os.environ.get("VIMAX_SKILLS_OUTPUT", str(Path.home() / ".vimax-skills" / "jobs")))
     manager = JobManager(root)
+    scene_slot = BoundedSemaphore(1)
 
     @asynccontextmanager
     async def lifespan(app):
@@ -163,6 +176,56 @@ def create_app(*, token: str | None = None, output_root: Path | None = None) -> 
         except ValueError as exc:
             raise HTTPException(409, str(exc)) from exc
 
+    @app.post("/api/skills/jobs/{job_id}/scene-detection")
+    def scene_detection(job_id: str, payload: SceneDetectionInput):
+        job = manager.get(job_id)
+        if not job:
+            raise HTTPException(404, "Job not found.")
+        if job["status"] not in {"awaiting_review", "approved"}:
+            raise HTTPException(409, "Scene detection requires a completed video.")
+        if not scene_detection_available():
+            raise HTTPException(503, "Scene detection is unavailable. Install skills/requirements.txt locally.")
+        if not scene_slot.acquire(blocking=False):
+            raise HTTPException(429, "Another local scene operation is running. Try again after it finishes.")
+        try:
+            try:
+                video = generated_video(manager.root, job_id)
+                result = detect_scenes(video, threshold=payload.threshold)
+                manager.save_scene_analysis(job_id, result)
+                return result
+            except (ValueError, RuntimeError) as exc:
+                raise HTTPException(422, str(exc)) from exc
+        finally:
+            scene_slot.release()
+
+    @app.post("/api/skills/jobs/{job_id}/scene-clip")
+    def scene_clip(job_id: str, payload: SceneClipInput):
+        job = manager.get(job_id)
+        if not job:
+            raise HTTPException(404, "Job not found.")
+        if job["status"] not in {"awaiting_review", "approved"}:
+            raise HTTPException(409, "Clip export requires a completed video.")
+        ffmpeg = ffmpeg_executable()
+        if not ffmpeg:
+            raise HTTPException(503, "FFmpeg is not installed in the local companion.")
+        if not scene_slot.acquire(blocking=False):
+            raise HTTPException(429, "Another local scene operation is running. Try again after it finishes.")
+        temporary = None
+        try:
+            try:
+                video = generated_video(manager.root, job_id)
+                temporary, metadata = extract_clip(video, payload.scene_number, ffmpeg)
+                manager.save_scene_clip(job_id, temporary, metadata)
+                return metadata
+            except ValueError as exc:
+                raise HTTPException(422, str(exc)) from exc
+            except RuntimeError as exc:
+                raise HTTPException(500, str(exc)) from exc
+        finally:
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
+            scene_slot.release()
+
     @app.post("/api/skills/jobs/{job_id}/upload")
     def upload(job_id: str):
         job = manager.get(job_id)
@@ -176,8 +239,9 @@ def create_app(*, token: str | None = None, output_root: Path | None = None) -> 
         job = manager.get(job_id)
         if not job or filename not in FILE_TYPES or job["status"] not in {"awaiting_review", "approved"}:
             raise HTTPException(404, "Output not found.")
-        path = manager.root / job_id / filename
-        if not path.is_file() or path.is_symlink():
+        directory = manager.root / job_id
+        path = directory / filename
+        if directory.is_symlink() or not path.is_file() or path.is_symlink() or path.resolve().parent != directory.resolve():
             raise HTTPException(404, "Output not found.")
         return FileResponse(path, media_type=FILE_TYPES[filename], headers={"Cache-Control": "no-store"})
 

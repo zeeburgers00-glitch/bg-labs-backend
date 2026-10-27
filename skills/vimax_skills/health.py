@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import importlib
 import importlib.util
 import json
 import os
@@ -129,6 +130,16 @@ def hardware_report() -> dict:
             "note": "The local slideshow uses CPU. GPU model adapters are not installed or verified."}
 
 
+def scene_detection_available() -> bool:
+    """Check native imports, not just whether package metadata is present."""
+    try:
+        importlib.import_module("cv2")
+        importlib.import_module("scenedetect")
+        return True
+    except Exception:
+        return False
+
+
 def capabilities() -> dict:
     ffmpeg = ffmpeg_executable()
     ffmpeg_version = None
@@ -142,6 +153,7 @@ def capabilities() -> dict:
         except (OSError, subprocess.SubprocessError, IndexError):
             ffmpeg = None
     piper = importlib.util.find_spec("piper") is not None
+    scene_detection = scene_detection_available()
     voices, warnings = load_voices()
     if not piper:
         warnings.append("Piper is not installed in the skills Python environment.")
@@ -149,7 +161,7 @@ def capabilities() -> dict:
         warnings.append("FFmpeg is not available. Install imageio-ffmpeg or set VIMAX_FFMPEG.")
     elif not codecs_available:
         warnings.append("The FFmpeg build needs both libx264 and AAC encoders for this workflow.")
-    return {"local_only": True, "piper_installed": piper, "ffmpeg_installed": bool(ffmpeg),
+    return {"local_only": True, "piper_installed": piper, "scene_detection_installed": scene_detection, "ffmpeg_installed": bool(ffmpeg),
             "ffmpeg_version": ffmpeg_version, "ffmpeg_required_codecs": codecs_available, "voices": [v.public() for v in voices],
             "hardware": hardware_report(), "warnings": warnings,
             "ready_for_video": bool(piper and ffmpeg and codecs_available and any(v.available for v in voices)),
