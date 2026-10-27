@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="referrer" content="no-referrer">
+  <title>ViMax Chat</title>
+  <link rel="stylesheet" href="/chat/app.css">
+  <script src="/skills/auth-clean.js"></script>
+  <script src="/chat/app.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="ViMax chat home">
+        <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2.5 14.3 9l6.6 3-6.6 2.9-2.3 6.6-2.3-6.6L3.1 12l6.6-3L12 2.5Z" fill="currentColor"/></svg></span>
+        <span>ViMax</span><span class="brand-label">CHAT</span>
+      </a>
+      <div class="channel-area">
+        <div class="channel-actions">
+          <button class="google-button" id="google-connect" type="button" aria-describedby="channel-status" disabled>
+            <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.5l6.8-6.8C35.8 2.4 30.4 0 24 0 14.6 0 6.5 5.4 2.5 13.3l7.9 6.1C12.3 13.6 17.7 9.5 24 9.5Z"/><path fill="#4285F4" d="M47 24.5c0-1.6-.1-3.2-.4-4.7H24v9h12.9c-.6 2.9-2.2 5.4-4.7 7.1l7.6 5.9C44.3 37.7 47 31.6 47 24.5Z"/><path fill="#FBBC05" d="M10.4 28.6A14.4 14.4 0 0 1 9.6 24c0-1.6.3-3.1.8-4.6l-7.9-6.1A24 24 0 0 0 0 24c0 3.8.9 7.4 2.5 10.7l7.9-6.1Z"/><path fill="#34A853" d="M24 48c6.4 0 11.8-2.1 15.8-5.8l-7.6-5.9c-2.1 1.4-4.8 2.2-8.2 2.2-6.3 0-11.7-4.1-13.6-9.9l-7.9 6.1C6.5 42.6 14.6 48 24 48Z"/></svg>
+            <span>Continue with Google</span>
+          </button>
+          <button class="icon-button channel-manage" id="channel-manage" type="button" aria-label="Manage connected channels" title="Manage connected channels" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+          </button>
+        </div>
+        <span id="channel-status" class="channel-status" role="status">Checking channel setup…</span>
+      </div>
+      <button id="account-button" class="account-button" type="button">Sign in</button>
+    </header>
+
+    <main class="chat-layout">
+      <div id="conversation" class="conversation">
+        <section id="welcome" class="welcome" aria-labelledby="welcome-title">
+          <div class="welcome-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2.5 14.3 9l6.6 3-6.6 2.9-2.3 6.6-2.3-6.6L3.1 12l6.6-3L12 2.5Z" fill="currentColor"/></svg></div>
+          <p class="eyebrow">A LITTLE SPACE FOR BIG IDEAS</p>
+          <h1 id="welcome-title">What’s on your mind?</h1>
+          <p class="welcome-copy">Ask a question, explore an idea, or just start a conversation.</p>
+        </section>
+        <div id="messages" class="messages" role="log" aria-live="polite" aria-label="Conversation"></div>
+      </div>
+      <div class="composer-wrap">
+        <p id="chat-status" class="chat-status" role="status">Checking chat setup…</p>
+        <p id="chat-error" class="error" role="alert"></p>
+        <form id="chat-form" class="composer">
+          <label class="sr-only" for="chat-prompt">Message ViMax</label>
+          <textarea id="chat-prompt" rows="2" maxlength="1600" placeholder="Message ViMax…" required></textarea>
+          <div class="composer-bottom">
+            <button class="settings-button" id="chat-settings" type="button" aria-label="Chat settings" title="Chat settings">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2m4 0h10M14 4v6M8 14v6"/></svg>
+              <span id="model-label">Chat settings</span>
+            </button>
+            <div class="composer-actions">
+              <button class="icon-button voice-button" id="dictate" type="button" aria-label="Start voice input" title="Start voice input" disabled>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3m-3 0h6"/></svg>
+              </button>
+              <button class="icon-button voice-button" id="stop-speech" type="button" aria-label="Stop spoken reply" title="Stop spoken reply" hidden>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+              </button>
+              <button id="chat-send" class="send-button" type="submit" aria-label="Send message" disabled>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6"/></svg>
+              </button>
+            </div>
+          </div>
+        </form>
+        <p class="disclaimer">Your messages are sent to your selected AI provider. Responses can be inaccurate.</p>
+      </div>
+    </main>
+  </div>
+
+  <dialog id="account-dialog" class="dialog" aria-labelledby="account-title">
+    <div class="dialog-heading"><div><p class="eyebrow">YOUR ACCOUNT</p><h2 id="account-title">Sign in to ViMax</h2></div><button class="icon-button close-dialog" type="button" data-close="account-dialog" aria-label="Close">×</button></div>
+    <p class="dialog-intro">Your ViMax account keeps your chat and channel connection private. Google below is for the channel, not app sign-in.</p>
+    <form id="account-form">
+      <label>Email<input id="account-email" name="email" type="email" autocomplete="username" maxlength="254" required></label>
+      <label>Password<input id="account-password" name="password" type="password" autocomplete="current-password" minlength="6" maxlength="128" required></label>
+      <div class="dialog-actions"><button class="primary-button" type="submit" value="login">Sign in</button><button class="secondary-button" type="submit" value="signup">Create account</button></div>
+      <button class="text-button" id="resend-confirmation" type="button">Resend confirmation email</button>
+      <p class="hint">New accounts need email confirmation. Delivery may be limited until the deployment owner configures email. Never share passwords or keys in chat.</p>
+    </form>
+    <div id="account-signed-in" hidden>
+      <p class="account-identity" id="account-identity"></p>
+      <p class="hint" id="account-id"></p>
+      <button class="secondary-button" id="logout" type="button">Sign out</button>
+    </div>
+    <p id="account-message" class="hint" role="status"></p><p id="account-error" class="error" role="alert"></p>
+  </dialog>
+
+  <dialog id="settings-dialog" class="dialog" aria-labelledby="settings-title">
+    <div class="dialog-heading"><div><p class="eyebrow">MAKE IT YOURS</p><h2 id="settings-title">Chat settings</h2></div><button class="icon-button close-dialog" type="button" data-close="settings-dialog" aria-label="Close">×</button></div>
+    <div class="settings-grid">
+      <label>Provider<select id="provider"><option value="">No provider configured</option></select></label>
+      <label>Model<select id="model"><option value="">No model configured</option></select></label>
+      <label>Response length<select id="answer-length"><option value="standard">Standard</option><option value="detailed">Detailed</option></select></label>
+      <label>Optional fallback<select id="fallback"><option value="">No fallback</option></select></label>
+    </div>
+    <p class="hint">Prompts and replies are saved to your account until deleted. The selected provider receives the current prompt and up to three previous turns. A fallback may send them to another provider. Calls may cost money; 10 attempts per account and 50 shared attempts per UTC day are limits, not spending caps.</p>
+    <div class="dialog-divider"></div>
+    <label class="check-label"><input type="checkbox" id="speak-replies"> Read new replies aloud</label>
+    <label>Voice<select id="speech-voice"><option value="">Browser default</option></select></label>
+    <label>Speech language<input id="speech-language" value="en-US" maxlength="35" placeholder="en-US or ur-PK"></label>
+    <p class="hint" id="voice-status">Voice availability depends on your browser and device. Browser speech services may process your audio or text.</p>
+    <div class="dialog-divider"></div>
+    <div class="dialog-actions"><button class="secondary-button" id="toggle-pause" type="button" disabled>Pause chat</button><button class="text-button danger" id="clear-history" type="button" disabled>Delete chat history</button></div>
+    <p id="settings-message" class="hint" role="status"></p>
+  </dialog>
+
+  <dialog id="channel-dialog" class="dialog" aria-labelledby="channel-title">
+    <div class="dialog-heading"><div><p class="eyebrow">YOUR CHANNEL</p><h2 id="channel-title">Manage channels</h2></div><button class="icon-button close-dialog" type="button" data-close="channel-dialog" aria-label="Close">×</button></div>
+    <p class="dialog-intro">Google permission connects a channel to your ViMax account. Chat does not automatically access that channel.</p>
+    <label>Saved channels<select id="channel-select" disabled><option value="">No saved channels</option></select></label>
+    <div class="dialog-actions"><button class="primary-button" id="channel-select-button" type="button" disabled>Use selected</button><button class="secondary-button" id="channel-disconnect" type="button" disabled>Disconnect</button></div>
+    <p class="hint">Saved access can expire or be revoked. Disconnect asks Google to revoke the grant; other channels using the same grant may also need to reconnect.</p>
+    <p id="channel-message" class="hint" role="status"></p><p id="channel-error" class="error" role="alert"></p>
+  </dialog>
+</body>
+</html>

@@ -1,9 +1,9 @@
 // Optional Chromium smoke. All APIs are mocked; no Runpod call is made.
-// Build web/dist first; set VIMAX_BROWSER_PATH and VIMAX_PLAYWRIGHT_PATH.
+// Build dist first (the preserved local interface); set VIMAX_BROWSER_PATH and VIMAX_PLAYWRIGHT_PATH.
 const http=require('node:http'),fs=require('node:fs/promises'),path=require('node:path'),assert=require('node:assert/strict');
 const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
 (async()=>{
- const root=path.resolve(process.env.VIMAX_TEST_DIST||'web/dist');
+ const root=path.resolve(process.env.VIMAX_TEST_DIST||'dist');
  const server=http.createServer(async(req,res)=>{try{
   let p=decodeURIComponent(new URL(req.url,'http://local').pathname);if(p.endsWith('/'))p+='index.html';
   const full=path.resolve(root,'.'+p);if(!full.startsWith(root+path.sep))return res.writeHead(403).end();
@@ -40,7 +40,7 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
    else return route.fulfill({status:404,json:{error:'unexpected mock path'}});
    return route.fulfill({status:200,json:data});
   });
-  await page.goto(`http://127.0.0.1:${server.address().port}/skills/`,{waitUntil:'domcontentloaded'});
+  await page.goto(`http://127.0.0.1:${server.address().port}${process.env.VIMAX_TEST_SKILLS_PATH||'/skills/'}`,{waitUntil:'domcontentloaded'});
   await page.waitForSelector('#gpu:not([hidden])');await page.waitForFunction(()=>!document.getElementById('gpu-submit').disabled);
   const prompt='<img src=x onerror=alert(1)> A starry sky';
   await page.locator('#gpu-prompt').fill(prompt);await page.locator('#gpu-aspect').selectOption('shorts');await page.locator('#gpu-confirm').check();await page.locator('#gpu-submit').click();

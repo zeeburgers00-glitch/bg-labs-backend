@@ -1,10 +1,10 @@
 // Optional Chromium smoke: APIs below are mocked; this never contacts Google.
-// Build web/dist first. Set VIMAX_BROWSER_PATH and, if needed,
+// Build dist first (the preserved local interface). Set VIMAX_BROWSER_PATH and, if needed,
 // VIMAX_PLAYWRIGHT_PATH to an installed playwright-core module.
 const http=require('node:http'),fs=require('node:fs/promises'),path=require('node:path'),assert=require('node:assert/strict');
 const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
 (async()=>{
- const root=path.resolve(process.env.VIMAX_TEST_DIST||'web/dist');
+ const root=path.resolve(process.env.VIMAX_TEST_DIST||'dist');
  const server=http.createServer(async(req,res)=>{try{
   let p=decodeURIComponent(new URL(req.url,'http://local').pathname);if(p.endsWith('/'))p+='index.html';
   const full=path.resolve(root,'.'+p);if(!full.startsWith(root+path.sep))return res.writeHead(403).end();
@@ -91,7 +91,9 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
    else return route.fulfill({status:404,json:{error:'unexpected mock path'}});
    return route.fulfill({status:200,json:data});
   });
-  const skills=`http://127.0.0.1:${server.address().port}/skills/`;
+  const origin=`http://127.0.0.1:${server.address().port}`;
+  const skills=`${origin}${process.env.VIMAX_TEST_SKILLS_PATH||'/skills/'}`;
+  const workspace=`${origin}${process.env.VIMAX_TEST_WORKSPACE_PATH||'/'}`;
   // The deep link must reveal the option while signed out without exposing owner data.
   await page.goto(`${skills}#youtube`,{waitUntil:'domcontentloaded'});
   await page.waitForSelector('#youtube:not([hidden])');
@@ -241,20 +243,20 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   assert.equal(await page.locator('#youtube').isHidden(),true);assert.equal(await page.locator('#youtube-link').isHidden(),true);
   await page.setViewportSize({width:1280,height:1000});
   const localSystem=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/skills/system');
-  await page.goto(`http://127.0.0.1:${server.address().port}/`,{waitUntil:'domcontentloaded'});await localSystem;
+  await page.goto(workspace,{waitUntil:'domcontentloaded'});await localSystem;
   assert.equal(await page.getByRole('button',{name:'Connect YouTube'}).count(),0);
-  // The additive ViMax sidebar item reaches the same deep link in cloud mode,
-  // even when the original video agent is unavailable.
+  // The legacy sidebar deep link goes to the local connection panel, or to
+  // the focused hosted chat's Google control when testing the hosted overlay.
+  const hostedFull=process.env.VIMAX_TEST_SKILLS_PATH==='/skills/full.html';
+  const sidebarUrl=`${origin}/skills/#youtube`, button=hostedFull?'#google-connect':'#yt-connect';
   localOnly=false;signedIn=false;youtubeConfigured=false;await page.reload({waitUntil:'domcontentloaded'});
   await page.getByRole('button',{name:'Connect YouTube'}).click();
-  await page.waitForURL(`${skills}#youtube`);await page.waitForSelector('#youtube:not([hidden])');
-  assert.equal(await page.locator('#yt-connect').isVisible(),true);
+  await page.waitForURL(sidebarUrl);assert.equal(await page.locator(button).isVisible(),true);
   await page.setViewportSize({width:390,height:844});
-  await page.goto(`http://127.0.0.1:${server.address().port}/`,{waitUntil:'domcontentloaded'});
+  await page.goto(workspace,{waitUntil:'domcontentloaded'});
   await page.getByRole('button',{name:'Open navigation'}).click();
   await page.getByRole('button',{name:'Connect YouTube'}).click();
-  await page.waitForURL(`${skills}#youtube`);await page.waitForSelector('#youtube:not([hidden])');
-  assert.equal(await page.locator('#yt-connect').isVisible(),true);
+  await page.waitForURL(sidebarUrl);assert.equal(await page.locator(button).isVisible(),true);
   assert.deepEqual(errors,[]);
   console.log('Browser smoke passed with mocked APIs: channel discovery, OAuth navigation, logout privacy, YouTube uploads, social, public GitHub, chat and mobile layout.');
  }finally{if(browser)await browser.close();await new Promise(r=>server.close(r));}
