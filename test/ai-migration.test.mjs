@@ -11,7 +11,7 @@ test('cloud AI migration enforces RLS and atomic, durable request budgets', asyn
   const role = async id => { await db.exec('reset role; set role authenticated;'); await db.query("select set_config('request.jwt.claim.sub', $1, false)", [id]); };
   const admin = async () => { await db.exec('reset role;'); };
   const reserve = async () => (await db.query("select public.vimax_reserve_ai_call('chat','groq','llama-3.1-8b-instant') as result")).rows[0].result;
-  const finish = async id => (await db.query("select public.vimax_finish_ai_call($1,'succeeded',12,8) as result", [id])).rows[0].result;
+  const finish = async (reservation, secret = reservation.finish_secret) => (await db.query("select public.vimax_finish_ai_call($1,$2,'succeeded',12,8) as result", [reservation.id, secret])).rows[0].result;
   try {
     await db.exec(`create schema auth; create role anon; create role authenticated;
       create table auth.users(id uuid primary key);
@@ -19,6 +19,7 @@ test('cloud AI migration enforces RLS and atomic, durable request budgets', asyn
       grant usage on schema auth to anon, authenticated;`);
     for (const id of users) await db.query('insert into auth.users(id) values ($1)', [id]);
     await db.exec(await readFile(new URL('../supabase/migrations/202610270002_vimax_cloud_ai.sql', import.meta.url), 'utf8'));
+    await db.exec(await readFile(new URL('../supabase/migrations/202610270003_vimax_ai_finish_token.sql', import.meta.url), 'utf8'));
 
     await t.test('anonymous health is harmless; anonymous data and budget access are denied', async () => {
       await db.exec('set role anon;');
@@ -33,18 +34,22 @@ test('cloud AI migration enforces RLS and atomic, durable request budgets', asyn
       await role(users[0]);
       await db.query("insert into public.vimax_chat_turns(prompt,reply,provider,model) values ('Alice private','hello','groq','model')");
       const aliceReservation = await reserve(); assert.equal(aliceReservation.allowed, true);
+      await assert.rejects(db.query('select completion_secret from public.vimax_ai_calls'), /permission denied/);
+      await assert.rejects(db.query('select id from public.vimax_ai_calls where completion_secret=$1', [aliceReservation.finish_secret]), /permission denied/);
+      assert.equal(await finish(aliceReservation, users[5]), false, 'a guessed completion capability must not release a reservation');
+      assert.equal((await reserve()).reason, 'in_flight');
       await role(users[1]);
       assert.equal((await db.query('select * from public.vimax_chat_turns')).rows.length, 0);
       assert.equal((await db.query('select id,feature from public.vimax_ai_calls')).rows.length, 0);
-      assert.equal(await finish(aliceReservation.id), false);
+      assert.equal(await finish(aliceReservation), false);
       await assert.rejects(db.query("insert into public.vimax_chat_turns(owner_id,prompt,reply,provider,model) values ($1,'x','x','groq','model')", [users[0]]), /permission denied/);
       await assert.rejects(db.query('delete from public.vimax_ai_calls'), /permission denied/);
       await assert.rejects(db.query('update public.vimax_ai_daily_budget set attempts=0'), /permission denied/);
       await db.query('delete from public.vimax_chat_turns');
       await role(users[0]);
       assert.equal((await db.query('select prompt from public.vimax_chat_turns')).rows[0].prompt, 'Alice private');
-      assert.equal(await finish(aliceReservation.id), true);
-      assert.equal(await finish(aliceReservation.id), false);
+      assert.equal(await finish(aliceReservation), true);
+      assert.equal(await finish(aliceReservation), false);
       assert.equal((await db.query('select public.vimax_set_ai_paused(true) as paused')).rows[0].paused, true);
       assert.equal((await reserve()).reason, 'paused');
       await assert.rejects(db.query('update public.vimax_ai_preferences set paused=false'), /permission denied/);
@@ -59,13 +64,13 @@ test('cloud AI migration enforces RLS and atomic, durable request budgets', asyn
       await role(users[0]);
       const pending = await reserve(); assert.equal(pending.allowed, true);
       assert.equal((await reserve()).reason, 'in_flight');
-      assert.equal(await finish(pending.id), true);
+      assert.equal(await finish(pending), true);
       // The isolation test consumed one attempt and the pending call another.
-      for (let i = 0; i < 8; i++) { const item = await reserve(); assert.equal(item.allowed, true); assert.equal(await finish(item.id), true); }
+      for (let i = 0; i < 8; i++) { const item = await reserve(); assert.equal(item.allowed, true); assert.equal(await finish(item), true); }
       assert.equal((await reserve()).reason, 'user_daily_limit');
       for (const id of users.slice(1, 5)) {
         await role(id);
-        for (let i = 0; i < 10; i++) { const item = await reserve(); assert.equal(item.allowed, true); assert.equal(await finish(item.id), true); }
+        for (let i = 0; i < 10; i++) { const item = await reserve(); assert.equal(item.allowed, true); assert.equal(await finish(item), true); }
       }
       await role(users[5]);
       assert.equal((await reserve()).reason, 'global_daily_limit');

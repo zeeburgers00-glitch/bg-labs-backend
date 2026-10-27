@@ -194,15 +194,16 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch} =
       const message = known ? reasons[value.reason] : 'AI safety limits are unavailable. No provider request was sent.';
       throw new HttpError(['history_limit', 'paused'].includes(value.reason) ? 409 : known ? 429 : 503, message);
     }
-    if (typeof value.id !== 'string' || !UUID.test(value.id) || !Number.isInteger(value.remaining_user) || value.remaining_user < 0 || value.remaining_user > 9) {
+    if (typeof value.id !== 'string' || !UUID.test(value.id) || typeof value.finish_secret !== 'string' || !UUID.test(value.finish_secret) || !Number.isInteger(value.remaining_user) || value.remaining_user < 0 || value.remaining_user > 9) {
       throw new HttpError(503, 'AI safety limits returned an invalid response. No provider request was sent.');
     }
-    return {id:value.id, remaining:value.remaining_user};
+    // Never return this random capability to the browser or log it.
+    return {id:value.id, secret:value.finish_secret, remaining:value.remaining_user};
   }
   async function finish(session, reservation, state, result) {
     try {
       const {response, value} = await supa('/rest/v1/rpc/vimax_finish_ai_call', {method:'POST', token:session.access,
-        data:{p_id:reservation.id, p_status:state, p_input_tokens:result?.inputTokens ?? null, p_output_tokens:result?.outputTokens ?? null}});
+        data:{p_id:reservation.id, p_secret:reservation.secret, p_status:state, p_input_tokens:result?.inputTokens ?? null, p_output_tokens:result?.outputTokens ?? null}});
       return response.ok && value === true;
     } catch { return false; }
   }

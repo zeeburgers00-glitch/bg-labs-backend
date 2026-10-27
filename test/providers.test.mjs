@@ -31,12 +31,12 @@ function mockBackend({provider, denyReservation=false, finishAvailable=true} = {
     if (target.pathname === '/rest/v1/rpc/vimax_reserve_ai_call' && users[who]) {
       if (paused.get(who)) return Response.json({allowed:false, reason:'paused'});
       if (denyReservation) return Response.json({allowed:false, reason:'user_daily_limit'});
-      const entry = {id:id(next++), owner:who, feature:payload.p_feature, provider:payload.p_provider, model:payload.p_model, status:'reserved'};
-      usage.push(entry); return Response.json({allowed:true, id:entry.id, remaining_user:9 - usage.filter(x => x.owner === who).length + 1});
+      const entry = {id:id(next++), secret:id(next++), owner:who, feature:payload.p_feature, provider:payload.p_provider, model:payload.p_model, status:'reserved'};
+      usage.push(entry); return Response.json({allowed:true, id:entry.id, finish_secret:entry.secret, remaining_user:9 - usage.filter(x => x.owner === who).length + 1});
     }
     if (target.pathname === '/rest/v1/rpc/vimax_finish_ai_call' && users[who]) {
       if (!finishAvailable) return Response.json({}, {status:503});
-      const entry = usage.find(x => x.id === payload.p_id && x.owner === who && x.status === 'reserved');
+      const entry = usage.find(x => x.id === payload.p_id && x.secret === payload.p_secret && x.owner === who && x.status === 'reserved');
       if (!entry) return Response.json(false);
       Object.assign(entry, {status:payload.p_status, input_tokens:payload.p_input_tokens, output_tokens:payload.p_output_tokens});
       return Response.json(true);
@@ -46,7 +46,7 @@ function mockBackend({provider, denyReservation=false, finishAvailable=true} = {
       if (init.method === 'POST') { turns.push({...payload, id:id(next++), owner:who}); return new Response(null, {status:201}); }
       if (init.method === 'DELETE') { for (let n=turns.length-1; n>=0; n--) if (turns[n].owner === who) turns.splice(n,1); return new Response(null, {status:204}); }
     }
-    if (target.pathname === '/rest/v1/vimax_ai_calls' && users[who]) return Response.json(usage.filter(x => x.owner === who));
+    if (target.pathname === '/rest/v1/vimax_ai_calls' && users[who]) return Response.json(usage.filter(x => x.owner === who).map(({secret, owner, ...visible}) => visible));
     return Response.json({error:'unexpected request'}, {status:404});
   };
   return {fetchImpl, calls, external, turns, usage};
@@ -100,6 +100,9 @@ test('cloud text planning requires auth and budget; chat and usage remain user s
   assert.equal(result.reply,'A useful draft.'); assert.equal(result.history_saved,true); assert.equal(result.audit_saved,true);
   assert.deepEqual(result.usage,{input_tokens:33,output_tokens:12});
   assert.equal(JSON.stringify(result).includes('test-only-groq'),false);
+  assert.equal(JSON.stringify(result).includes(fake.usage[0].secret),false);
+  const ownUsage = await (await bridge.fetch(req('/api/cloud/usage'))).json();
+  assert.equal(JSON.stringify(ownUsage).includes(fake.usage[0].secret),false);
   assert.equal(fake.external.length,1); assert.match(fake.external[0].payload.messages[0].content,/cannot browse/);
   const second = await bridge.fetch(req('/api/cloud/chat',{method:'POST',body:{...input,prompt:'Follow up'}})); assert.equal(second.status,200);
   assert.equal(fake.external[1].payload.messages.at(-2).content,'A useful draft.');
