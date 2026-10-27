@@ -85,7 +85,7 @@ async function loadSystem() {
       return;
     }
     $('connection').textContent = 'Local companion connected';
-    $('cloud-ai-link').hidden = true;
+    $('cloud-ai-link').hidden = true; $('mission-link').hidden = true;
     $('notice').classList.add('ready');
     $('notice').textContent = 'Single-user local mode. Your script and notes remain on this computer. This path uses text cards, not AI-generated visuals; no online research, translation, or YouTube upload is included.';
     setupVoices(system); $('create-button').disabled = !system.ready_for_video; $('analysis-button').disabled = false;
@@ -224,8 +224,9 @@ async function loadAccount() {
   const loggedIn = Boolean(data.user);
   $('account-form').hidden = loggedIn; $('cloud-projects').hidden = !loggedIn; $('cloud-info').hidden = loggedIn;
   const cloud = window.vimaxCloud.onSession(loggedIn);
+  const mission = window.vimaxMission.onSession(loggedIn);
   if (loggedIn) { $('account-identity').textContent = `${data.user.email} · Account ID: ${data.user.id}`; await loadProjects(); }
-  await cloud;
+  await Promise.all([cloud, mission]);
   try {
     const confirmed = sessionStorage.getItem('vimax-email-confirmed');
     if (confirmed) { $('account-message').textContent = confirmed === 'yes' ? 'Email confirmed. Please sign in.' : 'Email confirmation failed or expired; please try again.'; sessionStorage.removeItem('vimax-email-confirmed'); }

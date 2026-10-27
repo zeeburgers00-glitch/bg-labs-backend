@@ -6,12 +6,14 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "start:local": "node scripts/local.mjs",
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test test/*.test.mjs",
+    "worker:planning": "node scripts/planning-worker.mjs"
   },
   "engines": {
     "node": ">=22"
   },
   "devDependencies": {
-    "@electric-sql/pglite": "0.5.12"
+    "@electric-sql/pglite": "0.5.12",
+    "pg": "8.23.1"
   }
 }

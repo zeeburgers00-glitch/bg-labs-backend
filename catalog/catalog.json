@@ -627,7 +627,7 @@
     {
       "id": "linyqh--narratoai",
       "name": "linyqh/NarratoAI",
-      "description": "利用 AI 大模型，一键解说并剪辑视频",
+      "description": "\u5229\u7528 AI \u5927\u6a21\u578b\uff0c\u4e00\u952e\u89e3\u8bf4\u5e76\u526a\u8f91\u89c6\u9891",
       "source": "https://github.com/linyqh/NarratoAI",
       "revision": "29a11b6cdf61b69ba90321fc5babc160e0ca2657",
       "license": "MIT",
@@ -653,7 +653,7 @@
     {
       "id": "rayventura--shortgpt",
       "name": "RayVentura/ShortGPT",
-      "description": "🚀🎬 ShortGPT - Experimental AI framework for youtube shorts / tiktok channel automation",
+      "description": "\ud83d\ude80\ud83c\udfac ShortGPT - Experimental AI framework for youtube shorts / tiktok channel automation",
       "source": "https://github.com/RayVentura/ShortGPT",
       "revision": "3df4e0f7a422bf7386565d498bf4521a2544c614",
       "license": "MIT",
@@ -678,7 +678,7 @@
     {
       "id": "huanshere--videolingo",
       "name": "Huanshere/VideoLingo",
-      "description": "Netflix-level subtitle cutting, translation, alignment, and even dubbing - one-click fully automated AI video subtitle team | Netflix级字幕切割、翻译、对齐、甚至加上配音，一键全自动视频搬运AI字幕组",
+      "description": "Netflix-level subtitle cutting, translation, alignment, and even dubbing - one-click fully automated AI video subtitle team | Netflix\u7ea7\u5b57\u5e55\u5207\u5272\u3001\u7ffb\u8bd1\u3001\u5bf9\u9f50\u3001\u751a\u81f3\u52a0\u4e0a\u914d\u97f3\uff0c\u4e00\u952e\u5168\u81ea\u52a8\u89c6\u9891\u642c\u8fd0AI\u5b57\u5e55\u7ec4",
       "source": "https://github.com/Huanshere/VideoLingo",
       "revision": "01f843492759be9bbfd1a5cb697b799cc9de1609",
       "license": "Apache-2.0",
@@ -703,7 +703,7 @@
     {
       "id": "elebumm--redditvideomakerbot",
       "name": "elebumm/RedditVideoMakerBot",
-      "description": "Create Reddit Videos with just✨ one command ✨",
+      "description": "Create Reddit Videos with just\u2728 one command \u2728",
       "source": "https://github.com/elebumm/RedditVideoMakerBot",
       "revision": "569f25098a64f85d2b30b3045c9c8b6232a3c758",
       "license": "GPL-3.0",
@@ -887,7 +887,7 @@
     {
       "id": "openhands--openhands",
       "name": "OpenHands/OpenHands",
-      "description": "🙌 OpenHands: AI-Driven Development",
+      "description": "\ud83d\ude4c OpenHands: AI-Driven Development",
       "source": "https://github.com/OpenHands/OpenHands",
       "revision": "6c120073f5a1e1c838ba6fdd9a075c79ff997b98",
       "license": "MIT",
@@ -910,7 +910,7 @@
     {
       "id": "openclaw--openclaw",
       "name": "openclaw/openclaw",
-      "description": "The AI that really does things. Any OS. Any Platform. The lobster way. 🦞",
+      "description": "The AI that really does things. Any OS. Any Platform. The lobster way. \ud83e\udd9e",
       "source": "https://github.com/openclaw/openclaw",
       "revision": "43dc38e6c1370e7682156b8a84ed6fc1abfaa0b7",
       "license": "MIT",
@@ -1118,7 +1118,7 @@
     {
       "id": "coqui-ai--tts",
       "name": "coqui-ai/TTS",
-      "description": "🐸💬 - a deep learning toolkit for Text-to-Speech, battle-tested in research and production",
+      "description": "\ud83d\udc38\ud83d\udcac - a deep learning toolkit for Text-to-Speech, battle-tested in research and production",
       "source": "https://github.com/coqui-ai/TTS",
       "revision": "dbf1a08a0d4e47fdad6172e433eeb34bc6b13b4e",
       "license": "MPL-2.0",
@@ -1710,7 +1710,7 @@
     {
       "id": "huggingface--diffusers",
       "name": "huggingface/diffusers",
-      "description": "🤗 Diffusers: State-of-the-art diffusion models for image, video, and audio generation in PyTorch.",
+      "description": "\ud83e\udd17 Diffusers: State-of-the-art diffusion models for image, video, and audio generation in PyTorch.",
       "source": "https://github.com/huggingface/diffusers",
       "revision": "06a9cfb86ae8aa69c6a220ba0da0f37b819dde6a",
       "license": "Apache-2.0",
@@ -2056,7 +2056,7 @@
     {
       "id": "huggingface--transformers",
       "name": "huggingface/transformers",
-      "description": "🤗 Transformers: the model-definition framework for state-of-the-art machine learning models in text, vision, audio, and multimodal models, for both inference and training.",
+      "description": "\ud83e\udd17 Transformers: the model-definition framework for state-of-the-art machine learning models in text, vision, audio, and multimodal models, for both inference and training.",
       "source": "https://github.com/huggingface/transformers",
       "revision": "20dc274d1bedd8fa8c179c655be1084ead433313",
       "license": "Apache-2.0",
@@ -2310,7 +2310,7 @@
     {
       "id": "electron-userland--electron-builder",
       "name": "electron-userland/electron-builder",
-      "description": "A complete solution to package and build a ready for distribution Electron app with “auto update” support out of the box",
+      "description": "A complete solution to package and build a ready for distribution Electron app with \u201cauto update\u201d support out of the box",
       "source": "https://github.com/electron-userland/electron-builder",
       "revision": "a712cc96a6342a36d7d25fc636ee95bb71c7f596",
       "license": "MIT",
@@ -2518,7 +2518,7 @@
     {
       "id": "sindresorhus--awesome",
       "name": "sindresorhus/awesome",
-      "description": "😎 Awesome lists about all kinds of interesting topics [NOTE: Pull requests are temporarily disabled until I have a chance to catch up with the existing ones]",
+      "description": "\ud83d\ude0e Awesome lists about all kinds of interesting topics [NOTE: Pull requests are temporarily disabled until I have a chance to catch up with the existing ones]",
       "source": "https://github.com/sindresorhus/awesome",
       "revision": "bc98e517ddca672f55f9857d714fc3ea3c3540b2",
       "license": "CC0-1.0",
@@ -3258,6 +3258,171 @@
       "security": "Linked projects and API privileges require separate review and authorization.",
       "readme": null,
       "root_manifests": []
+    },
+    {
+      "id": "triggerdotdev--trigger.dev",
+      "name": "triggerdotdev/trigger.dev",
+      "description": "Durable AI workflows; service and SDK are not installed.",
+      "source": "https://github.com/triggerdotdev/trigger.dev",
+      "revision": "4d9e4cf7a477d5b0a580613dbaf20e6a5ba5ef9e",
+      "license": "Apache-2.0",
+      "status": "reviewed",
+      "review_level": "surface",
+      "category": "AI agents & automation",
+      "requirements": "Root manifest names observed; runtime requirements and transitive dependencies were not fully audited.",
+      "features": [
+        "AI agents & automation"
+      ],
+      "platform": "Windows, macOS, Linux and hosted/serverless compatibility not verified.",
+      "security": "Surface inventory only; no code execution, dependency or security audit. Check service permissions, package/model licenses and credentials before use.",
+      "readme": "README.md",
+      "root_manifests": [
+        "LICENSE",
+        "package.json",
+        "pnpm-workspace.yaml"
+      ],
+      "archived": false
+    },
+    {
+      "id": "temporalio--temporal",
+      "name": "temporalio/temporal",
+      "description": "Durable execution server; not installed or hosted.",
+      "source": "https://github.com/temporalio/temporal",
+      "revision": "f7ca7c3c49318cefa10299960b2c8dd7d9d4f9cb",
+      "license": "MIT",
+      "status": "reviewed",
+      "review_level": "surface",
+      "category": "AI agents & automation",
+      "requirements": "Root manifest names observed; runtime requirements and transitive dependencies were not fully audited.",
+      "features": [
+        "AI agents & automation"
+      ],
+      "platform": "Windows, macOS, Linux and hosted/serverless compatibility not verified.",
+      "security": "Surface inventory only; no code execution, dependency or security audit. Check service permissions, package/model licenses and credentials before use.",
+      "readme": "README.md",
+      "root_manifests": [
+        "LICENSE",
+        "go.mod"
+      ],
+      "archived": false
+    },
+    {
+      "id": "berriai--litellm",
+      "name": "BerriAI/litellm",
+      "description": "AI gateway; no code or package integrated. License metadata was inconclusive.",
+      "source": "https://github.com/BerriAI/litellm",
+      "revision": "cfe0100e1fca613e7b1af27dd1fe4807ca4d1d1a",
+      "license": "NOASSERTION",
+      "status": "reviewed",
+      "review_level": "surface",
+      "category": "AI agents & automation",
+      "requirements": "Root manifest names observed; runtime requirements and transitive dependencies were not fully audited.",
+      "features": [
+        "AI agents & automation"
+      ],
+      "platform": "Windows, macOS, Linux and hosted/serverless compatibility not verified.",
+      "security": "Surface inventory only; no code execution, dependency or security audit. Check service permissions, package/model licenses and credentials before use.",
+      "readme": "README.md",
+      "root_manifests": [
+        "LICENSE",
+        "package.json",
+        "pyproject.toml",
+        "Dockerfile"
+      ],
+      "archived": false
+    },
+    {
+      "id": "snakers4--silero-vad",
+      "name": "snakers4/silero-vad",
+      "description": "Voice activity detection; model and code are not installed.",
+      "source": "https://github.com/snakers4/silero-vad",
+      "revision": "066409f3d9db45a30d21dfcbf9147826ffdd7052",
+      "license": "MIT",
+      "status": "reviewed",
+      "review_level": "surface",
+      "category": "Voice & speech",
+      "requirements": "Root manifest names observed; runtime requirements and transitive dependencies were not fully audited.",
+      "features": [
+        "Voice & speech"
+      ],
+      "platform": "Windows, macOS, Linux and hosted/serverless compatibility not verified.",
+      "security": "Surface inventory only; no code execution, dependency or security audit. Check service permissions, package/model licenses and credentials before use.",
+      "readme": "README.md",
+      "root_manifests": [
+        "LICENSE",
+        "pyproject.toml"
+      ],
+      "archived": false
+    },
+    {
+      "id": "googleapis--google-api-python-client",
+      "name": "googleapis/google-api-python-client",
+      "description": "Official Google API client; repository describes maintenance mode. No YouTube client installed.",
+      "source": "https://github.com/googleapis/google-api-python-client",
+      "revision": "c1bdb24533614d6fcffeb7b9a93b2fc836c4e4e0",
+      "license": "Apache-2.0",
+      "status": "reviewed",
+      "review_level": "surface",
+      "category": "Platform APIs",
+      "requirements": "Root manifest names observed; runtime requirements and transitive dependencies were not fully audited.",
+      "features": [
+        "Platform APIs"
+      ],
+      "platform": "Windows, macOS, Linux and hosted/serverless compatibility not verified.",
+      "security": "Surface inventory only; no code execution, dependency or security audit. Check service permissions, package/model licenses and credentials before use.",
+      "readme": "README.md",
+      "root_manifests": [
+        "LICENSE",
+        "setup.py"
+      ],
+      "archived": false
+    },
+    {
+      "id": "googleapis--google-auth-library-python",
+      "name": "googleapis/google-auth-library-python",
+      "description": "Archived repository; README points to google-cloud-python. Not installed.",
+      "source": "https://github.com/googleapis/google-auth-library-python",
+      "revision": "2ea24b03436765fa3cf279ce148482ff6332136b",
+      "license": "Apache-2.0",
+      "status": "reviewed",
+      "review_level": "surface",
+      "category": "Platform APIs",
+      "requirements": "Root manifest names observed; runtime requirements and transitive dependencies were not fully audited.",
+      "features": [
+        "Platform APIs"
+      ],
+      "platform": "Windows, macOS, Linux and hosted/serverless compatibility not verified.",
+      "security": "Surface inventory only; no code execution, dependency or security audit. Check service permissions, package/model licenses and credentials before use.",
+      "readme": "README.rst",
+      "root_manifests": [
+        "LICENSE",
+        "setup.py"
+      ],
+      "archived": true
+    },
+    {
+      "id": "supabase--supabase",
+      "name": "supabase/supabase",
+      "description": "Hosted Supabase Auth and PostgREST are used via HTTP; this repository is not installed.",
+      "source": "https://github.com/supabase/supabase",
+      "revision": "14ca6c0455c609e9098d0ccce08c4949eec4160f",
+      "license": "Apache-2.0",
+      "status": "reviewed",
+      "review_level": "surface",
+      "category": "Platform APIs",
+      "requirements": "Root manifest names observed; runtime requirements and transitive dependencies were not fully audited.",
+      "features": [
+        "Platform APIs"
+      ],
+      "platform": "Windows, macOS, Linux and hosted/serverless compatibility not verified.",
+      "security": "Surface inventory only; no code execution, dependency or security audit. Check service permissions, package/model licenses and credentials before use.",
+      "readme": "README.md",
+      "root_manifests": [
+        "LICENSE",
+        "package.json",
+        "pnpm-workspace.yaml"
+      ],
+      "archived": false
     }
   ]
 }

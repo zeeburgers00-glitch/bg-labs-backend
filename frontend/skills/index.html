@@ -7,8 +7,10 @@
   <title>Skills &amp; Agents · ViMax</title>
   <link rel="stylesheet" href="/skills/styles.css">
   <link rel="stylesheet" href="/skills/cloud.css">
+  <link rel="stylesheet" href="/skills/mission.css">
   <script src="/skills/auth-clean.js"></script>
   <script src="/skills/cloud.js" defer></script>
+  <script src="/skills/mission.js" defer></script>
   <script src="/skills/app.js" defer></script>
 </head>
 <body>
@@ -24,7 +26,7 @@
       <div class="eyebrow"><span class="spark">✳</span> CREATOR TOOLKIT</div>
       <h1>Make more with ViMax.</h1>
       <p>Explore reviewed creator skills and produce a simple, narrated video with your own script—without replacing your ViMax workspace.</p>
-      <div class="hero-nav"><a id="cloud-ai-link" href="#account">Cloud AI planning <span>↗</span></a><a href="#studio" class="secondary">Open local studio</a><a href="#catalog" class="secondary">Browse the catalog</a></div>
+      <div class="hero-nav"><a id="cloud-ai-link" href="#account">Cloud AI planning <span>↗</span></a><a id="mission-link" href="#account" class="secondary">Mission control</a><a href="#studio" class="secondary">Open local studio</a><a href="#catalog" class="secondary">Browse the catalog</a></div>
     </section>
     <aside class="notice" id="notice" role="status">
       <strong>Local companion required.</strong> The public Vercel site has no video backend yet. This catalog is available, but generation only works after the local companion is set up. It is not a shared or multi-user service.
@@ -51,7 +53,7 @@
           <p id="cloud-project-error" class="error" role="alert"></p>
           <ul id="cloud-project-list" class="cloud-project-list"></ul>
         </div>
-        <div class="panel" id="cloud-info"><h3>What is connected?</h3><p class="form-note">The account and saved ideas use Supabase. Text planning can be enabled with a server-side provider key. Cloud rendering, web research, scheduling and YouTube OAuth/upload are not connected. Use the local companion below for the tested CPU text-card renderer.</p></div>
+        <div class="panel" id="cloud-info"><h3>What is connected?</h3><p class="form-note">The account and saved ideas use Supabase. Text planning can be enabled with a server-side provider key. Cloud rendering, verified web research and YouTube OAuth/upload are not connected. Scheduled text planning needs a separately hosted worker. Use the local companion below for the tested CPU text-card renderer.</p></div>
       </div>
     </section>
 
@@ -105,6 +107,48 @@
           </div>
         </div>
       </div>
+    </section>
+
+    <section id="mission" class="section" hidden>
+      <div class="section-heading"><div><div class="eyebrow">MISSION CONTROL / TEXT ONLY</div><h2>Plan across channels.</h2><p>Save private channel profiles and queue three real text-planning stages: ideas, script and review. A separately hosted worker and provider key are required; a profile is not a connected YouTube channel.</p></div><span class="tag">REVIEW REQUIRED</span></div>
+      <div class="mission-banner">
+        <div><strong id="mission-worker-state">Checking worker heartbeat…</strong><p id="mission-queue-state">Loading queue…</p></div>
+        <div class="mission-controls"><button id="mission-refresh" class="small-button" type="button">Refresh</button><button id="mission-pause" class="small-button" type="button" disabled>Pause queue</button></div>
+      </div>
+      <p class="form-note">A recent heartbeat only indicates that a worker contacted the database; it does not verify its provider. The queue cannot browse, verify facts, render, access analytics or publish. Provider requests can incur charges, including after timeouts.</p>
+      <p id="mission-error" class="error" role="alert"></p><p id="mission-notice" class="form-note" role="status"></p>
+      <div class="studio-grid mission-grid">
+        <div class="panel">
+          <div class="panel-heading"><div><h3>Channel profiles</h3><p>Settings are snapshotted when you queue a plan.</p></div><span class="step-number">01</span></div>
+          <form id="mission-channel-form">
+            <label>Profile name <input name="name" maxlength="100" required placeholder="e.g. Curious Stories"></label>
+            <label>Niche <input name="niche" maxlength="500" required placeholder="History, science, cooking…"></label>
+            <label>Target audience <input name="audience" maxlength="500" placeholder="Who is this for?"></label>
+            <div class="field-grid"><label>Language code <input name="language" value="en" maxlength="35" required placeholder="en or ur-PK"></label><label>Timezone <input name="timezone" value="UTC" maxlength="80" required placeholder="Asia/Karachi"></label></div>
+            <label>Brand voice / strategy <textarea name="brand_voice" maxlength="500" rows="2" placeholder="Helpful, curious, conversational…"></textarea></label>
+            <label>Format <select name="format"><option value="shorts">Shorts</option><option value="landscape">Landscape</option></select></label>
+            <div class="mission-controls"><button id="mission-channel-save" class="small-button" type="submit">Add profile</button><button id="mission-channel-reset" class="small-button" type="button" hidden>Cancel edit</button></div>
+          </form>
+          <div id="mission-channel-list" class="mission-list"></div>
+          <div class="mission-subsection"><h3>Competitor references</h3><p class="form-note">Saved URLs are context only. They are not fetched or analyzed.</p>
+            <form id="mission-competitor-form"><label>Profile <select id="mission-competitor-channel" name="channel_id" required></select></label><label>YouTube channel URL <input name="url" type="url" maxlength="300" required placeholder="https://www.youtube.com/@channel"></label><button class="small-button" type="submit">Save reference</button></form>
+            <div id="mission-competitor-list" class="mission-list"></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-heading"><div><h3>Queue a planning job</h3><p>Three provider calls are normally needed. Existing daily safety limits apply.</p></div><span class="step-number">02</span></div>
+          <form id="mission-job-form">
+            <label>Profile <select id="mission-job-channel" name="channel_id" required></select></label>
+            <label>Topic or brief <textarea name="topic" maxlength="1600" rows="3" required placeholder="What should this video explore?"></textarea></label>
+            <div class="field-grid"><label>Provider <select id="mission-provider" name="provider"><option value="groq">Groq</option><option value="gemini">Gemini</option><option value="mistral">Mistral</option><option value="zai">Z.ai</option><option value="openrouter">OpenRouter</option><option value="huggingface">Hugging Face</option><option value="opencode">OpenCode</option></select></label><label>Model <input id="mission-model" name="model" value="llama-3.1-8b-instant" maxlength="128" required></label></div>
+            <label>Start planning no earlier than <input name="not_before" type="datetime-local"><small>Optional; interpreted in this browser’s timezone, not the profile timezone. Maximum 30 days. This is not YouTube scheduling.</small></label>
+            <button class="button" type="submit">Queue text plan <span>→</span></button>
+          </form>
+          <div class="mission-subsection"><h3>Job history <span class="mission-subtle">· 50 per page</span></h3><div id="mission-job-list" class="mission-list"></div><div class="mission-controls"><button id="mission-prev" class="small-button" type="button" disabled>Previous</button><span id="mission-page" class="mission-subtle">Page 1</span><button id="mission-next" class="small-button" type="button" disabled>Next</button></div></div>
+        </div>
+      </div>
+      <div id="mission-detail" class="panel mission-detail" hidden><div class="panel-heading"><div><h3 id="mission-detail-title">Job details</h3><p id="mission-detail-status"></p></div><button id="mission-detail-close" class="small-button" type="button">Close</button></div><div id="mission-detail-actions" class="mission-controls"></div><div id="mission-steps"></div><h4>Recorded events</h4><ul id="mission-events" class="events"></ul></div>
+      <details class="mission-help"><summary>Worker setup and limits</summary><p>The worker runs separately on a trusted always-on machine, signs in as this account and uses server-side provider keys. Start it with <code>npm run worker:planning</code> after configuring the environment documented in the repository. Nothing runs continuously on Vercel. Stored jobs may remain queued when no worker is online.</p><p>The queue allows up to 1,000 active jobs per account, subject to shared storage caps; this is not a tested throughput guarantee or 1,000 processes. Default provider budgets are 10 attempts per user and 50 globally per UTC day, with one provider call at a time per user. Pause stops new stages and requests cancellation of running jobs; an already-started call can finish or be billed.</p></details>
     </section>
 
     <section id="studio" class="section">

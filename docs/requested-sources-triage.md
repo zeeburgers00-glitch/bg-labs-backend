@@ -169,3 +169,17 @@ These links are discovery or official API documentation only, not installed inte
 - [https://github.com/explore](https://github.com/explore)
 - [https://github.com/collections](https://github.com/collections)
 - [https://github.com/trending](https://github.com/trending)
+
+## Additional mission-control candidates (2026-10-27)
+
+Only GitHub metadata, root file names and the beginning of each README were examined. Dependencies, security, licensing beyond reported SPDX metadata, terms and deployment compatibility require a deeper review. These entries are **not installed**; the current queue is an original PostgreSQL/worker implementation, not Trigger.dev or Temporal. The existing Supabase hosted service is accessed via Auth/PostgREST, not by installing its repository.
+
+| Candidate / pinned README | GitHub license metadata | Observed status and decision |
+|---|---|---|
+| [triggerdotdev/trigger.dev](https://github.com/triggerdotdev/trigger.dev/blob/4d9e4cf7a477d5b0a580613dbaf20e6a5ba5ef9e/README.md) | Apache-2.0 | Active TypeScript/pnpm durable-workflow service; would need separately provisioned infrastructure and credentials; not installed. |
+| [temporalio/temporal](https://github.com/temporalio/temporal/blob/f7ca7c3c49318cefa10299960b2c8dd7d9d4f9cb/README.md) | MIT | Active Go durable-execution server; would need separate hosting and operations; not installed. |
+| [BerriAI/litellm](https://github.com/BerriAI/litellm/blob/cfe0100e1fca613e7b1af27dd1fe4807ca4d1d1a/README.md) | NOASSERTION | Active AI gateway; GitHub did not resolve a single SPDX license, so investigate license and security before integration. Not installed. |
+| [snakers4/silero-vad](https://github.com/snakers4/silero-vad/blob/066409f3d9db45a30d21dfcbf9147826ffdd7052/README.md) | MIT | Voice-activity detector; model/runtime requirements and model terms not verified. Not installed. |
+| [googleapis/google-api-python-client](https://github.com/googleapis/google-api-python-client/blob/c1bdb24533614d6fcffeb7b9a93b2fc836c4e4e0/README.md) | Apache-2.0 | Official client in maintenance mode per README; not installed and no YouTube OAuth/upload implemented. |
+| [googleapis/google-auth-library-python](https://github.com/googleapis/google-auth-library-python/blob/2ea24b03436765fa3cf279ce148482ff6332136b/README.rst) | Apache-2.0 | Archived; README points to google-cloud-python. Not installed. |
+| [supabase/supabase](https://github.com/supabase/supabase/blob/14ca6c0455c609e9098d0ccce08c4949eec4160f/README.md) | Apache-2.0 | Hosted Supabase is already used through HTTP and RLS; this repository is not installed. |

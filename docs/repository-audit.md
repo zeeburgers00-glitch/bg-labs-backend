@@ -81,3 +81,8 @@ Topic listings are not blanket-reviewed or installed. Evaluate any new repositor
 - `Jakeschincariol/youtube-agent-skill` at `a2feb2104981a375ffd4f87ee04f4f5344ac43c6`: `yt-script/hookscore.py`, `yt-script/hooks.json`, and `yt-package/title.py`; MIT license included alongside them.
 - `ahmedsakri/youtube-agent-pro` at `45e8e2603d4bf8e17c1147ba870a4ea00eaecbc5`: `yt-idea/ideascore.py`; MIT license included alongside it.
 - These are local, deterministic English-language word heuristics. They do not access YouTube, generate artificial engagement, perform research, predict views, or publish.
+
+## Queue concurrency-test dependencies (2026-10-27)
+
+- [`brianc/node-postgres`](https://github.com/brianc/node-postgres/tree/2a5850fb0db18f5e40a642bbb4a4743de412ab54): GitHub metadata reported MIT, unarchived and recently updated; the README describes a pure JavaScript PostgreSQL client, with optional native bindings. Pinned `pg@8.23.1` is a **development-only** dependency for the opt-in isolated multi-connection test, not used by Vercel or the worker. Its transitive npm dependencies are locked; `npm audit` reported no known vulnerabilities at the check time. This is not a full security audit or guarantee.
+- A temporary PostgreSQL 17.6 test cluster was run from `@embedded-postgres/linux-x64@17.6.0-beta.15` outside the repository, with npm lifecycle scripts disabled and an audited symlink setup. Its repository metadata reports MIT for the packaging code and the downloader identifies Zonky PostgreSQL binaries. The cluster ran as an unprivileged OS user on a Unix socket without a network listener, solely for tests. Binary provenance and every bundled native dependency were not independently audited; it is not a project or runtime dependency and is not deployed.

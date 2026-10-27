@@ -469,6 +469,41 @@
       "name": "sindresorhus/awesome",
       "category": "Discovery collections",
       "source": "https://github.com/sindresorhus/awesome"
+    },
+    {
+      "name": "triggerdotdev/trigger.dev",
+      "category": "AI agents & automation",
+      "source": "https://github.com/triggerdotdev/trigger.dev"
+    },
+    {
+      "name": "temporalio/temporal",
+      "category": "AI agents & automation",
+      "source": "https://github.com/temporalio/temporal"
+    },
+    {
+      "name": "BerriAI/litellm",
+      "category": "AI agents & automation",
+      "source": "https://github.com/BerriAI/litellm"
+    },
+    {
+      "name": "snakers4/silero-vad",
+      "category": "Voice & speech",
+      "source": "https://github.com/snakers4/silero-vad"
+    },
+    {
+      "name": "googleapis/google-api-python-client",
+      "category": "Platform APIs",
+      "source": "https://github.com/googleapis/google-api-python-client"
+    },
+    {
+      "name": "googleapis/google-auth-library-python",
+      "category": "Platform APIs",
+      "source": "https://github.com/googleapis/google-auth-library-python"
+    },
+    {
+      "name": "supabase/supabase",
+      "category": "Platform APIs",
+      "source": "https://github.com/supabase/supabase"
     }
   ],
   "topic_pages": [

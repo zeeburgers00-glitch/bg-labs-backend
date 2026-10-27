@@ -119,6 +119,47 @@ function stockInput(input) {
   return {query, orientation};
 }
 
+function channelInput(input) {
+  const fields = {name:100, niche:500, audience:500, brand_voice:500};
+  const result = {};
+  for (const [key,max] of Object.entries(fields)) {
+    const value = typeof input[key] === 'string' ? input[key].trim() : '';
+    if (Array.from(value).length > max || /[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(value)) throw new HttpError(422, 'A channel field is too long or contains invalid characters.');
+    result[key] = value;
+  }
+  if (!result.name || !result.niche) throw new HttpError(422, 'Enter a channel name and niche.');
+  result.language = typeof input.language === 'string' ? input.language.trim() : '';
+  result.timezone = typeof input.timezone === 'string' ? input.timezone.trim() : '';
+  result.format = input.format;
+  if (!/^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/.test(result.language) || result.language.length > 35
+      || !/^[A-Za-z0-9_+/-]{1,80}$/.test(result.timezone) || !['shorts','landscape'].includes(result.format)) throw new HttpError(422, 'Choose a valid language, timezone and format.');
+  try { new Intl.DateTimeFormat('en', {timeZone:result.timezone}); } catch { throw new HttpError(422, 'Choose a valid IANA timezone, such as Asia/Karachi or UTC.'); }
+  return result;
+}
+function competitorInput(input) {
+  if (typeof input.channel_id !== 'string' || !UUID.test(input.channel_id)) throw new HttpError(422, 'Choose a channel profile.');
+  const url = typeof input.url === 'string' ? input.url.trim() : '';
+  if (url.length > 300 || !/^https:\/\/(?:www\.)?youtube\.com\/(?:@[A-Za-z0-9_.-]+|(?:channel|c|user)\/[A-Za-z0-9_.-]+)$/.test(url)) {
+    throw new HttpError(422, 'Use a YouTube channel URL without query parameters.');
+  }
+  return {channel_id:input.channel_id,url};
+}
+function missionJobInput(input) {
+  const topic = typeof input.topic === 'string' ? input.topic.trim() : '';
+  if (typeof input.channel_id !== 'string' || !UUID.test(input.channel_id) || typeof input.client_key !== 'string' || !UUID.test(input.client_key)
+      || !topic || Array.from(topic).length > 1600 || /[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(topic)
+      || !['groq','gemini','mistral','zai','openrouter','huggingface','opencode'].includes(input.provider)
+      || typeof input.model !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$/.test(input.model)) throw new HttpError(422, 'Choose a channel, topic, supported provider and model.');
+  let when = null;
+  if (input.not_before !== undefined && input.not_before !== null && input.not_before !== '') {
+    if (typeof input.not_before !== 'string' || !/^\d{4}-\d\d-\d\dT\d\d:\d\d(?::\d\d(?:\.\d{1,3})?)?(?:Z|[+-]\d\d:\d\d)$/.test(input.not_before)) throw new HttpError(422, 'Use an ISO timestamp with a timezone.');
+    const date = new Date(input.not_before);
+    if (!Number.isFinite(date.getTime()) || date.getTime() < Date.now() - 30 * 86400_000 || date.getTime() > Date.now() + 30 * 86400_000) throw new HttpError(422, 'Choose a start time within the next 30 days.');
+    when = date.toISOString();
+  }
+  return {p_channel_id:input.channel_id,p_client_key:input.client_key,p_topic:topic,p_provider:input.provider,p_model:input.model,p_not_before:when};
+}
+
 export function createBridge({env = process.env, fetchImpl = globalThis.fetch} = {}) {
   function config() {
     let url;
@@ -230,7 +271,7 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch} =
         return session;
       };
       const path = pathFor(request), method = request.method.toUpperCase();
-      if (!['GET', 'HEAD', 'POST', 'DELETE'].includes(method)) throw new HttpError(405, 'Method not allowed.');
+      if (!['GET', 'HEAD', 'POST', 'PATCH', 'DELETE'].includes(method)) throw new HttpError(405, 'Method not allowed.');
       if (!['GET', 'HEAD'].includes(method) && !sameOrigin(request)) throw new HttpError(403, 'A same-origin request is required.');
 
       if (method === 'GET' && path === '/api/health') {
@@ -274,6 +315,101 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch} =
         try { session = await currentUser(request); } catch { /* clear locally even if offline */ }
         if (session?.access) { try { await supa('/auth/v1/logout', {method:'POST', token:session.access}); } catch { /* session cookies are still cleared below */ } }
         return json({ok:true}, 200, clearCookies());
+      }
+      if (path === '/api/cloud/mission' && method === 'GET') {
+        const session = await authenticated();
+        const paths = [
+          '/rest/v1/vimax_channels?select=id,name,niche,audience,language,timezone,brand_voice,format,created_at,updated_at&order=created_at.desc&limit=25',
+          '/rest/v1/vimax_competitors?select=id,channel_id,url,created_at&order=created_at.desc&limit=625',
+          '/rest/v1/vimax_mission_jobs?select=id,channel_id,topic,provider,model,status,review_reason,not_before,attempts,cancel_requested,last_error,created_at,updated_at&order=created_at.desc,id.desc&limit=50',
+          '/rest/v1/vimax_mission_workers?select=worker_id,last_seen_at&order=last_seen_at.desc&limit=10',
+          '/rest/v1/vimax_mission_settings?select=paused&limit=1',
+        ];
+        const items = await Promise.all(paths.map(item => supa(item,{token:session.access})));
+        if (items.some(item => !item.response.ok || !Array.isArray(item.value))) throw new HttpError(503, 'Mission control is temporarily unavailable.');
+        return json({channels:items[0].value,competitors:items[1].value,jobs:items[2].value,workers:items[3].value,paused:items[4].value[0]?.paused === true},200,session.updates);
+      }
+      const pageMatch = path.match(/^\/api\/cloud\/mission\/jobs-page\/(\d{1,4})$/);
+      if (pageMatch && method === 'GET') {
+        const offset=Number(pageMatch[1]);
+        if (offset > 1950 || offset % 50 !== 0) throw new HttpError(400, 'Invalid job page.');
+        const session=await authenticated();
+        const {response,value}=await supa(`/rest/v1/vimax_mission_jobs?select=id,channel_id,topic,provider,model,status,review_reason,not_before,attempts,cancel_requested,last_error,created_at,updated_at&order=created_at.desc,id.desc&limit=50&offset=${offset}`,{token:session.access});
+        if (!response.ok || !Array.isArray(value)) throw new HttpError(503, 'Job history is temporarily unavailable.');
+        return json({jobs:value},200,session.updates);
+      }
+      if (path === '/api/cloud/mission/channels' && method === 'POST') {
+        const session = await authenticated(); const input = channelInput(await body(request));
+        const {response,value} = await supa('/rest/v1/vimax_channels?select=id,name,niche,audience,language,timezone,brand_voice,format,created_at,updated_at',
+          {method:'POST',token:session.access,data:input,extraHeaders:{prefer:'return=representation'}});
+        if (!response.ok || !Array.isArray(value) || !value[0]) throw new HttpError(response.status === 400 ? 409 : 503, 'Could not save the channel profile. Check the 25-profile limit.');
+        return json({channel:value[0]},201,session.updates);
+      }
+      const channelMatch = path.match(/^\/api\/cloud\/mission\/channels\/([0-9a-f-]+)$/i);
+      if (channelMatch && ['PATCH','DELETE'].includes(method)) {
+        if (!UUID.test(channelMatch[1])) throw new HttpError(400, 'Invalid channel profile.');
+        const session = await authenticated(); const data = method === 'PATCH' ? channelInput(await body(request)) : undefined;
+        const {response,value} = await supa(`/rest/v1/vimax_channels?id=eq.${channelMatch[1]}&select=id,name,niche,audience,language,timezone,brand_voice,format,created_at,updated_at`,
+          {method,token:session.access,data,extraHeaders:{prefer:'return=representation'}});
+        if (!response.ok) throw new HttpError(response.status === 409 ? 409 : 503, 'Could not change this profile. Remove its completed jobs first.');
+        if (!Array.isArray(value) || !value[0]) throw new HttpError(404, 'Channel profile not found.');
+        return json({channel:value[0]},200,session.updates);
+      }
+      if (path === '/api/cloud/mission/competitors' && method === 'POST') {
+        const session = await authenticated(); const input = competitorInput(await body(request));
+        const {response,value} = await supa('/rest/v1/vimax_competitors?select=id,channel_id,url,created_at',
+          {method:'POST',token:session.access,data:input,extraHeaders:{prefer:'return=representation'}});
+        if (!response.ok || !Array.isArray(value) || !value[0]) throw new HttpError(response.status === 409 || response.status === 400 ? 409 : 503, 'Could not save this reference. Check the profile, duplicate URL and 25-reference limit.');
+        return json({competitor:value[0]},201,session.updates);
+      }
+      const competitorMatch = path.match(/^\/api\/cloud\/mission\/competitors\/([0-9a-f-]+)$/i);
+      if (competitorMatch && method === 'DELETE') {
+        if (!UUID.test(competitorMatch[1])) throw new HttpError(400, 'Invalid reference.');
+        const session = await authenticated();
+        const {response,value} = await supa(`/rest/v1/vimax_competitors?id=eq.${competitorMatch[1]}&select=id`,{method:'DELETE',token:session.access,extraHeaders:{prefer:'return=representation'}});
+        if (!response.ok) throw new HttpError(503, 'Could not remove this reference.');
+        if (!Array.isArray(value) || !value[0]) throw new HttpError(404, 'Reference not found.');
+        return json({ok:true},200,session.updates);
+      }
+      if (path === '/api/cloud/mission/jobs' && method === 'POST') {
+        const session = await authenticated(); const input = missionJobInput(await body(request));
+        const {response,value} = await supa('/rest/v1/rpc/vimax_mission_submit',{method:'POST',token:session.access,data:input});
+        if (!response.ok || !value || typeof value.id !== 'string' || !UUID.test(value.id)) {
+          if (typeof value?.message === 'string' && value.message.includes('Idempotency key')) throw new HttpError(409, 'This request key was already used for different job details.');
+          throw new HttpError(response.status === 400 ? 409 : 503, 'Could not queue this job. Check the profile, start time and storage limits.');
+        }
+        return json({job:value},value.existing ? 200 : 201,session.updates);
+      }
+      const detailMatch = path.match(/^\/api\/cloud\/mission\/jobs\/([0-9a-f-]+)$/i);
+      if (detailMatch && method === 'GET') {
+        if (!UUID.test(detailMatch[1])) throw new HttpError(400, 'Invalid job.');
+        const session = await authenticated(); const id = detailMatch[1];
+        const paths = [
+          `/rest/v1/vimax_mission_jobs?id=eq.${id}&select=id,channel_id,topic,provider,model,status,review_reason,not_before,attempts,cancel_requested,last_error,created_at,updated_at`,
+          `/rest/v1/vimax_mission_steps?job_id=eq.${id}&select=stage,status,output,started_at,finished_at&order=started_at.asc`,
+          `/rest/v1/vimax_mission_events?job_id=eq.${id}&select=id,event,stage,created_at&order=id.desc&limit=100`,
+        ];
+        const items=await Promise.all(paths.map(item=>supa(item,{token:session.access})));
+        if (items.some(item=>!item.response.ok || !Array.isArray(item.value))) throw new HttpError(503,'Job details are temporarily unavailable.');
+        if (!items[0].value[0]) throw new HttpError(404,'Job not found.');
+        return json({job:items[0].value[0],steps:items[1].value,events:items[2].value},200,session.updates);
+      }
+      const actionMatch = path.match(/^\/api\/cloud\/mission\/jobs\/([0-9a-f-]+)\/action$/i);
+      if (actionMatch && method === 'POST') {
+        if (!UUID.test(actionMatch[1])) throw new HttpError(400, 'Invalid job.');
+        const session = await authenticated(); const input = await body(request);
+        if (!['cancel','retry','approve','purge'].includes(input.action) || (input.confirm_duplicate_charge !== undefined && typeof input.confirm_duplicate_charge !== 'boolean')) throw new HttpError(422,'Invalid job action.');
+        const {response,value}=await supa('/rest/v1/rpc/vimax_mission_action',{method:'POST',token:session.access,
+          data:{p_job_id:actionMatch[1],p_action:input.action,p_confirm_duplicate_charge:input.confirm_duplicate_charge === true}});
+        if (!response.ok || value?.ok !== true) throw new HttpError(response.status === 400 ? 409 : 503,'Action unavailable. An uncertain retry requires confirmation of possible duplicate charges.');
+        return json({result:value},200,session.updates);
+      }
+      if (path === '/api/cloud/mission/pause' && method === 'POST') {
+        const session=await authenticated(); const input=await body(request);
+        if (typeof input.paused !== 'boolean') throw new HttpError(422,'Specify whether to pause the queue.');
+        const {response,value}=await supa('/rest/v1/rpc/vimax_mission_pause',{method:'POST',token:session.access,data:{p_paused:input.paused}});
+        if (!response.ok || value !== input.paused) throw new HttpError(503,'Could not change the queue pause setting.');
+        return json({paused:value},200,session.updates);
       }
       if (path === '/api/cloud/projects' && ['GET','POST'].includes(method)) {
         const session = await authenticated();
