@@ -88,6 +88,11 @@ function authInput(input) {
   }
   return {email, password};
 }
+function confirmationEmail(input) {
+  const email = typeof input.email === 'string' ? input.email.trim() : '';
+  if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new HttpError(422, 'Enter a valid email address.');
+  return email;
+}
 function projectInput(input) {
   const title = typeof input.title === 'string' ? input.title.trim() : '';
   const notes = typeof input.notes === 'string' ? input.notes.trim() : '';
@@ -311,6 +316,16 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch} =
         const {response} = await supa(`/auth/v1/signup?redirect_to=${redirect}`, {method:'POST',data:input});
         if (!response.ok) throw new HttpError(response.status === 429 ? 429 : 400, response.status === 429 ? 'Email signup limit reached; try again later.' : 'Account creation failed. Check your details and try again.');
         return json({message:'If the account can be created, check your email to confirm it, then sign in here.'}, 202);
+      }
+      if (method === 'POST' && path === '/api/cloud/resend-confirmation') {
+        const email = confirmationEmail(await body(request));
+        const redirect = encodeURIComponent('https://vimax-vert.vercel.app/skills/');
+        // Do not reveal whether the address is registered or already confirmed.
+        // Supabase applies its project and per-address email rate limits.
+        const {response} = await supa(`/auth/v1/resend?redirect_to=${redirect}`, {method:'POST',data:{type:'signup',email}});
+        if (response.status === 429) throw new HttpError(429, 'Email limit reached. Wait and try again later.');
+        if ([401,404].includes(response.status) || response.status >= 500) throw new HttpError(503, 'Email confirmation is temporarily unavailable.');
+        return json({message:'If this account needs confirmation and email can be delivered, check your inbox for a new link.'}, 202);
       }
       if (method === 'POST' && path === '/api/cloud/login') {
         const input = authInput(await body(request));

@@ -246,6 +246,17 @@ $('account-form').addEventListener('submit', async event => {
   } catch (error) { $('account-error').textContent = error.message; }
   finally { buttons.forEach(button => { button.disabled = false; }); }
 });
+$('resend-confirmation').addEventListener('click', async () => {
+  const form=$('account-form'), email=form.elements.email;
+  $('account-error').textContent = ''; $('account-message').textContent = '';
+  if (!email.reportValidity()) return;
+  const buttons=form.querySelectorAll('button'); buttons.forEach(button => { button.disabled=true; });
+  try {
+    const result=await json('/api/cloud/resend-confirmation', {method:'POST',body:JSON.stringify({email:email.value.trim()})});
+    $('account-message').textContent=result.message;
+  } catch (error) { $('account-error').textContent=error.message; }
+  finally { buttons.forEach(button => { button.disabled=false; }); }
+});
 $('logout-button').addEventListener('click', async () => {
   try { await json('/api/cloud/logout', {method:'POST',body:'{}'}); await loadAccount(); }
   catch (error) { $('cloud-project-error').textContent = error.message; }

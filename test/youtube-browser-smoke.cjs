@@ -21,12 +21,13 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   const uploadId='12345678-0000-4000-8000-000000000002',secondId='12345678-0000-4000-8000-000000000003',channel='UC1234567890123456789012';
   let current=alice,signedIn=true,firstStart=true,failStatus=false,releaseChunk,releaseSecond;
   let reachedChunk,reachedSecond;const chunkReached=new Promise(r=>{reachedChunk=r;}),secondReached=new Promise(r=>{reachedSecond=r;});
-  const jobs=[],keys=[],posts=[],chatBodies=[];
+  const jobs=[],keys=[],posts=[],chatBodies=[],resendBodies=[];
   await page.route('**/api/**',async route=>{
    const rq=route.request(),u=new URL(rq.url()),p=u.pathname,m=rq.method();let data={},body={};try{body=rq.postDataJSON()||{}}catch{}
    if(m!=='GET')posts.push(p);
    if(p==='/api/skills/system')data={local_only:false,database_connected:true,text_chat:'unconfigured',ready_for_video:false,piper_installed:false,ffmpeg_installed:false,scene_detection_installed:false,voices:[],hardware:{},warnings:[]};
    else if(p==='/api/cloud/session')data={user:signedIn?{id:current,email:'person@example.test'}:null};
+   else if(p==='/api/cloud/resend-confirmation'){resendBodies.push(body);data={message:'If this account needs confirmation, check your inbox.'};}
    else if(p==='/api/cloud/projects')data={projects:[]};
    else if(p==='/api/cloud/providers')data={providers:[{id:'groq',label:'Groq',state:'configured_unverified',models:['openai/gpt-oss-120b']}],pexels:'not_configured',allowed:true,paused:false};
    else if(p==='/api/cloud/chat/history')data={turns:[]};
@@ -110,7 +111,12 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   assert.match(await page.locator('#yt-progress').innerText(),/No upload in progress/);
   await page.setViewportSize({width:390,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'mobile overflow');
   await page.locator('#logout-button').click();await page.waitForSelector('#youtube[hidden]',{state:'attached'});assert.equal(await page.locator('#yt-history .mission-row').count(),0);
+  await page.locator('#account-form [name=email]').fill('person@example.test');
+  await page.locator('#account-form [name=password]').fill('never-send-on-resend');
+  await page.locator('#resend-confirmation').click();
+  await page.waitForFunction(()=>document.getElementById('account-message').textContent.includes('check your inbox'));
+  assert.deepEqual(resendBodies,[{email:'person@example.test'}]);
   assert.deepEqual(errors,[]);
-  console.log('YouTube browser smoke passed with mocked APIs: pending retry, active account switch, busy refresh, confirmation, public GitHub lookup, safe rendering, logout and mobile layout.');
+  console.log('Browser smoke passed with mocked APIs: YouTube, public GitHub, detailed chat, confirmation resend, account switching, logout and mobile layout.');
  }finally{if(browser)await browser.close();await new Promise(r=>server.close(r));}
 })().catch(e=>{console.error(e);process.exitCode=1});

@@ -41,6 +41,7 @@
           <label>Email <input name="email" type="email" autocomplete="username" maxlength="254" required></label>
           <label>Password <input name="password" type="password" autocomplete="current-password" minlength="6" maxlength="128" required></label>
           <div class="account-actions"><button class="button primary" type="submit" value="login">Sign in</button><button class="button secondary-button" type="submit" value="signup">Create account</button></div>
+          <button type="button" id="resend-confirmation" class="small-button">Resend confirmation email</button>
           <p class="form-note">Accounts share the connected Supabase project. Its default email sender only delivers to organization-team addresses and is limited to two emails per hour. A custom SMTP service is required for other users to sign up. Never send passwords or keys in chat.</p>
           <p id="account-message" class="form-note" role="status"></p><p id="account-error" class="error" role="alert"></p>
         </form>

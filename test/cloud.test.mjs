@@ -9,12 +9,18 @@ function fakeSupabase() {
   const projects = []; let next = 1; const calls = [];
   const fetch = async (url, init) => {
     const u = new URL(url), payload = init.body ? JSON.parse(init.body) : null;
-    calls.push({path:u.pathname, method:init.method, token:init.headers.authorization});
+    calls.push({path:u.pathname, method:init.method, token:init.headers.authorization, payload, redirect:u.searchParams.get('redirect_to')});
     const token = init.headers.authorization?.replace('Bearer ', '');
     const who = token === 'alice-token' ? 'alice' : token === 'bob-token' ? 'bob' : null;
     if (u.pathname === '/auth/v1/health') return Response.json({status:'ok'});
     if (u.pathname === '/rest/v1/rpc/vimax_cloud_health') return Response.json(true);
     if (u.pathname === '/auth/v1/signup') return Response.json({id:'fake'});
+    if (u.pathname === '/auth/v1/resend') {
+      if (payload.email === 'rate@example.test') return Response.json({error:'internal details'}, {status:429});
+      if (payload.email === 'unknown@example.test') return Response.json({error:'internal details'}, {status:400});
+      if (payload.email === 'down@example.test') return Response.json({error:'internal details'}, {status:503});
+      return Response.json({});
+    }
     if (u.pathname === '/auth/v1/token' && u.searchParams.get('grant_type') === 'password') {
       const name = payload.email.split('@')[0];
       if (!userIds[name] || payload.password !== 'example-password') return Response.json({error:'bad auth'}, {status:400});
@@ -68,6 +74,25 @@ test('CSRF, oversized bodies, malformed input and missing sessions fail closed',
   assert.equal((await bridge.fetch(request('/api/cloud/projects'))).status,401);
   assert.equal((await bridge.fetch(request('/api/bridge?__vimax_path=../secret'))).status,400);
   assert.equal(fake.calls.length,0);
+});
+
+test('confirmation resend sends only an email to Supabase, hides account existence and respects limits', async () => {
+  const fake=fakeSupabase(), bridge=createBridge({env,fetchImpl:fake.fetch});
+  const send = (email,extra={}) => bridge.fetch(request('/api/cloud/resend-confirmation',{method:'POST',payload:{email,password:'never-forward-this',...extra}}));
+  const response=await send(' alice@example.test ');
+  assert.equal(response.status,202); const message=await response.json();
+  const call=fake.calls[0];
+  assert.equal(call.path,'/auth/v1/resend'); assert.equal(call.method,'POST');
+  assert.deepEqual(call.payload,{type:'signup',email:'alice@example.test'});
+  assert.equal(call.redirect,'https://vimax-vert.vercel.app/skills/');
+  const unknown=await send('unknown@example.test'); assert.equal(unknown.status,202);
+  assert.deepEqual(await unknown.json(),message);
+  assert.equal((await send('rate@example.test')).status,429);
+  assert.equal((await send('down@example.test')).status,503);
+  const before=fake.calls.length;
+  assert.equal((await send('bad-email')).status,422);
+  assert.equal((await bridge.fetch(request('/api/cloud/resend-confirmation',{method:'POST',origin:'https://evil.example',payload:{email:'alice@example.test'}}))).status,403);
+  assert.equal(fake.calls.length,before);
 });
 
 test('login cookies are HTTP-only, CRUD is scoped by user JWT, logout clears tokens', async () => {
