@@ -1,10 +1,14 @@
-// Public, stateless Supabase account/project API. It never exposes ViMax's
-// unauthenticated single-workspace local server to the Internet.
+// Public, stateless Supabase API. It never exposes ViMax's unauthenticated
+// single-workspace local server or server-side provider keys to the Internet.
+import {ProviderError, providerStatus, pexelsStatus, validateSelection, chatCompletion, searchPexels} from './providers.mjs';
+
 const ACCESS_COOKIE = '__Host-vimax_access';
 const REFRESH_COOKIE = '__Host-vimax_refresh';
 const MAX_BODY = 8192;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const AGENT_UNAVAILABLE = 'Supabase is connected, but the online ViMax video agent and automatic YouTube upload are not connected yet. Open Skills & Agents to save private ideas.';
+const AGENT_UNAVAILABLE = 'The online ViMax video agent and YouTube upload are not connected yet. Open Skills & Agents for saved ideas and cloud text planning when configured.';
+const SYSTEM_PROMPT = 'You are ViMax’s text-planning assistant for original, legitimate video projects. You cannot browse, verify facts, render videos, access YouTube, publish or run background jobs. Never claim you performed those actions. Distinguish suggestions from verified facts, say when sources need checking, respect copyright, and do not suggest fake engagement or spam.';
+const MODES = Object.freeze({chat:'Help the user plan their video project.', ideas:'Brainstorm distinct, original video ideas with audiences and hooks.', script:'Draft a clear narration script with a hook and structure; flag claims needing verification.', review:'Review the provided material for unsupported claims, originality risks and unclear wording; do not claim independent verification.'});
 
 class HttpError extends Error {
   constructor(status, message) { super(message); this.status = status; }
@@ -91,6 +95,29 @@ function projectInput(input) {
   }
   return {title, notes};
 }
+function chatInput(input) {
+  const prompt = typeof input.prompt === 'string' ? input.prompt.trim() : '';
+  const mode = input.mode === undefined ? 'chat' : input.mode;
+  if (!prompt || Array.from(prompt).length > 1600 || /[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(prompt) || !Object.hasOwn(MODES, mode)) {
+    throw new HttpError(422, 'Enter up to 1600 characters and select a supported planning mode.');
+  }
+  const primary = {provider:input.provider, model:input.model};
+  let fallback = null;
+  if (input.fallback !== undefined && input.fallback !== null) {
+    if (typeof input.fallback !== 'object' || Array.isArray(input.fallback)) throw new HttpError(422, 'Invalid fallback provider.');
+    fallback = {provider:input.fallback.provider, model:input.fallback.model};
+    if (fallback.provider === primary.provider && fallback.model === primary.model) throw new HttpError(422, 'Choose a different fallback provider or model.');
+  }
+  return {prompt, mode, primary, fallback};
+}
+function stockInput(input) {
+  const query = typeof input.query === 'string' ? input.query.trim() : '';
+  const orientation = input.orientation || '';
+  if (!query || Array.from(query).length > 120 || /[\u0000-\u001f\u007f]/.test(query) || !['', 'landscape', 'portrait', 'square'].includes(orientation)) {
+    throw new HttpError(422, 'Enter a stock search of up to 120 characters and a valid orientation.');
+  }
+  return {query, orientation};
+}
 
 export function createBridge({env = process.env, fetchImpl = globalThis.fetch} = {}) {
   function config() {
@@ -109,7 +136,7 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch} =
     try {
       response = await fetchImpl(`${base}${path}`, {method, headers:{apikey:key, ...(token ? {authorization:`Bearer ${token}`} : {}),
         ...(data === undefined ? {} : {'content-type':'application/json'}), ...extraHeaders},
-        ...(data === undefined ? {} : {body:JSON.stringify(data)}), signal:AbortSignal.timeout(12_000), cache:'no-store'});
+        ...(data === undefined ? {} : {body:JSON.stringify(data)}), signal:AbortSignal.timeout(12_000), redirect:'error', cache:'no-store'});
     } catch { throw new HttpError(503, 'Supabase is temporarily unreachable.'); }
     let value = null;
     if (response.status !== 204) { try { value = await response.json(); } catch { /* fail closed below */ } }
@@ -138,19 +165,76 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch} =
     if (!session.user) throw new HttpError(401, 'Please sign in to your ViMax account.');
     return session;
   }
+  function aiAllowed(session) {
+    // The Supabase project is shared with other apps. A key alone must not
+    // grant every account access to billable provider requests by accident.
+    if (env.VIMAX_AI_ALLOW_ALL_AUTHENTICATED === 'true') return true;
+    const raw = env.VIMAX_AI_ALLOWED_USER_IDS || '';
+    if (!raw || raw.length > 4000) return false;
+    const ids = raw.split(',').map(id => id.trim());
+    if (ids.length > 100 || ids.some(id => !UUID.test(id))) return false;
+    return ids.some(id => id.toLowerCase() === session.user.id.toLowerCase());
+  }
+  function requireAiAccess(session) {
+    if (!aiAllowed(session)) throw new HttpError(403, 'AI provider access is not enabled for this account. Ask the deployment owner.');
+  }
   async function databaseReady() {
-    const {response} = await supa('/auth/v1/health');
-    if (!response.ok) throw new HttpError(503, 'Supabase is temporarily unavailable.');
+    const auth = await supa('/auth/v1/health');
+    if (!auth.response.ok) throw new HttpError(503, 'Supabase Auth is temporarily unavailable.');
+    const database = await supa('/rest/v1/rpc/vimax_cloud_health', {method:'POST', data:{}});
+    if (!database.response.ok || database.value !== true) throw new HttpError(503, 'Supabase database health check failed.');
+  }
+  async function reserve(session, feature, provider, model) {
+    const {response, value} = await supa('/rest/v1/rpc/vimax_reserve_ai_call', {method:'POST', token:session.access,
+      data:{p_feature:feature, p_provider:provider, p_model:model}});
+    if (!response.ok || !value || typeof value !== 'object') throw new HttpError(503, 'AI safety limits are unavailable. No provider request was sent.');
+    if (value.allowed !== true) {
+      const reasons = {paused:'AI calls are paused for your account. Resume them to make another request.', in_flight:'Another request is in progress; wait up to a minute and try again.', user_daily_limit:'Your daily provider-request limit was reached (UTC).', global_daily_limit:'The shared daily provider-request limit was reached (UTC).', history_limit:'Chat history is full. Delete it before generating more replies.'};
+      const known = typeof value.reason === 'string' && Object.hasOwn(reasons, value.reason);
+      const message = known ? reasons[value.reason] : 'AI safety limits are unavailable. No provider request was sent.';
+      throw new HttpError(['history_limit', 'paused'].includes(value.reason) ? 409 : known ? 429 : 503, message);
+    }
+    if (typeof value.id !== 'string' || !UUID.test(value.id) || !Number.isInteger(value.remaining_user) || value.remaining_user < 0 || value.remaining_user > 9) {
+      throw new HttpError(503, 'AI safety limits returned an invalid response. No provider request was sent.');
+    }
+    return {id:value.id, remaining:value.remaining_user};
+  }
+  async function finish(session, reservation, state, result) {
+    try {
+      const {response, value} = await supa('/rest/v1/rpc/vimax_finish_ai_call', {method:'POST', token:session.access,
+        data:{p_id:reservation.id, p_status:state, p_input_tokens:result?.inputTokens ?? null, p_output_tokens:result?.outputTokens ?? null}});
+      return response.ok && value === true;
+    } catch { return false; }
+  }
+  async function attempt(session, feature, selection, operation) {
+    const reservation = await reserve(session, feature, selection.provider, selection.model);
+    try {
+      const result = await operation();
+      const auditSaved = await finish(session, reservation, 'succeeded', result);
+      return {result, remaining:reservation.remaining, auditSaved};
+    } catch (error) {
+      const auditSaved = await finish(session, reservation, 'failed', null);
+      if (error && typeof error === 'object') error.auditSaved = auditSaved;
+      throw error;
+    }
   }
   async function handler(request) {
+    let sessionUpdates = [];
     try {
+      // Retain refreshed cookies even when a later provider/database operation
+      // fails; otherwise refresh-token rotation would silently sign users out.
+      const authenticated = async () => {
+        const session = await requireUser(request);
+        sessionUpdates = session.updates;
+        return session;
+      };
       const path = pathFor(request), method = request.method.toUpperCase();
       if (!['GET', 'HEAD', 'POST', 'DELETE'].includes(method)) throw new HttpError(405, 'Method not allowed.');
       if (!['GET', 'HEAD'].includes(method) && !sameOrigin(request)) throw new HttpError(403, 'A same-origin request is required.');
 
       if (method === 'GET' && path === '/api/health') {
         await databaseReady();
-        return json({ok:true, database:'connected', video_agent:'unavailable', youtube_upload:'unavailable'});
+        return json({ok:true, database:'connected', text_chat:providerStatus(env).some(p => p.state === 'configured_unverified') ? 'configured_unverified' : 'unconfigured', video_agent:'unavailable', youtube_upload:'unavailable'});
       }
       if (method === 'GET' && path === '/api/sessions') {
         await databaseReady();
@@ -162,7 +246,7 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch} =
       }
       if (method === 'GET' && path === '/api/skills/system') {
         await databaseReady();
-        return json({local_only:false, database_connected:true, ready_for_video:false, piper_installed:false, ffmpeg_installed:false, scene_detection_installed:false,
+        return json({local_only:false, database_connected:true, text_chat:providerStatus(env).some(p => p.state === 'configured_unverified') ? 'configured_unverified' : 'unconfigured', ready_for_video:false, piper_installed:false, ffmpeg_installed:false, scene_detection_installed:false,
           voices:[], hardware:{logical_cpus:null, memory_gib:null, home_disk_free_gib:null, nvidia_gpu:null}, warnings:[AGENT_UNAVAILABLE]});
       }
       if (method === 'GET' && path === '/api/cloud/session') {
@@ -191,7 +275,7 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch} =
         return json({ok:true}, 200, clearCookies());
       }
       if (path === '/api/cloud/projects' && ['GET','POST'].includes(method)) {
-        const session = await requireUser(request);
+        const session = await authenticated();
         if (method === 'GET') {
           const {response, value} = await supa('/rest/v1/vimax_projects?select=id,title,notes,created_at,updated_at&order=created_at.desc&limit=100', {token:session.access});
           if (!response.ok || !Array.isArray(value)) throw new HttpError(503, 'Saved ideas are temporarily unavailable.');
@@ -206,16 +290,101 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch} =
       if (method === 'DELETE' && path.startsWith('/api/cloud/projects/')) {
         const id = path.slice('/api/cloud/projects/'.length);
         if (!UUID.test(id)) throw new HttpError(400, 'Invalid project ID.');
-        const session = await requireUser(request);
+        const session = await authenticated();
         const {response} = await supa(`/rest/v1/vimax_projects?id=eq.${id}`, {method:'DELETE',token:session.access});
         if (!response.ok) throw new HttpError(503, 'Could not delete this idea.');
         return json({ok:true}, 200, session.updates);
       }
+      if (method === 'GET' && path === '/api/cloud/providers') {
+        const session = await authenticated();
+        const preferences = await supa('/rest/v1/vimax_ai_preferences?select=paused&limit=1', {token:session.access});
+        if (!preferences.response.ok || !Array.isArray(preferences.value) || preferences.value.length > 1 || (preferences.value.length && typeof preferences.value[0].paused !== 'boolean')) {
+          throw new HttpError(503, 'AI safety settings are temporarily unavailable.');
+        }
+        return json({providers:providerStatus(env), pexels:pexelsStatus(env), allowed:aiAllowed(session), paused:preferences.value[0]?.paused ?? false,
+          hackerai:{state:'unsupported', reason:'Its private API endpoint has not been verified for this deployment.'},
+          limits:{user_daily_attempts:10, global_daily_attempts:50, history_turns:200}}, 200, session.updates);
+      }
+      if (method === 'POST' && path === '/api/cloud/ai/pause') {
+        const session = await authenticated();
+        const input = await body(request);
+        if (typeof input.paused !== 'boolean') throw new HttpError(422, 'Choose whether to pause AI calls.');
+        const result = await supa('/rest/v1/rpc/vimax_set_ai_paused', {method:'POST', token:session.access, data:{p_paused:input.paused}});
+        if (!result.response.ok || result.value !== input.paused) throw new HttpError(503, 'Could not update the AI pause setting.');
+        return json({paused:input.paused}, 200, session.updates);
+      }
+      if (method === 'POST' && path === '/api/cloud/providers/test') {
+        const session = await authenticated(); requireAiAccess(session);
+        const input = await body(request);
+        validateSelection(env, input.provider, input.model);
+        const selection = {provider:input.provider, model:input.model};
+        const tested = await attempt(session, 'provider_test', selection, () => chatCompletion({env, fetchImpl, id:selection.provider, model:selection.model,
+          messages:[{role:'user', content:'Reply with the word OK.'}], maxTokens:16}));
+        return json({ok:true, provider:selection.provider, model:selection.model, remaining_user:tested.remaining, audit_saved:tested.auditSaved}, 200, session.updates);
+      }
+      if (path === '/api/cloud/chat/history' && ['GET', 'DELETE'].includes(method)) {
+        const session = await authenticated();
+        if (method === 'DELETE') {
+          const {response} = await supa('/rest/v1/vimax_chat_turns?id=not.is.null', {method:'DELETE', token:session.access});
+          if (!response.ok) throw new HttpError(503, 'Could not delete chat history.');
+          return json({ok:true}, 200, session.updates);
+        }
+        const {response, value} = await supa('/rest/v1/vimax_chat_turns?select=id,prompt,reply,provider,model,created_at&order=created_at.desc,id.desc&limit=30', {token:session.access});
+        if (!response.ok || !Array.isArray(value)) throw new HttpError(503, 'Chat history is temporarily unavailable.');
+        return json({turns:value}, 200, session.updates);
+      }
+      if (method === 'GET' && path === '/api/cloud/usage') {
+        const session = await authenticated();
+        const {response, value} = await supa('/rest/v1/vimax_ai_calls?select=id,feature,provider,model,status,input_tokens,output_tokens,created_at,completed_at&order=created_at.desc&limit=20', {token:session.access});
+        if (!response.ok || !Array.isArray(value)) throw new HttpError(503, 'Provider usage history is temporarily unavailable.');
+        return json({calls:value}, 200, session.updates);
+      }
+      if (method === 'POST' && path === '/api/cloud/chat') {
+        const session = await authenticated(); requireAiAccess(session);
+        const input = chatInput(await body(request));
+        validateSelection(env, input.primary.provider, input.primary.model);
+        if (input.fallback) validateSelection(env, input.fallback.provider, input.fallback.model);
+        const history = await supa('/rest/v1/vimax_chat_turns?select=prompt,reply&order=created_at.desc,id.desc&limit=3', {token:session.access});
+        if (!history.response.ok || !Array.isArray(history.value)) throw new HttpError(503, 'Chat history is unavailable. No provider request was sent.');
+        const messages = [{role:'system', content:`${SYSTEM_PROMPT} ${MODES[input.mode]}`}];
+        for (const turn of history.value.slice(0, 3).reverse()) {
+          if (typeof turn?.prompt === 'string' && typeof turn?.reply === 'string') {
+            messages.push({role:'user', content:Array.from(turn.prompt).slice(0, 1600).join('')});
+            messages.push({role:'assistant', content:Array.from(turn.reply).slice(0, 6000).join('')});
+          }
+        }
+        messages.push({role:'user', content:input.prompt});
+        const run = selection => attempt(session, 'chat', selection, () => chatCompletion({env, fetchImpl, id:selection.provider, model:selection.model, messages}));
+        let selection = input.primary, completed, usedFallback = false;
+        try { completed = await run(selection); }
+        catch (error) {
+          // Fallback is opt-in, separately budgeted, and only for explicit
+          // upstream failures. Ambiguous timeouts are never retried automatically.
+          if (!(input.fallback && error instanceof ProviderError && error.retryable && error.auditSaved)) throw error;
+          selection = input.fallback; usedFallback = true; completed = await run(selection);
+        }
+        let saved = false;
+        try {
+          const stored = await supa('/rest/v1/vimax_chat_turns', {method:'POST', token:session.access,
+            data:{prompt:input.prompt, reply:completed.result.text, provider:selection.provider, model:selection.model}, extraHeaders:{prefer:'return=minimal'}});
+          saved = stored.response.ok;
+        } catch { /* Return the generated text, but disclose that it was not saved. */ }
+        return json({reply:completed.result.text, provider:selection.provider, model:selection.model, used_fallback:usedFallback,
+          history_saved:saved, audit_saved:completed.auditSaved, remaining_user:completed.remaining,
+          usage:{input_tokens:completed.result.inputTokens, output_tokens:completed.result.outputTokens}}, 200, session.updates);
+      }
+      if (method === 'POST' && path === '/api/cloud/stock-search') {
+        const session = await authenticated(); requireAiAccess(session);
+        const input = stockInput(await body(request));
+        if (pexelsStatus(env) !== 'configured_unverified') throw new HttpError(503, 'Pexels is not configured on this deployment.');
+        const result = await attempt(session, 'stock_search', {provider:'pexels', model:''}, () => searchPexels({env, fetchImpl, ...input}));
+        return json({videos:result.result, remaining_user:result.remaining, audit_saved:result.auditSaved}, 200, session.updates);
+      }
       if (path.startsWith('/api/')) throw new HttpError(503, AGENT_UNAVAILABLE);
       throw new HttpError(404, 'Not found.');
     } catch (error) {
-      const status = error instanceof HttpError ? error.status : 500;
-      return json({error:status === 500 ? 'The request could not be completed.' : error.message}, status);
+      const status = error instanceof HttpError || error instanceof ProviderError ? error.status : 500;
+      return json({error:status === 500 ? 'The request could not be completed.' : error.message}, status, sessionUpdates);
     }
   }
   return {fetch:handler};

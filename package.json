@@ -8,5 +8,10 @@
     "start:local": "node scripts/local.mjs",
     "test": "node --test test/*.test.mjs"
   },
-  "engines": {"node": ">=22"}
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.12"
+  }
 }

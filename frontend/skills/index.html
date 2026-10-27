@@ -6,7 +6,9 @@
   <meta name="color-scheme" content="dark light">
   <title>Skills &amp; Agents · ViMax</title>
   <link rel="stylesheet" href="/skills/styles.css">
+  <link rel="stylesheet" href="/skills/cloud.css">
   <script src="/skills/auth-clean.js"></script>
+  <script src="/skills/cloud.js" defer></script>
   <script src="/skills/app.js" defer></script>
 </head>
 <body>
@@ -22,7 +24,7 @@
       <div class="eyebrow"><span class="spark">✳</span> CREATOR TOOLKIT</div>
       <h1>Make more with ViMax.</h1>
       <p>Explore reviewed creator skills and produce a simple, narrated video with your own script—without replacing your ViMax workspace.</p>
-      <div class="hero-nav"><a href="#studio">Open local studio <span>↗</span></a><a href="#catalog" class="secondary">Browse the catalog</a></div>
+      <div class="hero-nav"><a id="cloud-ai-link" href="#account">Cloud AI planning <span>↗</span></a><a href="#studio" class="secondary">Open local studio</a><a href="#catalog" class="secondary">Browse the catalog</a></div>
     </section>
     <aside class="notice" id="notice" role="status">
       <strong>Local companion required.</strong> The public Vercel site has no video backend yet. This catalog is available, but generation only works after the local companion is set up. It is not a shared or multi-user service.
@@ -49,7 +51,59 @@
           <p id="cloud-project-error" class="error" role="alert"></p>
           <ul id="cloud-project-list" class="cloud-project-list"></ul>
         </div>
-        <div class="panel" id="cloud-info"><h3>What is connected?</h3><p class="form-note">The account and saved ideas use Supabase. Cloud rendering, AI research, scheduling and YouTube OAuth/upload are not connected. Use the local companion below for the tested CPU text-card renderer.</p></div>
+        <div class="panel" id="cloud-info"><h3>What is connected?</h3><p class="form-note">The account and saved ideas use Supabase. Text planning can be enabled with a server-side provider key. Cloud rendering, web research, scheduling and YouTube OAuth/upload are not connected. Use the local companion below for the tested CPU text-card renderer.</p></div>
+      </div>
+    </section>
+
+    <section id="cloud-ai" class="section" hidden>
+      <div class="section-heading"><div><div class="eyebrow">CLOUD / TEXT PLANNING</div><h2>Think through the next video.</h2><p>Ask for ideas, a script or a review. This assistant cannot browse, verify facts, render video or publish. Check its output and sources yourself.</p></div><span class="tag">ACCOUNT REQUIRED</span></div>
+      <div class="studio-grid">
+        <div class="panel">
+          <div class="panel-heading"><div><h3>Planning chat</h3><p>Replies and prompts are saved privately in your account when possible.</p></div><button type="button" id="clear-chat" class="small-button">Delete history</button></div>
+          <div id="chat-history" class="chat-history" aria-live="polite"><p class="form-note">No conversation yet.</p></div>
+          <form id="chat-form">
+            <div class="field-grid">
+              <label>Provider <select id="ai-provider" required></select></label>
+              <label>Model <select id="ai-model" required></select></label>
+              <label>Planning mode <select id="ai-mode"><option value="chat">Chat</option><option value="ideas">Brainstorm ideas</option><option value="script">Draft a script</option><option value="review">Review supplied text</option></select></label>
+              <label>Optional fallback <select id="ai-fallback"><option value="">No fallback</option></select></label>
+            </div>
+            <label>Your message <textarea id="chat-prompt" maxlength="1600" rows="4" required placeholder="Describe the video you want to plan…"></textarea></label>
+            <div class="chat-actions"><button class="button primary" id="chat-send" type="submit" disabled>Send message <span>→</span></button><button class="button secondary-button" id="ai-test" type="button" disabled>Test provider</button></div>
+          </form>
+          <p id="chat-status" class="form-note" role="status">Sign in and configure a provider to use text planning.</p><p id="chat-error" class="error" role="alert"></p>
+          <p class="form-note">Your prompt and up to three previous turns are sent to the selected provider. Choosing a fallback also permits sending that conversation to the fallback after an explicit provider failure. Calls may be paid; check provider pricing and privacy terms. Limits: 10 attempts per account and 50 shared per UTC day, including tests and stock searches. These are not dollar spending caps.</p>
+          <div class="voice-tools">
+            <h3>Voice input &amp; playback</h3>
+            <p class="form-note">Browser speech services may send audio or text to a third party. Dictation fills the message for review; it does not send automatically. Available languages and male/female voices depend on your browser and device.</p>
+            <label>Speech language <input id="speech-language" maxlength="35" value="en-US" placeholder="e.g. en-US or ur-PK"></label>
+            <label>Spoken reply voice <select id="speech-voice"><option value="">Browser default</option></select></label>
+            <label class="checkbox-label"><input type="checkbox" id="speak-replies"> Read new replies aloud</label>
+            <div class="voice-actions"><button type="button" id="dictate" class="small-button">Start dictation</button><button type="button" id="stop-dictation" class="small-button" disabled>Stop dictation</button><button type="button" id="stop-speech" class="small-button" disabled>Stop playback</button></div>
+            <p id="voice-status" class="form-note" role="status">Checking browser speech support…</p>
+          </div>
+        </div>
+        <div>
+          <div class="panel">
+            <div class="panel-heading"><div><h3>Providers &amp; usage</h3><p>Configured means a key exists, not that it works. A test is a real, possibly paid request.</p></div></div>
+            <ul id="provider-list" class="provider-list"></ul>
+            <p class="form-note">Keys are configured by the deployment owner in Vercel, never in this page. Hacker AI requires a verified private endpoint and is not connected. OpenCode supports only selected paid chat-completions models here.</p>
+            <button type="button" id="ai-pause" class="small-button" disabled>Pause my provider calls</button>
+            <p id="ai-access" class="form-note" role="status">Checking account access…</p>
+            <button type="button" id="refresh-usage" class="small-button">Refresh my usage</button>
+            <ul id="usage-list" class="usage-list"></ul>
+          </div>
+          <div class="panel stock-panel">
+            <div class="panel-heading"><div><h3>Find stock footage</h3><p>Search the Pexels video catalog; this does not download or add media to a video.</p></div></div>
+            <form id="stock-form">
+              <label>Search terms <input id="stock-query" maxlength="120" required placeholder="e.g. sunrise in the mountains"></label>
+              <label>Orientation <select id="stock-orientation"><option value="">Any</option><option value="landscape">Landscape</option><option value="portrait">Portrait</option><option value="square">Square</option></select></label>
+              <button class="button secondary-button" id="stock-search" type="submit" disabled>Search Pexels</button>
+            </form>
+            <p id="stock-status" class="form-note" role="status"></p><ul id="stock-results" class="stock-results"></ul>
+            <p class="form-note">Videos provided by <a href="https://www.pexels.com" target="_blank" rel="noopener noreferrer">Pexels</a>. Review each asset and the <a href="https://www.pexels.com/license/" target="_blank" rel="noopener noreferrer">license</a> before use; credit creators when possible.</p>
+          </div>
+        </div>
       </div>
     </section>
 

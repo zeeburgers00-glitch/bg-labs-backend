@@ -1,0 +1,138 @@
+// Server-only, fixed-host provider adapters. Browser input can choose only a
+// configured provider/model; it never supplies a URL, key, or arbitrary model.
+const SPECS = Object.freeze([
+  {id:'groq', label:'Groq', key:'GROQ_API_KEY', models:'GROQ_MODELS', defaults:['llama-3.1-8b-instant'], url:'https://api.groq.com/openai/v1/chat/completions'},
+  {id:'gemini', label:'Gemini', key:'GEMINI_API_KEY', models:'GEMINI_MODELS', defaults:['gemini-2.5-flash'], url:'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'},
+  {id:'mistral', label:'Mistral', key:'MISTRAL_API_KEY', models:'MISTRAL_MODELS', defaults:['mistral-small-latest'], url:'https://api.mistral.ai/v1/chat/completions'},
+  {id:'zai', label:'Z.ai (general API)', key:'ZAI_API_KEY', models:'ZAI_MODELS', defaults:['glm-4.5-flash'], url:'https://api.z.ai/api/paas/v4/chat/completions'},
+  {id:'openrouter', label:'OpenRouter', key:'OPENROUTER_API_KEY', models:'OPENROUTER_MODELS', defaults:['openrouter/free'], url:'https://openrouter.ai/api/v1/chat/completions'},
+  {id:'huggingface', label:'Hugging Face Inference', key:'HF_TOKEN', models:'HF_MODELS', defaults:['openai/gpt-oss-120b:groq'], url:'https://router.huggingface.co/v1/chat/completions'},
+  // OpenCode's different model families use different protocols. Restrict this
+  // adapter to documented paid chat-completions models, not /responses or
+  // /messages models. Free chat models require the OpenCode client itself.
+  {id:'opencode', label:'OpenCode Console / Zen', key:'OPENCODE_API_KEY', models:'OPENCODE_MODELS', defaults:[], url:'https://opencode.ai/inference/openai/v1/chat/completions', allowedModels:['qwen3.8-max','deepseek-v4.1-flash','deepseek-v4-pro','minimax-m3','minimax-m2.7','minimax-m2.5','glm-5.3-flash','glm-5.3','glm-5.2','glm-5.1','glm-5','kimi-k2.5','kimi-k2.6','kimi-k2.7-code','kimi-k3','mistral-large-4']},
+]);
+const MODEL = /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$/;
+const MAX_RESPONSE_BYTES = 256 * 1024;
+
+export class ProviderError extends Error {
+  constructor(status, message, retryable = false) {
+    super(message); this.status = status; this.retryable = retryable;
+  }
+}
+function validKey(value) {
+  return typeof value === 'string' && /^[\x21-\x7e]{1,2048}$/.test(value);
+}
+function configuration(env, spec) {
+  const key = env[spec.key] || '';
+  const raw = env[spec.models];
+  const models = raw === undefined || raw === '' ? spec.defaults : String(raw).split(',').map(s => s.trim());
+  if (!key) return {state:'not_configured', models:[]};
+  if (!validKey(key)) return {state:'invalid_configuration', models:[]};
+  if (!models.length) return {state:'model_required', models:[]};
+  if (models.length > 10 || new Set(models).size !== models.length || models.some(m => !MODEL.test(m) || (spec.allowedModels && !spec.allowedModels.includes(m)))) {
+    return {state:'invalid_configuration', models:[]};
+  }
+  return {state:'configured_unverified', models, key};
+}
+export function providerStatus(env) {
+  return SPECS.map(spec => {
+    const config = configuration(env, spec);
+    return {id:spec.id, label:spec.label, state:config.state, models:config.models};
+  });
+}
+export function pexelsStatus(env) {
+  const value = env.PEXELS_API_KEY || '';
+  return !value ? 'not_configured' : validKey(value) ? 'configured_unverified' : 'invalid_configuration';
+}
+function selected(env, id, model) {
+  const spec = SPECS.find(p => p.id === id);
+  if (!spec) throw new ProviderError(422, 'Choose an available AI provider.');
+  const config = configuration(env, spec);
+  if (config.state !== 'configured_unverified') throw new ProviderError(503, `${spec.label} is not configured for chat on this deployment.`);
+  if (typeof model !== 'string' || !config.models.includes(model)) throw new ProviderError(422, 'Choose a model allowed by the deployment owner.');
+  return {spec, key:config.key};
+}
+export function validateSelection(env, id, model) {
+  selected(env, id, model);
+}
+function responseFailure(status) {
+  if (status === 401 || status === 403) return new ProviderError(502, 'The provider rejected its credentials or permissions.', true);
+  if (status === 429) return new ProviderError(429, 'The provider rate limit or quota was reached.', true);
+  if ([500, 502, 503, 504].includes(status)) return new ProviderError(502, 'The provider is temporarily unavailable.', true);
+  return new ProviderError(502, 'The provider rejected the configured model or request.');
+}
+async function readResponse(response) {
+  if (!response.ok) {
+    try { await response.body?.cancel(); } catch { /* Never disclose provider error bodies. */ }
+    throw responseFailure(response.status);
+  }
+  const declared = response.headers.get('content-length');
+  if (declared && Number(declared) > MAX_RESPONSE_BYTES) throw new ProviderError(502, 'The provider response was too large.');
+  const reader = response.body?.getReader();
+  if (!reader) throw new ProviderError(502, 'The provider returned an empty response.');
+  const chunks = []; let size = 0;
+  while (true) {
+    const {done, value} = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > MAX_RESPONSE_BYTES) {
+      await reader.cancel();
+      throw new ProviderError(502, 'The provider response was too large.');
+    }
+    chunks.push(value);
+  }
+  const joined = new Uint8Array(size); let offset = 0;
+  for (const chunk of chunks) { joined.set(chunk, offset); offset += chunk.byteLength; }
+  try { return JSON.parse(new TextDecoder().decode(joined)); }
+  catch { throw new ProviderError(502, 'The provider returned invalid JSON.'); }
+}
+function safeCount(value) {
+  return Number.isSafeInteger(value) && value >= 0 && value <= 10_000_000 ? value : null;
+}
+export async function chatCompletion({env, fetchImpl, id, model, messages, maxTokens = 600}) {
+  const {spec, key} = selected(env, id, model);
+  let value;
+  try {
+    const response = await fetchImpl(spec.url, {method:'POST', headers:{authorization:`Bearer ${key}`, 'content-type':'application/json'},
+      body:JSON.stringify({model, messages, max_tokens:maxTokens}), signal:AbortSignal.timeout(25_000), redirect:'error', cache:'no-store'});
+    value = await readResponse(response);
+  } catch (error) {
+    if (error instanceof ProviderError) throw error;
+    // A timed-out request may already have been billed. Do not automatically
+    // retry it or switch providers in that ambiguous situation.
+    throw new ProviderError(504, 'The provider request timed out or could not be completed; it may have incurred charges.');
+  }
+  const text = value?.choices?.[0]?.message?.content;
+  if (typeof text !== 'string' || !text.trim()) throw new ProviderError(502, 'The provider returned no text.');
+  return {text:Array.from(text.trim()).slice(0, 6000).join(''), inputTokens:safeCount(value?.usage?.prompt_tokens), outputTokens:safeCount(value?.usage?.completion_tokens)};
+}
+function safePexelsUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && url.hostname === 'www.pexels.com' && !url.port && !url.username && !url.password ? url.href : null;
+  } catch { return null; }
+}
+export async function searchPexels({env, fetchImpl, query, orientation}) {
+  if (pexelsStatus(env) !== 'configured_unverified') throw new ProviderError(503, 'Pexels is not configured on this deployment.');
+  const url = new URL('https://api.pexels.com/v1/videos/search');
+  url.searchParams.set('query', query); url.searchParams.set('per_page', '8');
+  if (orientation) url.searchParams.set('orientation', orientation);
+  let value;
+  try {
+    const response = await fetchImpl(url.href, {method:'GET', headers:{authorization:env.PEXELS_API_KEY}, signal:AbortSignal.timeout(12_000), redirect:'error', cache:'no-store'});
+    value = await readResponse(response);
+  } catch (error) {
+    if (error instanceof ProviderError) throw error;
+    throw new ProviderError(504, 'Pexels could not be reached.');
+  }
+  if (!Array.isArray(value?.videos)) throw new ProviderError(502, 'Pexels returned an invalid result.');
+  return value.videos.slice(0, 8).map(video => {
+    const url = safePexelsUrl(video?.url);
+    if (!url || !Number.isSafeInteger(video?.id) || video.id < 1) return null;
+    return {id:video.id, url, creator:typeof video?.user?.name === 'string' ? video.user.name.replace(/[\u0000-\u001f\u007f]/g, '').slice(0, 100) : 'Pexels contributor',
+      duration:Number.isFinite(video.duration) && video.duration >= 0 ? Math.round(video.duration) : null,
+      width:Number.isSafeInteger(video.width) && video.width > 0 ? video.width : null,
+      height:Number.isSafeInteger(video.height) && video.height > 0 ? video.height : null};
+  }).filter(Boolean);
+}

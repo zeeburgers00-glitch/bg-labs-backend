@@ -2,6 +2,7 @@ node_modules/
 dist/
 .vercel/
 .env*
+!.env.example
 .vimax-skills/
 skills/.venv/
 skills/voices.json

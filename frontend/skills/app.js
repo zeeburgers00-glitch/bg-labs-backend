@@ -77,7 +77,7 @@ async function loadSystem() {
     $('connection').classList.add('ready');
     if (!system.local_only) {
       $('connection').textContent = 'Database connected · video worker offline';
-      $('notice').textContent = 'Supabase accounts and private ideas are connected. The online video agent, AI research and automatic YouTube upload are not connected yet. The renderer below currently runs only on a locally configured computer.';
+      $('notice').textContent = `Supabase accounts and private ideas are connected. Cloud text planning is ${system.text_chat === 'configured_unverified' ? 'configured but not yet verified' : 'not configured'}. Online video generation, web research and automatic YouTube upload are not connected. The renderer below runs only on a locally configured computer.`;
       $('account').hidden = false;
       $('hardware').textContent = system.warnings.join(' ');
       setupVoices(system); renderCatalog();
@@ -85,6 +85,7 @@ async function loadSystem() {
       return;
     }
     $('connection').textContent = 'Local companion connected';
+    $('cloud-ai-link').hidden = true;
     $('notice').classList.add('ready');
     $('notice').textContent = 'Single-user local mode. Your script and notes remain on this computer. This path uses text cards, not AI-generated visuals; no online research, translation, or YouTube upload is included.';
     setupVoices(system); $('create-button').disabled = !system.ready_for_video; $('analysis-button').disabled = false;
@@ -93,7 +94,8 @@ async function loadSystem() {
     const prior = await json('/api/skills/jobs');
     if (prior.jobs.length) showJob(prior.jobs[0]);
   } catch (error) {
-    $('connection').textContent = 'Local companion offline';
+    $('connection').textContent = 'Service health unavailable';
+    $('notice').textContent = 'The service health check could not be completed. Cloud and local capabilities cannot be verified right now.';
     $('hardware').textContent = error.message;
   }
 }
@@ -221,7 +223,9 @@ async function loadAccount() {
   const data = await json('/api/cloud/session');
   const loggedIn = Boolean(data.user);
   $('account-form').hidden = loggedIn; $('cloud-projects').hidden = !loggedIn; $('cloud-info').hidden = loggedIn;
-  if (loggedIn) { $('account-identity').textContent = data.user.email; await loadProjects(); }
+  const cloud = window.vimaxCloud.onSession(loggedIn);
+  if (loggedIn) { $('account-identity').textContent = `${data.user.email} · Account ID: ${data.user.id}`; await loadProjects(); }
+  await cloud;
   try {
     const confirmed = sessionStorage.getItem('vimax-email-confirmed');
     if (confirmed) { $('account-message').textContent = confirmed === 'yes' ? 'Email confirmed. Please sign in.' : 'Email confirmation failed or expired; please try again.'; sessionStorage.removeItem('vimax-email-confirmed'); }

@@ -13,6 +13,7 @@ function fakeSupabase() {
     const token = init.headers.authorization?.replace('Bearer ', '');
     const who = token === 'alice-token' ? 'alice' : token === 'bob-token' ? 'bob' : null;
     if (u.pathname === '/auth/v1/health') return Response.json({status:'ok'});
+    if (u.pathname === '/rest/v1/rpc/vimax_cloud_health') return Response.json(true);
     if (u.pathname === '/auth/v1/signup') return Response.json({id:'fake'});
     if (u.pathname === '/auth/v1/token' && u.searchParams.get('grant_type') === 'password') {
       const name = payload.email.split('@')[0];
@@ -50,7 +51,7 @@ async function login(bridge, user) {
 test('health truthfully distinguishes connected database from missing agent and upload', async () => {
   const fake = fakeSupabase(); const bridge = createBridge({env,fetchImpl:fake.fetch});
   const health = await bridge.fetch(request('/api/health'));
-  assert.deepEqual(await health.json(), {ok:true,database:'connected',video_agent:'unavailable',youtube_upload:'unavailable'});
+  assert.deepEqual(await health.json(), {ok:true,database:'connected',text_chat:'unconfigured',video_agent:'unavailable',youtube_upload:'unavailable'});
   const sessions = await (await bridge.fetch(request('/api/bridge?__vimax_path=sessions'))).json();
   assert.deepEqual(sessions.sessions, []); assert.match(sessions.warning, /not connected/);
   const system = await (await bridge.fetch(request('/api/skills/system'))).json();
