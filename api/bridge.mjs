@@ -4,7 +4,9 @@ import {ProviderError, providerStatus, pexelsStatus, validateSelection, chatComp
 import {YouTubeError, createYouTube, clearYouTubeCookies} from './youtube.mjs';
 import {SocialError, createSocial, clearSocialCookies} from './social.mjs';
 import {GpuError, createGpu} from './gpu.mjs';
+import {createHash, randomBytes} from 'node:crypto';
 
+const GOOGLE_PKCE_COOKIE = '__Host-vimax_google_pkce';
 const ACCESS_COOKIE = '__Host-vimax_access';
 const REFRESH_COOKIE = '__Host-vimax_refresh';
 const MAX_BODY = 8192;
@@ -22,6 +24,12 @@ function json(body, status = 200, cookies = []) {
   for (const cookie of cookies) headers.append('set-cookie', cookie);
   return Response.json(body, {status, headers});
 }
+function googleSignInRedirect(success, cookies = []) {
+  const headers = new Headers({location:success ? '/skills/?google_signin=success' : '/skills/?google_signin=failed',
+    'cache-control':'no-store', 'referrer-policy':'no-referrer', 'x-content-type-options':'nosniff'});
+  for (const item of cookies) headers.append('set-cookie', item);
+  return new Response(null, {status:303, headers});
+}
 function cookie(name, value, maxAge) {
   // Values are opaque GoTrue tokens; reject anything that could corrupt headers.
   if (!/^[A-Za-z0-9_.~-]*$/.test(value) || value.length > 4096) throw new Error('Invalid session token.');
@@ -32,7 +40,17 @@ function sessionCookies(session) {
   const age = Math.max(1, Math.min(Number(session.expires_in) || 3600, 3600));
   return [cookie(ACCESS_COOKIE, session.access_token, age), cookie(REFRESH_COOKIE, session.refresh_token, 30 * 24 * 3600)];
 }
-function clearCookies() { return [cookie(ACCESS_COOKIE, '', 0), cookie(REFRESH_COOKIE, '', 0), ...clearYouTubeCookies(), ...clearSocialCookies()]; }
+function clearCookies() { return [cookie(ACCESS_COOKIE, '', 0), cookie(REFRESH_COOKIE, '', 0), cookie(GOOGLE_PKCE_COOKIE, '', 0), ...clearYouTubeCookies(), ...clearSocialCookies()]; }
+function readSingleCookie(request, name) {
+  let value = null, seen = false;
+  for (const part of (request.headers.get('cookie') || '').split(';')) {
+    const index = part.indexOf('=');
+    if (index < 0 || part.slice(0, index).trim() !== name) continue;
+    if (seen) return null;
+    seen = true; value = part.slice(index + 1).trim();
+  }
+  return value;
+}
 function readCookies(request) {
   const result = Object.create(null);
   for (const part of (request.headers.get('cookie') || '').split(';')) {
@@ -181,6 +199,24 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch} =
     if (!/^sb_publishable_[A-Za-z0-9_-]+$/.test(key)) throw new HttpError(503, 'Supabase is not configured on this deployment.');
     return {base:url.origin, key};
   }
+  function googleSignInConfig(request) {
+    // A separate opt-in protects existing accounts in the shared Auth project.
+    // The owner must confirm their existing email and configure the Supabase
+    // provider and redirect allowlist before enabling this switch.
+    if (env.VIMAX_GOOGLE_SIGNIN_ENABLED !== 'true') return null;
+    let redirect;
+    try { redirect = new URL(env.VIMAX_GOOGLE_SIGNIN_REDIRECT_URI || ''); } catch { return null; }
+    if (redirect.protocol !== 'https:' || redirect.username || redirect.password || redirect.port || redirect.search || redirect.hash
+        || redirect.pathname !== '/api/cloud/google/callback' || redirect.origin !== new URL(request.url).origin) return null;
+    return {redirect:redirect.href, ...config()};
+  }
+  async function googleSignInReady(request) {
+    const configured = googleSignInConfig(request);
+    if (!configured) return null;
+    const {response, value} = await supa('/auth/v1/settings');
+    if (!response.ok || !value || !value.external || typeof value.external !== 'object' || Array.isArray(value.external)) throw new HttpError(503, 'Google sign-in status could not be checked.');
+    return value.external.google === true ? configured : null;
+  }
   async function supa(path, {method = 'GET', token, data, extraHeaders = {}} = {}) {
     const {base, key} = config();
     let response;
@@ -287,6 +323,39 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch} =
       if (!['GET', 'HEAD', 'POST', 'PATCH', 'DELETE'].includes(method)) throw new HttpError(405, 'Method not allowed.');
       if (!['GET', 'HEAD'].includes(method) && !sameOrigin(request)) throw new HttpError(403, 'A same-origin request is required.');
 
+      if (path === '/api/cloud/google/status' && method === 'GET') {
+        return json({enabled:Boolean(await googleSignInReady(request))});
+      }
+      if (path === '/api/cloud/google/start' && method === 'POST') {
+        await body(request);
+        const session = await currentUser(request);
+        sessionUpdates = session.updates;
+        if (session.user) throw new HttpError(409, 'Sign out before signing in with another account.');
+        const cfg = await googleSignInReady(request);
+        if (!cfg) throw new HttpError(503, 'Google sign-in is not configured for this deployment.');
+        const verifier = randomBytes(32).toString('base64url');
+        const challenge = createHash('sha256').update(verifier).digest('base64url');
+        const url = new URL('/auth/v1/authorize', cfg.base);
+        for (const [key,value] of Object.entries({provider:'google',scopes:'openid',redirect_to:cfg.redirect,code_challenge:challenge,code_challenge_method:'s256'})) url.searchParams.set(key,value);
+        return json({authorization_url:url.href}, 200, [cookie(GOOGLE_PKCE_COOKIE, verifier, 600)]);
+      }
+      if (path === '/api/cloud/google/callback' && method === 'GET') {
+        // The Supabase authorization code is one-use. The PKCE verifier never
+        // leaves an HttpOnly cookie; neither it nor tokens go to page scripts.
+        const cleared = cookie(GOOGLE_PKCE_COOKIE, '', 0);
+        try {
+          const cfg = googleSignInConfig(request), params = new URL(request.url).searchParams;
+          const code = params.get('code') || '', verifier = readSingleCookie(request, GOOGLE_PKCE_COOKIE) || '';
+          if (!cfg || params.getAll('code').length !== 1 || !UUID.test(code) || !/^[A-Za-z0-9_-]{43}$/.test(verifier)) return googleSignInRedirect(false, [cleared]);
+          const existing = await currentUser(request);
+          // Do not replace an account established in another tab while Google
+          // consent was open; explicit sign-out is needed to change accounts.
+          if (existing.user) return googleSignInRedirect(false, [...existing.updates, cleared]);
+          const {response,value} = await supa('/auth/v1/token?grant_type=pkce', {method:'POST',data:{auth_code:code,code_verifier:verifier}});
+          if (!response.ok) return googleSignInRedirect(false, [cleared]);
+          return googleSignInRedirect(true, [cleared, ...clearYouTubeCookies(), ...clearSocialCookies(), ...sessionCookies(value)]);
+        } catch { return googleSignInRedirect(false, [cleared]); }
+      }
       if (path.startsWith('/api/cloud/youtube/')) {
         const session = await authenticated();
         return await youtube.handle({request,path,method,session});

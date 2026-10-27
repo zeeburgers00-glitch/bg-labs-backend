@@ -19,8 +19,8 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   let confirm=true;page.on('dialog',dialog=>confirm?dialog.accept():dialog.dismiss());
   const alice='aaaaaaaa-0000-4000-8000-000000000001',bob='bbbbbbbb-0000-4000-8000-000000000002';
   const channelA='12345678-0000-4000-8000-000000000010',channelB='12345678-0000-4000-8000-000000000011';
-  let signedIn=false,current=alice,configured=false,allowed=true,paused=false,googleConfigured=false,googleAllowed=true;
-  let authorizationUrl='https://accounts.google.com/o/oauth2/v2/auth?state=mock',holdChat=false,holdOAuth=false,holdProviders=false,releaseChat,releaseOAuth,releaseProviders,notifyChat,notifyOAuth,notifyProviders;
+  let signedIn=false,current=alice,configured=false,allowed=true,paused=false,googleConfigured=false,googleAllowed=true,appLoginEnabled=false,fbConfigured=false;
+  let authorizationUrl='https://accounts.google.com/o/oauth2/v2/auth?state=mock',appAuthorizationUrl='https://fake.supabase.co/auth/v1/authorize?provider=google',holdChat=false,holdOAuth=false,holdProviders=false,releaseChat,releaseOAuth,releaseProviders,notifyChat,notifyOAuth,notifyProviders;
   const selected={[alice]:null,[bob]:null}, histories={
    [alice]:[{prompt:'Alice private question',reply:'<img src=x onerror=alert(1)> safe answer',provider:'groq',model:'openai/gpt-oss-120b'}],
    [bob]:[{prompt:'Bob private question',reply:'Bob reply',provider:'groq',model:'openai/gpt-oss-120b'}],
@@ -30,11 +30,19 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
     {id:channelB,channel_id:'UCabcdefghijklmnopqrstuv',channel_title:'Second channel',status:'active',is_default:false}],
    [bob]:[],
   };
-  const requests=[],posts=[],chatBodies=[],loginBodies=[],resendBodies=[],selections=[],disconnects=[];
+  const facebookPage='22345678-0000-4000-8000-000000000010';
+  const pages={[alice]:[{id:facebookPage,provider:'facebook',external_id:'12345',display_name:'Alice Page',status:'active',is_default:true}],[bob]:[]};
+  const requests=[],posts=[],chatBodies=[],loginBodies=[],resendBodies=[],selections=[],disconnects=[],facebookSelections=[];
   await page.route('**/api/**',async route=>{
    const rq=route.request(),p=new URL(rq.url()).pathname,m=rq.method();let data={},body={};try{body=rq.postDataJSON()||{}}catch{}
    requests.push(p);if(m!=='GET')posts.push(p);
    if(p==='/api/health')data={ok:true,text_chat:configured?'configured_unverified':'unconfigured',youtube_upload:googleConfigured?'configured_unverified':'unavailable'};
+   else if(p==='/api/cloud/google/status')data={enabled:appLoginEnabled};
+   else if(p==='/api/cloud/google/start')data={authorization_url:appAuthorizationUrl};
+   else if(p==='/api/cloud/social/status')data={providers:{facebook:{configured:fbConfigured,allowed:fbConfigured},tiktok:{configured:false,allowed:false}},connections:pages[current]};
+   else if(p==='/api/cloud/social/facebook/select'){facebookSelections.push({owner:current,id:body.id});data={connection:{id:body.id,provider:'facebook'}};}
+   else if(p==='/api/cloud/social/facebook/disconnect'){pages[current]=pages[current].filter(item=>item.id!==body.id);data={disconnected:true,revoked:false};}
+   else if(p==='/api/cloud/social/facebook/start')data={authorization_url:'https://www.facebook.com/v26.0/dialog/oauth?state=mock'};
    else if(p==='/api/cloud/session')data={user:signedIn?{id:current,email:current===alice?'alice@example.test':'bob@example.test'}:null};
    else if(p==='/api/cloud/login'){loginBodies.push(body);current=body.email.startsWith('bob')?bob:alice;signedIn=true;data={ok:true};}
    else if(p==='/api/cloud/signup')data={message:'Check your email, then sign in.'};
@@ -80,11 +88,13 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   await page.waitForFunction(()=>document.getElementById('chat-status').textContent.includes('AI provider'));
   assert.equal(await page.getByRole('heading',{name:'What’s on your mind?'}).isVisible(),true);
   assert.equal(await page.getByRole('button',{name:'Continue with Google'}).isVisible(),true);
-  assert.equal(await page.locator('#google-connect').isDisabled(),true);assert.equal(await page.locator('#chat-send').isDisabled(),true);
-  assert.match(await page.locator('#channel-status').textContent(),/Google setup needed/);
+  assert.equal(await page.locator('#google-signin').isDisabled(),true);assert.equal(await page.locator('#chat-send').isDisabled(),true);
+  await page.waitForFunction(()=>document.getElementById('google-signin-status').textContent.includes('setup needed'));
+  assert.match(await page.locator('#google-signin-status').textContent(),/setup needed/);
   assert.equal(await page.locator('video, iframe, a[href="/workspace.html"], a[href="/skills/full.html"]').count(),0);
   assert.doesNotMatch(await page.locator('body').innerText(),/video tools|gpu|mission control|upload|catalog/i);
-  await page.locator('#google-connect').dispatchEvent('click');
+  await page.locator('#google-signin').dispatchEvent('click');
+  assert.equal(posts.includes('/api/cloud/google/start'),false);
   assert.equal(posts.includes('/api/cloud/youtube/oauth/start'),false);
   assert.equal(requests.includes('/api/cloud/youtube/status'),false);
   // Email confirmation resend only sends the email; the password stays in the form.
@@ -97,16 +107,18 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   await page.locator('#account-form button[value=login]').click();await providersReached;
   await page.waitForFunction(()=>document.getElementById('account-button').textContent==='Account' && !document.getElementById('account-dialog').open);
   releaseProviders();holdProviders=false;
-  await page.waitForFunction(()=>document.getElementById('chat-status').textContent.includes('No AI provider'));
+  await page.waitForFunction(()=>document.getElementById('chat-status').textContent.includes('channel setup is incomplete'));
   assert.equal(loginBodies.length,1);assert.equal(await page.locator('#google-connect').isDisabled(),true);
   await page.locator('#chat-prompt').fill('Hello');await page.locator('#chat-form').dispatchEvent('submit');
   assert.equal(chatBodies.length,0,'unconfigured chat must not call the provider');
   // Restore a saved channel and chat history for the authenticated owner.
-  configured=true;googleConfigured=true;await page.reload({waitUntil:'domcontentloaded'});
+  configured=true;googleConfigured=true;fbConfigured=true;await page.reload({waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>document.getElementById('channel-status').textContent.startsWith('Selected:'));
   assert.deepEqual(selections,[{owner:alice,id:channelA}]);
   assert.equal(await page.locator('#messages img').count(),0);assert.match(await page.locator('#messages').textContent(),/<img src=x/);
   assert.equal(await page.locator('#channel-status img').count(),0);
+  await page.waitForFunction(()=>document.getElementById('facebook-status').textContent.includes('Verified this session'));
+  assert.deepEqual(facebookSelections,[{owner:alice,id:facebookPage}]);
   await page.locator('#chat-settings').click();await page.locator('#provider').selectOption('groq');
   await page.locator('#model').selectOption('openai/gpt-oss-120b');await page.locator('#answer-length').selectOption('detailed');
   await page.locator('#fallback').selectOption('openai|gpt-5.4-mini');await page.locator('[data-close=settings-dialog]').click();
@@ -119,16 +131,24 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   await page.waitForFunction(()=>document.getElementById('toggle-pause').textContent==='Resume chat');assert.equal(await page.locator('#chat-send').isDisabled(),true);
   await page.locator('#toggle-pause').click();await page.waitForFunction(()=>document.getElementById('toggle-pause').textContent==='Pause chat');
   await page.locator('[data-close=settings-dialog]').click();
-  await page.locator('#channel-manage').click();await page.locator('#channel-select').selectOption(channelB);await page.locator('#channel-select-button').click();
+  await page.locator('#account-button').click();await page.locator('#channel-manage').click();await page.locator('#channel-select').selectOption(channelB);await page.locator('#channel-select-button').click();
   await page.waitForFunction(()=>document.getElementById('channel-status').textContent.includes('Second channel'));
   assert.equal(selections.at(-1).id,channelB);await page.locator('#channel-disconnect').click();
   await page.waitForFunction(()=>document.getElementById('channel-message').textContent.includes('revocation was not confirmed'));
-  assert.deepEqual(disconnects,[{owner:alice,id:channelB}]);await page.locator('[data-close=channel-dialog]').click();
+  assert.deepEqual(disconnects,[{owner:alice,id:channelB}]);
+  await page.locator('#channel-select').selectOption(channelA);await page.locator('#channel-select-button').click();
+  await page.waitForFunction(()=>document.getElementById('channel-status').textContent.startsWith('Selected:'));
+  await page.locator('[data-close=channel-dialog]').click();
+  await page.locator('#account-button').click();await page.locator('#facebook-manage').click();
+  assert.match(await page.locator('#facebook-status').textContent(),/Alice Page/);
+  await page.locator('#facebook-disconnect').click();
+  await page.waitForFunction(()=>document.getElementById('facebook-message').textContent.includes('not revoked'));
+  await page.locator('[data-close=facebook-dialog]').click();
   // A late provider response after logout must not reveal the old owner's data.
   holdChat=true;const chatReached=new Promise(resolve=>{notifyChat=resolve;});
   await page.locator('#chat-prompt').fill('Private pending question');await page.locator('#chat-send').click();await chatReached;
   await page.locator('#account-button').click();await page.locator('#logout').click();
-  await page.waitForFunction(()=>document.getElementById('account-button').textContent==='Sign in');
+  await page.waitForFunction(()=>document.getElementById('account-button').textContent==='Email sign in');
   releaseChat();await page.waitForTimeout(100);holdChat=false;
   assert.equal(await page.locator('#messages').textContent(),'');assert.equal(await page.locator('#chat-prompt').inputValue(),'');
   assert.equal(await page.locator('#channel-manage').isHidden(),true);assert.doesNotMatch(await page.locator('#channel-status').textContent(),/Selected|img src/);
@@ -139,18 +159,21 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   assert.doesNotMatch(await page.locator('#messages').textContent(),/Alice private|Private pending/);
   assert.equal(await page.locator('#channel-manage').isHidden(),true);
   // Validate redirect origin and prevent a late OAuth start from navigating after logout.
-  authorizationUrl='https://example.invalid/steal';await page.locator('#google-connect').click();
+  assert.match(await page.locator('#chat-status').textContent(),/Connect a YouTube channel/);
+  assert.equal(await page.locator('#chat-send').isDisabled(),true);
+  authorizationUrl='https://example.invalid/steal';await page.locator('#account-button').click();await page.locator('#channel-manage').click();await page.locator('#google-connect').click();
   await page.waitForFunction(()=>document.getElementById('channel-error').textContent.includes('Invalid Google authorization URL'));
   assert.ok(page.url().startsWith(base));await page.locator('[data-close=channel-dialog]').click();
   authorizationUrl='https://accounts.google.com/o/oauth2/v2/auth?state=mock';holdOAuth=true;
-  const oauthReached=new Promise(resolve=>{notifyOAuth=resolve;});await page.locator('#google-connect').click();await oauthReached;
-  await page.locator('#account-button').click();await page.locator('#logout').click();
-  await page.waitForFunction(()=>document.getElementById('account-button').textContent==='Sign in');
+  const oauthReached=new Promise(resolve=>{notifyOAuth=resolve;});await page.locator('#account-button').click();await page.locator('#channel-manage').click();await page.locator('#google-connect').click();await oauthReached;
+  await page.locator('[data-close=channel-dialog]').click();await page.locator('#account-button').click();await page.locator('#logout').click();
+  await page.waitForFunction(()=>document.getElementById('account-button').textContent==='Email sign in');
   releaseOAuth();await page.waitForTimeout(100);holdOAuth=false;assert.ok(page.url().startsWith(base));
   await page.locator('#account-button').click();await page.locator('#account-email').fill('bob@example.test');
   await page.locator('#account-password').fill('sample-password');await page.locator('#account-form button[value=login]').click();
   await page.waitForFunction(()=>!document.getElementById('google-connect').disabled);
   let googleNavigation='';await page.route('https://accounts.google.com/**',route=>{googleNavigation=route.request().url();return route.fulfill({status:200,body:'Mock consent page'});});
+  await page.locator('#account-button').click();await page.locator('#channel-manage').click();
   await page.locator('#google-connect').click();await page.waitForURL('https://accounts.google.com/**');
   assert.equal(new URL(googleNavigation).pathname,'/o/oauth2/v2/auth');
   assert.equal(posts.filter(value=>value==='/api/cloud/youtube/oauth/start').length,3);
@@ -162,8 +185,34 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   assert.equal(await page.locator('#account-dialog').isVisible(),true);assert.ok(!page.url().includes('test-token'));
   await page.locator('[data-close=account-dialog]').click();await page.setViewportSize({width:390,height:844});
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'mobile overflow');
-  assert.equal(await page.locator('#google-connect').isVisible(),true);assert.equal(await page.locator('#chat-form').isVisible(),true);
+  assert.equal(await page.locator('#google-signin').isVisible(),true);assert.equal(await page.locator('#chat-form').isVisible(),true);
+  // A forged success query without this tab's login intent cannot start channel consent.
+  appLoginEnabled=true;signedIn=true;current=bob;const beforeAuto=posts.filter(value=>value==='/api/cloud/youtube/oauth/start').length;
+  await page.goto(`${base}/skills/?google_signin=success`,{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>document.getElementById('chat-status').textContent.includes('Connect a YouTube channel'));
+  assert.equal(posts.filter(value=>value==='/api/cloud/youtube/oauth/start').length,beforeAuto);
+  assert.equal(await page.locator('#chat-send').isDisabled(),true);
+  // Google app sign-in is first; reject untrusted redirect, then mock the
+  // Supabase callback and the first separately-consented channel authorization.
+  signedIn=false;await page.goto(`${base}/`,{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>!document.getElementById('google-signin').disabled);
+  assert.equal(await page.locator('#account-button').isHidden(),true);
+  appAuthorizationUrl='https://evil.example/steal';await page.locator('#google-signin').click();
+  await page.waitForFunction(()=>document.getElementById('google-signin-status').textContent.includes('Invalid Google sign-in URL'));
+  assert.ok(page.url().startsWith(base));assert.equal(await page.locator('#account-button').isVisible(),true);
+  appAuthorizationUrl='https://fake.supabase.co/auth/v1/authorize?provider=google';let appNavigation='';
+  await page.route('https://fake.supabase.co/**',route=>{appNavigation=route.request().url();return route.fulfill({status:200,body:'Mock app sign-in'});});
+  await page.locator('#google-signin').click();await page.waitForURL('https://fake.supabase.co/**');
+  assert.equal(new URL(appNavigation).pathname,'/auth/v1/authorize');
+  signedIn=true;await page.goto(`${base}/skills/?google_signin=success`,{waitUntil:'domcontentloaded'});
+  await page.waitForURL('https://accounts.google.com/**');
+  assert.equal(posts.filter(value=>value==='/api/cloud/youtube/oauth/start').length,beforeAuto+1);
+  // A saved channel restores without a second consent; it gates the composer.
+  channels[bob]=[{id:channelB,channel_id:'UCabcdefghijklmnopqrstuv',channel_title:'Bob channel',status:'active',is_default:true}];selected[bob]=null;
+  await page.goto(`${base}/skills/?youtube=connected#youtube`,{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>document.getElementById('channel-status').textContent.includes('Bob channel'));
+  await page.locator('#chat-prompt').fill('Hi');assert.equal(await page.locator('#chat-send').isEnabled(),true);
   assert.deepEqual(errors,[]);
-  console.log('Mocked hosted chat smoke passed: minimal layout, auth, chat, channel restore, OAuth, logout privacy and mobile.');
+  console.log('Mocked hosted chat smoke passed: Google app login, channel consent/restore, Facebook Pages, chat privacy and mobile.');
  } finally {await browser?.close();await new Promise(resolve=>server.close(resolve));}
 })().catch(error=>{console.error(error);process.exitCode=1});

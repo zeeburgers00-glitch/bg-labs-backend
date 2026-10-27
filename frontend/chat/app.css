@@ -21,15 +21,15 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .brand-mark { width: 33px; height: 33px; border-radius: 11px; }
 .brand-mark svg { width: 19px; height: 19px; }
 .brand-label { margin-left: 2px; color: #9690a9; font-size: 9px; font-weight: 800; letter-spacing: .15em; }
-.channel-area { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 5px; min-width: 0; }
-.channel-actions { display: flex; align-items: center; gap: 6px; }
+.signin-area { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 5px; min-width: 0; }
 .google-button { min-height: 38px; display: inline-flex; align-items: center; justify-content: center; gap: 9px; padding: 0 13px; border: 1px solid #e4e3e9; border-radius: 10px; color: #25232d; background: #fff; font-size: 12px; font-weight: 700; white-space: nowrap; }
 .google-button svg { width: 16px; height: 16px; flex: none; }
 .google-button:disabled { opacity: .57; }
 .google-button:not(:disabled):hover { background: #f0edf8; }
-.channel-status { max-width: 340px; color: #aaa6b8; font-size: 10px; text-align: right; line-height: 1.3; overflow-wrap: anywhere; }
+.signin-status { max-width: 340px; color: #aaa6b8; font-size: 10px; text-align: right; line-height: 1.3; overflow-wrap: anywhere; }
 .account-button, .secondary-button { color: #eeedf4; background: #22232f; border: 1px solid #383946; border-radius: 9px; font-weight: 650; }
 .account-button { flex: none; padding: 10px 14px; font-size: 12px; white-space: nowrap; }
+.signin-area[hidden] + .account-button { margin-left: auto; }
 .account-button:hover, .secondary-button:hover:not(:disabled) { background: #2c2c3b; }
 .chat-layout { width: min(870px, 100%); flex: 1; min-height: 0; margin: 0 auto; padding: 0 28px; display: flex; flex-direction: column; }
 .conversation { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; scrollbar-color: #494555 transparent; scrollbar-width: thin; }
@@ -70,10 +70,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .icon-button { display: inline-grid; place-items: center; padding: 0; border: 0; background: transparent; color: #b6b2c5; border-radius: 8px; }
 .icon-button:hover:not(:disabled) { color: #fff; background: #ffffff0d; }
 .icon-button:disabled { opacity: .38; }
-.voice-button, .channel-manage { width: 35px; height: 35px; }
+.voice-button { width: 35px; height: 35px; }
 .voice-button svg { width: 19px; height: 19px; }
-.channel-manage { border: 1px solid #3e3d4c; }
-.channel-manage svg { width: 19px; height: 19px; fill: currentColor; stroke: none; }
 .send-button { width: 37px; height: 37px; display: grid; place-items: center; border: 0; border-radius: 11px; color: #1a1627; background: #cabaff; }
 .send-button:hover:not(:disabled) { background: #ded4ff; }
 .send-button:disabled { opacity: .38; }
@@ -110,9 +108,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .brand { font-size: 17px; }
   .brand-mark { width: 30px; height: 30px; border-radius: 10px; }
   .account-button { margin-left: auto; padding: 8px 11px; }
-  .channel-area { order: 3; width: 100%; margin: 0; flex-direction: row; justify-content: space-between; align-items: center; gap: 10px; }
+  .signin-area { order: 3; width: 100%; margin: 0; flex-direction: row; justify-content: space-between; align-items: center; gap: 10px; }
   .google-button { min-height: 35px; font-size: 11px; padding: 0 10px; }
-  .channel-status { flex: 1; max-width: 190px; font-size: 9px; }
+  .signin-status { flex: 1; max-width: 190px; font-size: 9px; }
   .chat-layout { padding: 0 16px; }
   .welcome { padding: 20px 0; }
   .welcome-mark { width: 50px; height: 50px; border-radius: 17px; margin-bottom: 24px; }
@@ -123,5 +121,5 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .composer-wrap { padding-bottom: 14px; }
   .dialog { padding: 21px; }
 }
-@media (max-width: 370px) { .settings-grid { grid-template-columns: 1fr; } .channel-status { max-width: 150px; } }
+@media (max-width: 370px) { .settings-grid { grid-template-columns: 1fr; } .signin-status { max-width: 150px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: .01ms !important; } }

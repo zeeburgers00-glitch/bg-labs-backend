@@ -248,7 +248,7 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   // The legacy sidebar deep link goes to the local connection panel, or to
   // the focused hosted chat's Google control when testing the hosted overlay.
   const hostedFull=process.env.VIMAX_TEST_SKILLS_PATH==='/skills/full.html';
-  const sidebarUrl=`${origin}/skills/#youtube`, button=hostedFull?'#google-connect':'#yt-connect';
+  const sidebarUrl=`${origin}/skills/#youtube`, button=hostedFull?'#google-signin':'#yt-connect';
   localOnly=false;signedIn=false;youtubeConfigured=false;await page.reload({waitUntil:'domcontentloaded'});
   await page.getByRole('button',{name:'Connect YouTube'}).click();
   await page.waitForURL(sidebarUrl);assert.equal(await page.locator(button).isVisible(),true);

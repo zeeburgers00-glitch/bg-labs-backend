@@ -4,9 +4,12 @@
   const state = {
     user:null, session:'loading', sessionSequence:0, version:0, controllers:new Set(), authBusy:false,
     deployment:{chat:'checking', youtube:'checking'},
+    google:{status:'checking', busy:false, error:''},
     chat:{providers:[], allowed:false, paused:false, settingsReady:false, historyReady:false, busy:false, turns:[], pending:null, note:'', error:''},
     channel:{ready:false, configured:false, allowed:false, busy:false, connected:null, connectionId:null, saved:[], autoAttempted:false, sequence:0, notice:'', error:''},
+    facebook:{ready:false, configured:false, allowed:false, busy:false, saved:[], verified:null, autoAttempted:false, sequence:0, notice:'', error:''},
   };
+  let autoConnectAfterLogin = false;
   const isCurrent = version => Boolean(state.user && state.version === version);
   const element = (tag, text, className = '') => {
     const item = document.createElement(tag);
@@ -61,8 +64,8 @@
     updateModels();
   }
   function canChat() {
-    return Boolean(state.user && state.chat.settingsReady && state.chat.historyReady && state.chat.allowed && !state.chat.paused
-      && !state.chat.busy && $('provider').value && $('model').value);
+    return Boolean(state.user && state.channel.ready && state.channel.connected && state.chat.settingsReady && state.chat.historyReady
+      && state.chat.allowed && !state.chat.paused && !state.chat.busy && $('provider').value && $('model').value);
   }
   function updateChatControls() {
     const chat = state.chat;
@@ -86,6 +89,12 @@
     else if (!chat.settingsReady || !chat.historyReady) status = 'Checking chat settings…';
     else if (!chat.allowed) status = 'Chat access is not enabled for this account.';
     else if (chat.paused) status = 'Chat is paused for this account. Resume it in chat settings.';
+    else if (!state.channel.ready && state.channel.error) status = 'Channel status could not be checked. Open Account to try again.';
+    else if (!state.channel.ready) status = 'Checking your channel connection…';
+    else if (!state.channel.configured) status = 'YouTube channel setup is incomplete. An AI provider may also need setup.';
+    else if (!state.channel.allowed) status = 'YouTube channel access is not enabled for this account.';
+    else if (state.channel.busy) status = 'Restoring your channel…';
+    else if (!state.channel.connected) status = 'Connect a YouTube channel in Account before chatting.';
     else if (!availableProviders().length) status = 'No AI provider is configured. The deployment owner needs to finish setup.';
     else if (chat.busy) status = 'Waiting for a reply…';
     else status = chat.note || 'Provider configured; it has not necessarily been verified. Calls may incur charges.';
@@ -130,7 +139,7 @@
   function updateChannelControls() {
     const channel = state.channel, selected = selectedChannel();
     $('google-connect').disabled = !canConnect();
-    $('channel-manage').hidden = !state.user || !channel.saved.length;
+    $('channel-manage').disabled = !state.user;
     $('channel-select').disabled = !state.user || channel.busy || !channel.saved.length;
     $('channel-select-button').disabled = !canConnect() || !selected || selected.status !== 'active';
     $('channel-disconnect').disabled = !state.user || channel.busy || !selected;
@@ -151,15 +160,51 @@
     $('channel-status').textContent = status;
     $('channel-message').textContent = channel.notice;
     $('channel-error').textContent = channel.error;
+    updateChatControls();
+  }
+  function selectedFacebook() { return state.facebook.saved.find(page => page.id === $('facebook-select').value); }
+  function renderFacebookList() {
+    const select = $('facebook-select'), previous = select.value, pages = state.facebook.saved;
+    select.replaceChildren();
+    if (!pages.length) makeOption(select, '', 'No saved Pages');
+    for (const page of pages) makeOption(select, page.id, `${page.display_name} (${page.external_id})${page.status === 'active' ? '' : ' — reconnect required'}`);
+    const chosen = pages.find(page => page.id === previous) || pages.find(page => page.id === state.facebook.verified)
+      || pages.find(page => page.is_default) || pages[0];
+    if (chosen) select.value = chosen.id;
+  }
+  function updateFacebookControls() {
+    const fb = state.facebook, page = selectedFacebook(), available = Boolean(state.user && fb.ready && fb.configured && fb.allowed && !fb.busy);
+    $('facebook-manage').disabled = !state.user;
+    $('facebook-connect').disabled = !available;
+    $('facebook-select').disabled = !state.user || fb.busy || !fb.saved.length;
+    $('facebook-select-button').disabled = !available || !page || page.status !== 'active';
+    $('facebook-disconnect').disabled = !state.user || fb.busy || !page;
+    const verified = fb.saved.find(item => item.id === fb.verified && item.status === 'active');
+    $('facebook-status').textContent = !state.user ? 'Sign in to manage Facebook Pages.'
+      : fb.error && !fb.ready ? 'Could not check Facebook setup.' : !fb.ready ? 'Checking Facebook setup…'
+      : !fb.configured ? 'Facebook developer app setup is incomplete.'
+      : !fb.allowed ? 'Facebook access is not enabled for this account.' : fb.busy ? 'Checking Facebook connection…'
+      : verified ? `Verified this session: ${verified.display_name}` : fb.saved.length ? 'Choose a saved Page or reconnect.' : 'Connect a Facebook account to list Pages.';
+    $('facebook-message').textContent = fb.notice; $('facebook-error').textContent = fb.error;
+  }
+  function updateGoogleControls() {
+    $('signin-area').hidden = Boolean(state.user);
+    // Email fallback remains available while Google login is unavailable.
+    $('account-button').hidden = !state.user && state.google.status === 'enabled' && !state.google.error;
+    $('google-signin').disabled = state.google.status !== 'enabled' || state.session !== 'signed-out' || state.authBusy;
+    $('google-signin-status').textContent = state.google.error || (state.google.status === 'checking' ? 'Checking Google sign-in…'
+      : state.google.status === 'unknown' ? 'Google sign-in could not be checked'
+      : state.google.status === 'disabled' ? 'Google sign-in setup needed' : 'Sign in, then allow channel access');
   }
   function updateAccount() {
     const loggedIn = Boolean(state.user);
-    $('account-button').textContent = loggedIn ? 'Account' : 'Sign in';
+    $('account-button').textContent = loggedIn ? 'Account' : 'Email sign in';
     $('account-form').hidden = loggedIn;
     $('account-signed-in').hidden = !loggedIn;
     $('account-title').textContent = loggedIn ? 'Your ViMax account' : 'Sign in to ViMax';
     $('account-identity').textContent = loggedIn ? state.user.email : '';
     $('account-id').textContent = loggedIn ? `Account ID: ${state.user.id}` : '';
+    updateGoogleControls();
   }
   function closeDialog(id) { const dialog = $(id); if (dialog.open) dialog.close(); }
   function showDialog(id) { const dialog = $(id); if (!dialog.open) dialog.showModal(); }
@@ -172,10 +217,11 @@
     state.session = state.user ? 'signed-in' : sessionState;
     state.chat = {providers:[], allowed:false, paused:false, settingsReady:false, historyReady:false, busy:false, turns:[], pending:null, note:'', error:''};
     state.channel = {ready:false, configured:false, allowed:false, busy:false, connected:null, connectionId:null, saved:[], autoAttempted:false, sequence:0, notice:'', error:''};
+    state.facebook = {ready:false, configured:false, allowed:false, busy:false, saved:[], verified:null, autoAttempted:false, sequence:0, notice:'', error:''};
     $('chat-prompt').value = ''; $('account-password').value = ''; $('speak-replies').checked = false;
     $('settings-message').textContent = ''; $('account-error').textContent = ''; $('account-message').textContent = '';
-    closeDialog('channel-dialog'); closeDialog('settings-dialog');
-    renderMessages(); renderProviders(); renderChannelList(); updateAccount(); updateChannelControls(); updateChatControls();
+    closeDialog('channel-dialog'); closeDialog('facebook-dialog'); closeDialog('settings-dialog');
+    renderMessages(); renderProviders(); renderChannelList(); renderFacebookList(); updateAccount(); updateChannelControls(); updateFacebookControls(); updateChatControls();
     return state.version;
   }
   async function loadProviders(version) {
@@ -215,9 +261,19 @@
       state.deployment.youtube = channel.configured ? 'configured_unverified' : 'unavailable';
       renderChannelList(); updateChannelControls();
       const savedDefault = channel.saved.find(item => item.is_default);
-      if (!channel.connected && channel.configured && channel.allowed && savedDefault?.status === 'active' && !channel.autoAttempted && !channel.busy) {
-        channel.autoAttempted = true;
+      if (channel.connected) autoConnectAfterLogin = false;
+      else if (channel.configured && channel.allowed && savedDefault?.status === 'active' && !channel.autoAttempted && !channel.busy) {
+        autoConnectAfterLogin = false; channel.autoAttempted = true;
         await selectChannel(version, savedDefault.id, true);
+      } else if (autoConnectAfterLogin) {
+        // Only a fresh Google sign-in started in this tab can launch the first
+        // channel consent automatically. A crafted callback URL alone cannot.
+        autoConnectAfterLogin = false;
+        if (channel.configured && channel.allowed && !channel.saved.length && !channel.busy) await startChannel(version);
+        else {
+          channel.notice = channel.saved.length ? 'Choose a saved channel or reconnect it with Google.' : 'Channel setup must be completed before you can connect.';
+          updateChannelControls(); showDialog('channel-dialog');
+        }
       }
     } catch (error) {
       if (isCurrent(version) && sequence === state.channel.sequence && error.name !== 'AbortError') {
@@ -238,12 +294,48 @@
       if (isCurrent(version) && error.name !== 'AbortError') { state.channel.error = error.message; state.channel.notice = 'The channel was not restored. Reconnect with Google if needed.'; }
     } finally { if (isCurrent(version)) { state.channel.busy = false; updateChannelControls(); } }
   }
+  async function loadFacebook(version) {
+    if (!isCurrent(version)) return;
+    const sequence = ++state.facebook.sequence;
+    try {
+      const data = await sessionApi('/api/cloud/social/status');
+      if (!isCurrent(version) || sequence !== state.facebook.sequence) return;
+      const fb = state.facebook, config = data?.providers?.facebook || {};
+      fb.ready = true; fb.configured = config.configured === true; fb.allowed = config.allowed === true;
+      fb.saved = Array.isArray(data.connections) ? data.connections.filter(page => page && page.provider === 'facebook' && typeof page.id === 'string'
+        && typeof page.external_id === 'string' && typeof page.display_name === 'string' && ['active','needs_reauth','uncertain'].includes(page.status)) : [];
+      if (!fb.saved.some(page => page.id === fb.verified && page.status === 'active')) fb.verified = null;
+      fb.error = ''; renderFacebookList(); updateFacebookControls();
+      const savedDefault = fb.saved.find(page => page.is_default && page.status === 'active');
+      if (fb.configured && fb.allowed && savedDefault && !fb.verified && !fb.autoAttempted && !fb.busy) {
+        fb.autoAttempted = true; await selectFacebook(version, savedDefault.id, true);
+      }
+    } catch (error) {
+      if (isCurrent(version) && sequence === state.facebook.sequence && error.name !== 'AbortError') {
+        state.facebook.ready = false; state.facebook.error = error.message; updateFacebookControls();
+      }
+    }
+  }
+  async function selectFacebook(version, id, automatic = false) {
+    const fb = state.facebook;
+    if (!isCurrent(version) || !fb.ready || !fb.configured || !fb.allowed || fb.busy || !id) return;
+    fb.busy = true; fb.error = ''; fb.notice = automatic ? '' : 'Checking this Page…'; updateFacebookControls();
+    try {
+      const data = await post('/api/cloud/social/facebook/select', {id});
+      if (!isCurrent(version)) return;
+      if (data?.connection?.id !== id || data.connection.provider !== 'facebook') throw new Error('Facebook did not confirm this Page.');
+      fb.verified = id; fb.busy = false; fb.notice = automatic ? '' : 'Facebook confirmed the selected Page for this session.';
+      await loadFacebook(version);
+    } catch (error) {
+      if (isCurrent(version) && error.name !== 'AbortError') { fb.verified = null; fb.error = error.message; fb.notice = 'The Page was not restored. Reconnect if needed.'; }
+    } finally { if (isCurrent(version)) { fb.busy = false; updateFacebookControls(); } }
+  }
   function applySession(user, sessionState = 'signed-out') {
     const version = resetForSession(user, sessionState);
     if (!state.user) return;
     // Account sign-in and sign-out must not wait on provider or channel calls.
     // Each loader is owner-versioned and is cancelled on an account change.
-    void Promise.all([loadProviders(version), loadHistory(version), loadChannel(version)]).catch(() => {
+    void Promise.all([loadProviders(version), loadHistory(version), loadChannel(version), loadFacebook(version)]).catch(() => {
       if (isCurrent(version)) { state.chat.error = 'Settings could not be loaded. Refresh and try again.'; updateChatControls(); }
     });
   }
@@ -268,9 +360,36 @@
     updateChatControls(); updateChannelControls();
   }
 
+  async function checkGoogleSignIn() {
+    try {
+      const data = await api('/api/cloud/google/status');
+      state.google.status = data?.enabled === true ? 'enabled' : 'disabled';
+    } catch { state.google.status = 'unknown'; }
+    updateGoogleControls();
+  }
+  $('google-signin').addEventListener('click', async () => {
+    if (state.user || state.session !== 'signed-out' || state.google.status !== 'enabled' || state.authBusy) return;
+    state.authBusy = true; state.google.error = '';
+    const sequence = ++state.sessionSequence; updateGoogleControls();
+    try {
+      const data = await api('/api/cloud/google/start', {method:'POST', body:'{}'});
+      let url;
+      try { url = new URL(data?.authorization_url); } catch { throw new Error('Invalid Google sign-in URL.'); }
+      if (url.protocol !== 'https:' || !/^[a-z0-9-]+\.supabase\.co$/.test(url.hostname) || url.port || url.username || url.password || url.hash
+          || url.pathname !== '/auth/v1/authorize' || url.searchParams.get('provider') !== 'google') throw new Error('Invalid Google sign-in URL.');
+      if (sequence !== state.sessionSequence || state.user) return;
+      // This nonsensitive, tab-scoped intent allows the first YouTube consent
+      // after app sign-in. URL parameters alone cannot trigger that redirect.
+      try { sessionStorage.setItem('vimax-google-channel-intent', String(Date.now())); } catch {}
+      window.location.assign(url.href);
+    } catch (error) {
+      if (sequence === state.sessionSequence) state.google.error = error.message;
+    } finally { state.authBusy = false; updateGoogleControls(); }
+  });
   $('account-button').addEventListener('click', () => showDialog('account-dialog'));
   $('chat-settings').addEventListener('click', () => showDialog('settings-dialog'));
-  $('channel-manage').addEventListener('click', () => { if (state.user && state.channel.saved.length) showDialog('channel-dialog'); });
+  $('channel-manage').addEventListener('click', () => { if (state.user) { closeDialog('account-dialog'); showDialog('channel-dialog'); } });
+  $('facebook-manage').addEventListener('click', () => { if (state.user) { closeDialog('account-dialog'); showDialog('facebook-dialog'); } });
   document.querySelectorAll('[data-close]').forEach(button => button.addEventListener('click', () => closeDialog(button.dataset.close)));
   $('account-dialog').addEventListener('close', () => { $('account-password').value = ''; });
   $('account-form').addEventListener('submit', async event => {
@@ -278,7 +397,7 @@
     if (state.authBusy) return;
     const form = event.currentTarget, action = event.submitter?.value === 'signup' ? 'signup' : 'login';
     const input = {email:$('account-email').value.trim(), password:$('account-password').value};
-    state.authBusy = true; state.sessionSequence++;
+    state.authBusy = true; state.sessionSequence++; updateGoogleControls();
     $('account-error').textContent = ''; $('account-message').textContent = '';
     form.querySelectorAll('button').forEach(button => { button.disabled = true; });
     try {
@@ -291,27 +410,28 @@
         else $('account-error').textContent = 'Sign-in could not be confirmed. Please try again.';
       }
     } catch (error) { $('account-password').value = ''; $('account-error').textContent = error.message; }
-    finally { state.authBusy = false; form.querySelectorAll('button').forEach(button => { button.disabled = false; }); }
+    finally { state.authBusy = false; form.querySelectorAll('button').forEach(button => { button.disabled = false; }); updateGoogleControls(); }
   });
   $('resend-confirmation').addEventListener('click', async () => {
     if (state.authBusy || !$('account-email').reportValidity()) return;
-    state.authBusy = true; $('account-error').textContent = ''; $('account-message').textContent = '';
+    state.authBusy = true; updateGoogleControls(); $('account-error').textContent = ''; $('account-message').textContent = '';
     $('resend-confirmation').disabled = true;
     try {
       const data = await api('/api/cloud/resend-confirmation', {method:'POST', body:JSON.stringify({email:$('account-email').value.trim()})});
       $('account-message').textContent = data.message;
     } catch (error) { $('account-error').textContent = error.message; }
-    finally { state.authBusy = false; $('resend-confirmation').disabled = false; }
+    finally { state.authBusy = false; $('resend-confirmation').disabled = false; updateGoogleControls(); }
   });
   $('logout').addEventListener('click', async () => {
     if (state.authBusy || !state.user) return;
-    state.authBusy = true; state.sessionSequence++;
+    state.authBusy = true; state.sessionSequence++; autoConnectAfterLogin = false;
+    try { sessionStorage.removeItem('vimax-google-channel-intent'); } catch {}
     // Immediately discard owner data and ignore late requests. A provider call
     // already received by the server can still finish or incur charges.
     await applySession(null, 'signed-out');
     try { await api('/api/cloud/logout', {method:'POST', body:'{}'}); closeDialog('account-dialog'); }
     catch { state.session = 'error'; $('account-error').textContent = 'Sign-out could not be confirmed. Refresh and try again.'; updateChatControls(); updateChannelControls(); }
-    finally { state.authBusy = false; }
+    finally { state.authBusy = false; updateGoogleControls(); }
   });
 
   $('provider').addEventListener('change', updateModels);
@@ -369,9 +489,9 @@
     finally { if (isCurrent(version)) { state.chat.busy = false; updateChatControls(); } }
   });
 
-  $('google-connect').addEventListener('click', async () => {
-    if (!canConnect()) return;
-    const version = state.version; state.channel.busy = true; state.channel.error = ''; state.channel.notice = ''; updateChannelControls();
+  async function startChannel(version) {
+    if (!isCurrent(version) || !canConnect()) return;
+    state.channel.busy = true; state.channel.error = ''; state.channel.notice = ''; updateChannelControls();
     try {
       const data = await post('/api/cloud/youtube/oauth/start');
       let url;
@@ -381,7 +501,8 @@
     } catch (error) {
       if (isCurrent(version) && error.name !== 'AbortError') { state.channel.error = error.message; state.channel.notice = ''; showDialog('channel-dialog'); }
     } finally { if (isCurrent(version)) { state.channel.busy = false; updateChannelControls(); } }
-  });
+  }
+  $('google-connect').addEventListener('click', () => { void startChannel(state.version); });
   $('channel-select').addEventListener('change', updateChannelControls);
   $('channel-select-button').addEventListener('click', () => {
     const item = selectedChannel(); if (!item || item.status !== 'active') return;
@@ -400,6 +521,38 @@
       await loadChannel(version);
     } catch (error) { if (isCurrent(version) && error.name !== 'AbortError') state.channel.error = error.message; }
     finally { if (isCurrent(version)) { state.channel.busy = false; updateChannelControls(); } }
+  });
+
+  $('facebook-connect').addEventListener('click', async () => {
+    const fb = state.facebook, version = state.version;
+    if (!isCurrent(version) || !fb.ready || !fb.configured || !fb.allowed || fb.busy) return;
+    fb.busy = true; fb.error = ''; fb.notice = ''; updateFacebookControls();
+    try {
+      const data = await post('/api/cloud/social/facebook/start');
+      let url;
+      try { url = new URL(data?.authorization_url); } catch { throw new Error('Invalid Facebook authorization URL.'); }
+      if (url.origin !== 'https://www.facebook.com' || url.pathname !== '/v26.0/dialog/oauth' || url.username || url.password || url.hash) throw new Error('Invalid Facebook authorization URL.');
+      if (isCurrent(version)) window.location.assign(url.href);
+    } catch (error) { if (isCurrent(version) && error.name !== 'AbortError') fb.error = error.message; }
+    finally { if (isCurrent(version)) { fb.busy = false; updateFacebookControls(); } }
+  });
+  $('facebook-select').addEventListener('change', updateFacebookControls);
+  $('facebook-select-button').addEventListener('click', () => {
+    const page = selectedFacebook(); if (!page || page.status !== 'active') return;
+    state.facebook.autoAttempted = true; void selectFacebook(state.version, page.id);
+  });
+  $('facebook-disconnect').addEventListener('click', async () => {
+    const page = selectedFacebook(), fb = state.facebook;
+    if (!state.user || fb.busy || !page || !confirm('Remove this Page from ViMax? This does not revoke the Facebook app grant; review access in Facebook settings.')) return;
+    const version = state.version; fb.busy = true; fb.autoAttempted = true; fb.error = ''; fb.notice = ''; updateFacebookControls();
+    try {
+      await post('/api/cloud/social/facebook/disconnect', {id:page.id});
+      if (!isCurrent(version)) return;
+      if (fb.verified === page.id) fb.verified = null;
+      fb.busy = false; fb.notice = 'Page removed from ViMax. Facebook app access was not revoked.';
+      await loadFacebook(version);
+    } catch (error) { if (isCurrent(version) && error.name !== 'AbortError') fb.error = error.message; }
+    finally { if (isCurrent(version)) { fb.busy = false; updateFacebookControls(); } }
   });
 
   const synthesis = 'speechSynthesis' in window ? window.speechSynthesis : null;
@@ -456,17 +609,25 @@
   // The callback contains no tokens; only show success after the owner-scoped
   // status endpoint confirms the saved channel. Email fragments are scrubbed by
   // auth-clean.js before this file runs.
-  const currentUrl = new URL(window.location.href);
-  if (currentUrl.searchParams.has('youtube')) {
-    currentUrl.searchParams.delete('youtube');
-    if (currentUrl.hash === '#youtube') currentUrl.hash = '';
-    history.replaceState(null, '', currentUrl.pathname + currentUrl.search + currentUrl.hash);
-  }
+  const currentUrl = new URL(window.location.href), googleResult = currentUrl.searchParams.get('google_signin');
+  let cleaned = false;
+  for (const key of ['youtube','social','google_signin']) if (currentUrl.searchParams.has(key)) { currentUrl.searchParams.delete(key); cleaned = true; }
+  if (['#youtube','#social-connections'].includes(currentUrl.hash) && cleaned) currentUrl.hash = '';
+  if (cleaned) history.replaceState(null, '', currentUrl.pathname + currentUrl.search + currentUrl.hash);
   let confirmation = null;
-  try { confirmation = sessionStorage.getItem('vimax-email-confirmed'); sessionStorage.removeItem('vimax-email-confirmed'); } catch {}
-  renderMessages(); renderProviders(); renderChannelList(); updateAccount(); updateChannelControls(); updateChatControls();
-  void checkDeployment();
+  try {
+    confirmation = sessionStorage.getItem('vimax-email-confirmed'); sessionStorage.removeItem('vimax-email-confirmed');
+    if (googleResult) {
+      const intent = sessionStorage.getItem('vimax-google-channel-intent'), age = Date.now() - Number(intent);
+      autoConnectAfterLogin = googleResult === 'success' && Boolean(intent) && age >= 0 && age < 600_000;
+      sessionStorage.removeItem('vimax-google-channel-intent');
+    }
+  } catch {}
+  if (googleResult === 'failed') state.google.error = 'Google sign-in did not complete. Try again.';
+  renderMessages(); renderProviders(); renderChannelList(); renderFacebookList(); updateAccount(); updateChannelControls(); updateFacebookControls(); updateChatControls();
+  void checkDeployment(); void checkGoogleSignIn();
   void checkSession().then(() => {
+    if (googleResult === 'success' && !state.user) { autoConnectAfterLogin = false; state.google.error = 'Google sign-in could not be confirmed. Try again.'; updateGoogleControls(); }
     if (confirmation && !state.user) {
       $('account-message').textContent = confirmation === 'yes' ? 'Email confirmed. Please sign in.' : 'Email confirmation failed or expired; please try again.';
       showDialog('account-dialog');
