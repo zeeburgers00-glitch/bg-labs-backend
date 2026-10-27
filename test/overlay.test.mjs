@@ -28,6 +28,9 @@ test('skills navigation is additive', () => {
   const source = `import {\n  Film,\n} from 'lucide-react';\n          <button className={activeView === 'settings' ? 'is-active' : ''} onClick={onSettings}><Settings size={17} /><span>Settings</span></button>`;
   const patched = patchApp(source);
   assert.match(patched, /Skills &amp; Agents/);
+  assert.match(patched, /Connect YouTube/);
+  assert.match(patched, /\/skills\/#youtube/);
+  assert.match(patched, /<Youtube size=\{17\}/);
   assert.match(patched, /onClick=\{onSettings\}/);
 });
 

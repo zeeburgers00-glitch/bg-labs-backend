@@ -2,8 +2,15 @@
 (() => {
   const $=id=>document.getElementById(id), chunkSize=1024*1024;
   const state={loggedIn:false,owner:null,version:0,refreshVersion:0,connected:false,channel:null,busy:false,abort:null,
-    resumeAbort:null,autoAttempted:false,savedChannels:[],historyReady:false};
+    resumeAbort:null,autoAttempted:false,savedChannels:[],historyReady:false,deploymentState:'checking'};
   const active=version=>state.loggedIn && state.version===version;
+  function showSignedOutStatus() {
+    $('yt-connection').textContent=state.deploymentState==='unavailable'
+      ? 'Google channel connection needs server setup before it can be used. An administrator must finish the Vercel and Google OAuth configuration.'
+      : state.deploymentState==='configured_unverified'
+        ? 'Sign in to ViMax first. Google configuration has not yet been verified.'
+        : 'Checking Google channel connection setup…';
+  }
   const el=(tag,text,cls='')=>{const x=document.createElement(tag);if(text!=null)x.textContent=text;if(cls)x.className=cls;return x;};
   async function api(path,options={}) {
     let response;
@@ -50,11 +57,12 @@
       const chosen=state.savedChannels.find(x=>x.id===previous)||state.savedChannels.find(x=>x.id===status.connection_id)
         ||state.savedChannels.find(x=>x.is_default)||state.savedChannels[0];
       if(chosen)select.value=chosen.id;
-      $('yt-connect').dataset.allowed=status.allowed?'yes':'no';
+      state.deploymentState=status.configured?'configured_unverified':'unavailable';
+      $('yt-connect').dataset.allowed=status.configured && status.allowed?'yes':'no';
       $('yt-connect').textContent=state.savedChannels.length?'Add / reconnect with Google':'Continue with Google';
       $('yt-disconnect').hidden=!state.savedChannels.length;
       const defaultChannel=state.savedChannels.find(x=>x.is_default);
-      $('yt-connection').textContent=!status.configured ? 'Google OAuth is not configured in Vercel yet.' : !status.allowed ? 'YouTube access is not enabled for this account.' : state.connected
+      $('yt-connection').textContent=!status.configured ? 'Google OAuth is not configured in Vercel yet. Ask the administrator to finish setup.' : !status.allowed ? 'YouTube access is not enabled for this account.' : state.connected
         ? `Selected: ${status.channel.title} (${status.channel.id}). The saved authorization was verified when connected or restored.`
         : defaultChannel && defaultChannel.status!=='active' ? 'The saved authorization needs Google consent again.'
         : state.savedChannels.length ? 'Choose a saved channel or reconnect with Google.' : 'Ready to connect: choose your channel on Google’s consent screen.';
@@ -142,6 +150,7 @@
     if(active(v))$('yt-progress').textContent='Upload bytes sent; check status for YouTube verification.';
   }
   $('yt-connect').addEventListener('click',async()=>{
+    if(!state.loggedIn||state.busy||$('yt-connect').dataset.allowed!=='yes')return;
     const v=state.version;try{busy(true);const result=await post('/api/cloud/youtube/oauth/start');
       const url=new URL(result.authorization_url);if(url.origin!=='https://accounts.google.com')throw new Error('Invalid Google authorization URL.');
       if(active(v))window.location.assign(url.href);
@@ -188,13 +197,21 @@
     } catch(error){if(active(v)&&error.name!=='AbortError'){$('yt-error').textContent=error.message;$('yt-progress').textContent='Upload paused or uncertain. Use Check status; do not start a duplicate blindly.';}}
     finally{if(active(v)){state.abort=null;busy(false);await refresh();}}
   });
-  window.vimaxYouTube={onSession:async user=>{
-    const loggedIn=Boolean(user && typeof user.id==='string');
-    state.version++;state.refreshVersion++;state.loggedIn=loggedIn;state.owner=loggedIn?user.id:null;state.connected=false;state.channel=null;state.historyReady=false;
-    state.abort?.abort();state.abort=null;state.resumeAbort?.abort();state.resumeAbort=null;state.autoAttempted=false;state.savedChannels=[];state.busy=false;
-    $('yt-form').reset();$('yt-saved-channels').replaceChildren();$('yt-connect').dataset.allowed='no';$('yt-disconnect').hidden=true;
-    $('youtube').hidden=!loggedIn;$('youtube-link').setAttribute('href',loggedIn?'#youtube':'#account');$('yt-error').textContent='';$('yt-notice').textContent='';$('yt-history').replaceChildren();
-    $('yt-progress').textContent='No upload in progress.';busy(false);
-    if(loggedIn)await refresh();
-  }};
+  window.vimaxYouTube={
+    setDeploymentState:value=>{
+      state.deploymentState=['unavailable','configured_unverified'].includes(value)?value:'checking';
+      if(!state.loggedIn)showSignedOutStatus();
+    },
+    onSession:async user=>{
+      const loggedIn=Boolean(user && typeof user.id==='string');
+      state.version++;state.refreshVersion++;state.loggedIn=loggedIn;state.owner=loggedIn?user.id:null;state.connected=false;state.channel=null;state.historyReady=false;
+      state.abort?.abort();state.abort=null;state.resumeAbort?.abort();state.resumeAbort=null;state.autoAttempted=false;state.savedChannels=[];state.busy=false;
+      $('yt-form').reset();$('yt-saved-channels').replaceChildren();$('yt-connect').dataset.allowed='no';$('yt-connect').textContent='Continue with Google';$('yt-disconnect').hidden=true;
+      $('yt-login-prompt').hidden=loggedIn;$('yt-saved-tools').hidden=!loggedIn;$('yt-upload-panel').hidden=!loggedIn;$('yt-refresh').hidden=!loggedIn;
+      $('yt-error').textContent='';$('yt-notice').textContent='';$('yt-history').replaceChildren();$('yt-progress').textContent='No upload in progress.';
+      if(loggedIn)$('yt-connection').textContent='Checking YouTube authorization…';else showSignedOutStatus();
+      busy(false);
+      if(loggedIn)await refresh();
+    }
+  };
 })();

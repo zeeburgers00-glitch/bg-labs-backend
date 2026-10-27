@@ -19,7 +19,9 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   let acceptDialog=false;page.on('dialog',dialog=>acceptDialog?dialog.accept():dialog.dismiss());
   const alice='aaaaaaaa-0000-4000-8000-000000000001',bob='bbbbbbbb-0000-4000-8000-000000000002';
   const uploadId='12345678-0000-4000-8000-000000000002',secondId='12345678-0000-4000-8000-000000000003',channel='UC1234567890123456789012';
-  let current=alice,signedIn=true,firstStart=true,failStatus=false,releaseChunk,releaseSecond,connectionMode=false,selectedConnection=null;
+  let current=alice,signedIn=false,firstStart=true,failStatus=false,releaseChunk,releaseSecond,connectionMode=false,selectedConnection=null;
+  let youtubeConfigured=false,youtubeAllowed=true,localOnly=false,authorizationUrl='https://accounts.google.com/o/oauth2/v2/auth?state=mock';
+  let holdOAuth=false,notifyOAuth,releaseOAuth;
   const connectionA='12345678-0000-4000-8000-000000000010',connectionB='12345678-0000-4000-8000-000000000011';
   const saved=[{id:connectionA,channel_id:channel,channel_title:'<img src=x onerror=alert(1)>',status:'active',is_default:true},
     {id:connectionB,channel_id:'UCabcdefghijklmnopqrstuv',channel_title:'Another channel',status:'active',is_default:false}];
@@ -30,11 +32,12 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
     {id:socialFb,provider:'facebook',external_id:'123456789',display_name:'Example Page',status:'active',is_default:true}];
   const socialSelections=[],socialRemovals=[];
   let reachedChunk,reachedSecond;const chunkReached=new Promise(r=>{reachedChunk=r;}),secondReached=new Promise(r=>{reachedSecond=r;});
-  const jobs=[],keys=[],posts=[],chatBodies=[],resendBodies=[];
+  const jobs=[],keys=[],posts=[],requests=[],chatBodies=[],resendBodies=[];
   await page.route('**/api/**',async route=>{
    const rq=route.request(),u=new URL(rq.url()),p=u.pathname,m=rq.method();let data={},body={};try{body=rq.postDataJSON()||{}}catch{}
-   if(m!=='GET')posts.push(p);
-   if(p==='/api/skills/system')data={local_only:false,database_connected:true,text_chat:'unconfigured',ready_for_video:false,piper_installed:false,ffmpeg_installed:false,scene_detection_installed:false,voices:[],hardware:{},warnings:[]};
+   requests.push(p);if(m!=='GET')posts.push(p);
+   if(p==='/api/skills/system')data={local_only:localOnly,database_connected:true,text_chat:'unconfigured',youtube_upload:youtubeConfigured?'configured_unverified':'unavailable',ready_for_video:false,piper_installed:false,ffmpeg_installed:false,scene_detection_installed:false,voices:[],hardware:{},warnings:[]};
+   else if(p==='/api/skills/jobs')data={jobs:[]};
    else if(p==='/api/cloud/session')data={user:signedIn?{id:current,email:'person@example.test'}:null};
    else if(p==='/api/cloud/resend-confirmation'){resendBodies.push(body);data={message:'If this account needs confirmation, check your inbox.'};}
    else if(p==='/api/cloud/projects')data={projects:[]};
@@ -53,10 +56,15 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
     if(index>=0)socialConnections.splice(index,1);data={disconnected:true,revoked:false};}
    else if(p==='/api/cloud/youtube/status'){
     if(failStatus){failStatus=false;return route.fulfill({status:503,json:{error:'simulated status outage'}});}
-    if(connectionMode){const channels=current===alice?saved:[],active=channels.find(x=>x.id===selectedConnection);
+    if(!youtubeConfigured||!youtubeAllowed)data={configured:youtubeConfigured,allowed:false,connected:false,channel:null,saved_channels:[]};
+    else if(connectionMode){const channels=current===alice?saved:[],active=channels.find(x=>x.id===selectedConnection);
       data={configured:true,allowed:true,connected:Boolean(active),channel:active?{id:active.channel_id,title:active.channel_title}:null,
         connection_id:active?.id||null,saved_channels:channels,expires_at:new Date(Date.now()+3600000).toISOString()};}
     else data={configured:true,allowed:true,connected:true,channel:{id:channel,title:'Test channel'},expires_at:new Date(Date.now()+3600000).toISOString()};
+   }
+   else if(p==='/api/cloud/youtube/oauth/start' && m==='POST'){
+    if(holdOAuth)await new Promise(resolve=>{releaseOAuth=resolve;notifyOAuth();});
+    data={authorization_url:authorizationUrl};
    }
    else if(p==='/api/cloud/youtube/select' && connectionMode){selections.push({owner:current,id:body.id});
     if(current!==alice||!saved.some(x=>x.id===body.id))return route.fulfill({status:404,json:{error:'not found'}});
@@ -83,7 +91,30 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
    else return route.fulfill({status:404,json:{error:'unexpected mock path'}});
    return route.fulfill({status:200,json:data});
   });
-  await page.goto(`http://127.0.0.1:${server.address().port}/skills/`,{waitUntil:'domcontentloaded'});
+  const skills=`http://127.0.0.1:${server.address().port}/skills/`;
+  // The deep link must reveal the option while signed out without exposing owner data.
+  await page.goto(`${skills}#youtube`,{waitUntil:'domcontentloaded'});
+  await page.waitForSelector('#youtube:not([hidden])');
+  await page.waitForFunction(()=>document.getElementById('yt-connection').textContent.includes('needs server setup'));
+  await page.waitForFunction(()=>Math.abs(document.getElementById('youtube').getBoundingClientRect().top)<20);
+  assert.equal(await page.locator('#yt-connect').isVisible(),true);
+  assert.equal(await page.locator('#yt-connect').isDisabled(),true);
+  assert.equal(await page.locator('#yt-login-prompt a').getAttribute('href'),'#account');
+  assert.equal(await page.locator('#yt-saved-tools').isHidden(),true);
+  assert.equal(await page.locator('#yt-upload-panel').isHidden(),true);
+  await page.locator('#yt-connect').dispatchEvent('click');
+  assert.equal(posts.includes('/api/cloud/youtube/oauth/start'),false);
+  assert.equal(requests.some(p=>p==='/api/cloud/youtube/status'||p==='/api/cloud/youtube/uploads'),false);
+  // A signed-in owner cannot start OAuth while setup is missing or access is denied.
+  signedIn=true;await page.reload({waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>document.getElementById('yt-connection').textContent.includes('not configured'));
+  assert.equal(await page.locator('#yt-connect').isDisabled(),true);
+  assert.equal(await page.locator('#yt-login-prompt').isHidden(),true);
+  youtubeConfigured=true;youtubeAllowed=false;await page.reload({waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>document.getElementById('yt-connection').textContent.includes('not enabled'));
+  assert.equal(await page.locator('#yt-connect').isDisabled(),true);
+  await page.locator('#yt-connect').dispatchEvent('click');assert.equal(posts.includes('/api/cloud/youtube/oauth/start'),false);
+  youtubeAllowed=true;await page.reload({waitUntil:'domcontentloaded'});
   await page.waitForSelector('#youtube:not([hidden])');await page.waitForFunction(()=>!document.getElementById('yt-upload').disabled);
   await page.waitForSelector('#mission:not([hidden])');
   await page.locator('#mission-provider').selectOption('openai');
@@ -160,14 +191,68 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   await page.evaluate(id=>window.vimaxYouTube.onSession({id}),bob);
   assert.equal(await page.locator('#yt-saved-channels option').count(),1);
   assert.equal(await page.locator('#yt-saved-channels').inputValue(),'');
+  // Logout leaves the connection option visible but removes all owner-specific
+  // names, history, selections, notices and form contents from the page.
+  current=alice;selectedConnection=connectionA;await page.evaluate(id=>window.vimaxYouTube.onSession({id}),alice);
+  assert.match(await page.locator('#yt-saved-channels').textContent(),/<img src=x/);
+  await page.locator('#yt-form [name=title]').fill('Private title');
   await page.setViewportSize({width:390,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'mobile overflow');
-  await page.locator('#logout-button').click();await page.waitForSelector('#youtube[hidden]',{state:'attached'});assert.equal(await page.locator('#yt-history .mission-row').count(),0);
+  await page.locator('#logout-button').click();await page.waitForSelector('#yt-login-prompt:not([hidden])');
+  assert.equal(await page.locator('#youtube').isVisible(),true);
+  assert.equal(await page.locator('#yt-connect').isDisabled(),true);
+  assert.equal(await page.locator('#yt-connect').textContent(),'Continue with Google');
+  assert.match(await page.locator('#yt-connection').textContent(),/not yet been verified/);
+  assert.equal(await page.locator('#yt-saved-tools').isHidden(),true);
+  assert.equal(await page.locator('#yt-upload-panel').isHidden(),true);
+  assert.equal(await page.locator('#yt-saved-channels option').count(),0);
+  assert.equal(await page.locator('#yt-history .mission-row').count(),0);
+  assert.equal(await page.locator('#yt-form [name=title]').inputValue(),'');
+  assert.equal(await page.locator('#yt-notice').textContent(),'');assert.equal(await page.locator('#yt-error').textContent(),'');
   await page.locator('#account-form [name=email]').fill('person@example.test');
   await page.locator('#account-form [name=password]').fill('never-send-on-resend');
   await page.locator('#resend-confirmation').click();
   await page.waitForFunction(()=>document.getElementById('account-message').textContent.includes('check your inbox'));
   assert.deepEqual(resendBodies,[{email:'person@example.test'}]);
+  // Starting the real UI action must POST to the OAuth endpoint and only
+  // navigate to the Google origin, never an arbitrary returned URL. A late
+  // start response must not redirect after the owner logs out.
+  signedIn=true;connectionMode=false;await page.reload({waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>!document.getElementById('yt-connect').disabled);
+  authorizationUrl='https://example.invalid/steal';await page.locator('#yt-connect').click();
+  await page.waitForFunction(()=>document.getElementById('yt-error').textContent.includes('Invalid Google authorization URL'));
+  assert.ok(page.url().startsWith(skills));
+  authorizationUrl='https://accounts.google.com/o/oauth2/v2/auth?state=mock';holdOAuth=true;
+  const oauthReached=new Promise(resolve=>{notifyOAuth=resolve;});
+  await page.locator('#yt-connect').click();await oauthReached;
+  await page.evaluate(()=>window.vimaxYouTube.onSession(null));
+  const lateResponse=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/cloud/youtube/oauth/start');
+  releaseOAuth();await lateResponse;await page.waitForTimeout(100);
+  assert.ok(page.url().startsWith(skills));assert.equal(await page.locator('#yt-connect').isDisabled(),true);
+  holdOAuth=false;await page.evaluate(id=>window.vimaxYouTube.onSession({id}),alice);
+  await page.waitForFunction(()=>!document.getElementById('yt-connect').disabled);
+  let navigatedToGoogle='';
+  await page.route('https://accounts.google.com/**',route=>{navigatedToGoogle=route.request().url();return route.fulfill({status:200,body:'Mock consent page'});});
+  await page.locator('#yt-connect').click();await page.waitForURL('https://accounts.google.com/**');
+  assert.equal(new URL(navigatedToGoogle).pathname,'/o/oauth2/v2/auth');
+  assert.equal(posts.filter(x=>x==='/api/cloud/youtube/oauth/start').length,3);
+  // Local-only mode should not advertise a cloud-only YouTube action.
+  localOnly=true;await page.goto(`${skills}#youtube`,{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>document.getElementById('connection').textContent==='Local companion connected');
+  assert.equal(await page.locator('#youtube').isHidden(),true);assert.equal(await page.locator('#youtube-link').isHidden(),true);
+  // The additive ViMax sidebar item reaches the same deep link even when the
+  // original video agent is unavailable.
+  localOnly=false;signedIn=false;youtubeConfigured=false;await page.setViewportSize({width:1280,height:1000});
+  await page.goto(`http://127.0.0.1:${server.address().port}/`,{waitUntil:'domcontentloaded'});
+  await page.getByRole('button',{name:'Connect YouTube'}).click();
+  await page.waitForURL(`${skills}#youtube`);await page.waitForSelector('#youtube:not([hidden])');
+  assert.equal(await page.locator('#yt-connect').isVisible(),true);
+  await page.setViewportSize({width:390,height:844});
+  await page.goto(`http://127.0.0.1:${server.address().port}/`,{waitUntil:'domcontentloaded'});
+  await page.getByRole('button',{name:'Open navigation'}).click();
+  await page.getByRole('button',{name:'Connect YouTube'}).click();
+  await page.waitForURL(`${skills}#youtube`);await page.waitForSelector('#youtube:not([hidden])');
+  assert.equal(await page.locator('#yt-connect').isVisible(),true);
   assert.deepEqual(errors,[]);
-  console.log('Browser smoke passed with mocked APIs: YouTube, public GitHub, detailed chat, confirmation resend, account switching, logout and mobile layout.');
+  console.log('Browser smoke passed with mocked APIs: channel discovery, OAuth navigation, logout privacy, YouTube uploads, social, public GitHub, chat and mobile layout.');
  }finally{if(browser)await browser.close();await new Promise(r=>server.close(r));}
 })().catch(e=>{console.error(e);process.exitCode=1});

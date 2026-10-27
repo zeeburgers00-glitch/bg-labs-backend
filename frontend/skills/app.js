@@ -79,13 +79,16 @@ async function loadSystem() {
       $('connection').textContent = 'Database connected · full video agent offline';
       $('notice').textContent = `Supabase accounts and private ideas are connected. Cloud text planning is ${system.text_chat === 'configured_unverified' ? 'configured but not yet verified' : 'not configured'}. The optional paid GPU preview is ${system.gpu_preview === 'configured_unverified' ? 'configured but not yet verified' : 'not configured'}. The full video agent, web research and automatic YouTube publishing are not connected. Private manual upload requires Google configuration and authorization. The renderer below runs only on a locally configured computer.`;
       $('account').hidden = false;
+      $('youtube').hidden = false;
+      window.vimaxYouTube.setDeploymentState(system.youtube_upload);
       $('hardware').textContent = system.warnings.join(' ');
       setupVoices(system); renderCatalog();
-      await loadAccount();
+      try { await loadAccount(); }
+      finally { if (window.location.hash === '#youtube') requestAnimationFrame(() => $('youtube').scrollIntoView()); }
       return;
     }
     $('connection').textContent = 'Local companion connected';
-    $('cloud-ai-link').hidden = true; $('mission-link').hidden = true; $('gpu-link').hidden = true;
+    $('cloud-ai-link').hidden = true; $('mission-link').hidden = true; $('gpu-link').hidden = true; $('youtube-link').hidden = true;
     $('notice').classList.add('ready');
     $('notice').textContent = 'Single-user local mode. Your script and notes remain on this computer. This path uses text cards, not AI-generated visuals; no online research, translation, or YouTube upload is included.';
     setupVoices(system); $('create-button').disabled = !system.ready_for_video; $('analysis-button').disabled = false;

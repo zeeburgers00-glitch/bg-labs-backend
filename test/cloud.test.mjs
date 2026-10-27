@@ -62,6 +62,7 @@ test('health truthfully distinguishes connected database from missing agent and 
   assert.deepEqual(sessions.sessions, []); assert.match(sessions.warning, /not connected/);
   const system = await (await bridge.fetch(request('/api/skills/system'))).json();
   assert.equal(system.database_connected, true); assert.equal(system.ready_for_video, false); assert.equal(system.scene_detection_installed, false);
+  assert.equal(system.youtube_upload,'unavailable');
   assert.ok(fake.calls.every(call => !call.path.includes('service_role')));
 });
 
@@ -139,6 +140,8 @@ test('health reports syntactically configured YouTube and OpenAI as unverified, 
     VIMAX_YOUTUBE_TOKEN_KEY:'12'.repeat(32),VIMAX_YOUTUBE_REDIRECT_URI:'https://vimax.example/api/cloud/youtube/callback'};
   const health=await (await createBridge({env:configured,fetchImpl:fake.fetch}).fetch(request('/api/health'))).json();
   assert.equal(health.text_chat,'configured_unverified');assert.equal(health.youtube_upload,'configured_unverified');
+  const system=await (await createBridge({env:configured,fetchImpl:fake.fetch}).fetch(request('/api/skills/system'))).json();
+  assert.equal(system.youtube_upload,'configured_unverified');
   assert.equal(health.video_agent,'unavailable');
   assert.ok(fake.calls.every(call=>call.path.startsWith('/auth/')||call.path==='/rest/v1/rpc/vimax_cloud_health'));
 });

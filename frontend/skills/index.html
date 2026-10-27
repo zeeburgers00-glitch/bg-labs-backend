@@ -29,7 +29,7 @@
       <div class="eyebrow"><span class="spark">✳</span> CREATOR TOOLKIT</div>
       <h1>Make more with ViMax.</h1>
       <p>Explore reviewed creator skills and produce a simple, narrated video with your own script—without replacing your ViMax workspace.</p>
-      <div class="hero-nav"><a id="cloud-ai-link" href="#account">AI chat <span>↗</span></a><a id="youtube-link" href="#account" class="secondary">YouTube upload</a><a id="social-link" href="#account" class="secondary">TikTok &amp; Facebook</a><a id="gpu-link" href="#account" class="secondary">GPU video preview</a><a id="mission-link" href="#account" class="secondary">Mission control</a><a href="#studio" class="secondary">Open local studio</a><a href="#catalog" class="secondary">Browse the catalog</a></div>
+      <div class="hero-nav"><a id="cloud-ai-link" href="#account">AI chat <span>↗</span></a><a id="youtube-link" href="#youtube" class="secondary">Connect YouTube</a><a id="social-link" href="#account" class="secondary">TikTok &amp; Facebook</a><a id="gpu-link" href="#account" class="secondary">GPU video preview</a><a id="mission-link" href="#account" class="secondary">Mission control</a><a href="#studio" class="secondary">Open local studio</a><a href="#catalog" class="secondary">Browse the catalog</a></div>
     </section>
     <aside class="notice" id="notice" role="status">
       <strong>Full video agent not connected.</strong> The local companion can render simple text-card videos. A separate paid GPU preview is optional and requires private provider setup; it is not connected by default. The local companion is not a shared or multi-user service.
@@ -187,19 +187,22 @@
     </section>
 
     <section id="youtube" class="section" hidden>
-      <div class="section-heading"><div><div class="eyebrow">YOUTUBE / PRIVATE UPLOAD</div><h2>Send a video for review.</h2><p>Connect your YouTube channels with Google and upload your own MP4 privately. This does not generate videos, schedule them or publish publicly.</p></div><span class="tag">PRIVATE · MANUAL</span></div>
+      <div class="section-heading"><div><div class="eyebrow">YOUTUBE / CHANNEL CONNECTION</div><h2>Connect your YouTube channel.</h2><p>Use Google to authorize your channel. You can also upload your own MP4 privately; this does not generate videos, schedule them or publish publicly.</p></div><span class="tag">GOOGLE · CONSENT</span></div>
       <div class="studio-grid mission-grid">
         <div class="panel">
           <div class="panel-heading"><div><h3>Channel authorization</h3><p>Google asks for permission; your Google password is never saved in ViMax.</p></div><span class="step-number">01</span></div>
           <p id="yt-connection" class="form-note" role="status">Checking YouTube configuration…</p>
-          <div class="mission-controls"><button type="button" id="yt-connect" class="small-button" disabled>Continue with Google</button><button type="button" id="yt-refresh" class="small-button">Refresh</button></div>
-          <label>Saved YouTube channels <select id="yt-saved-channels" disabled><option value="">No saved channels</option></select></label>
-          <div class="mission-controls"><button type="button" id="yt-select-channel" class="small-button" disabled>Use selected channel</button><button type="button" id="yt-disconnect" class="small-button" hidden>Disconnect selected</button></div>
+          <div class="mission-controls"><button type="button" id="yt-connect" class="small-button google-channel-button" aria-describedby="yt-connection" disabled>Continue with Google</button><button type="button" id="yt-refresh" class="small-button" hidden>Refresh</button></div>
+          <p id="yt-login-prompt" class="form-note">First <a href="#account">sign in to ViMax</a> so your channel stays private to your account. Google consent connects the channel; it does not sign you in to ViMax.</p>
+          <div id="yt-saved-tools" hidden>
+            <label>Saved YouTube channels <select id="yt-saved-channels" disabled><option value="">No saved channels</option></select></label>
+            <div class="mission-controls"><button type="button" id="yt-select-channel" class="small-button" disabled>Use selected channel</button><button type="button" id="yt-disconnect" class="small-button" hidden>Disconnect selected</button></div>
+          </div>
           <p class="form-note">With your consent, an encrypted authorization is saved for your ViMax account and the last-used channel is restored when possible. Google can expire or revoke it; you may need to connect again. Only the selected channel is used for uploads.</p>
           <p class="form-note">Upload attempts use Google API quota and may incur hosting costs. ViMax limits new upload sessions to 3 per account and 10 shared per UTC day. A stopped or timed-out upload might still exist privately in YouTube Studio.</p>
           <p id="yt-error" class="error" role="alert"></p><p id="yt-notice" class="form-note" role="status"></p>
         </div>
-        <div class="panel">
+        <div class="panel" id="yt-upload-panel" hidden>
           <div class="panel-heading"><div><h3>Upload your MP4</h3><p>Maximum 100 MiB. Keep this page open while uploading.</p></div><span class="step-number">02</span></div>
           <form id="yt-form">
             <label>Video file <input id="yt-file" type="file" accept="video/mp4,.mp4" required></label>
