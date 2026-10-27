@@ -504,6 +504,11 @@
       "name": "supabase/supabase",
       "category": "Platform APIs",
       "source": "https://github.com/supabase/supabase"
+    },
+    {
+      "name": "RohanAdwankar/cgpu",
+      "category": "GPU compute",
+      "source": "https://github.com/RohanAdwankar/cgpu"
     }
   ],
   "topic_pages": [

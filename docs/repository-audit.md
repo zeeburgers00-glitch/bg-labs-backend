@@ -82,6 +82,10 @@ Topic listings are not blanket-reviewed or installed. Evaluate any new repositor
 - `ahmedsakri/youtube-agent-pro` at `45e8e2603d4bf8e17c1147ba870a4ea00eaecbc5`: `yt-idea/ideascore.py`; MIT license included alongside it.
 - These are local, deterministic English-language word heuristics. They do not access YouTube, generate artificial engagement, perform research, predict views, or publish.
 
+## cgpu GPU tool review (2026-10-27)
+
+[`RohanAdwankar/cgpu`](https://github.com/RohanAdwankar/cgpu/tree/6895aa73c666a66a7220345341998e40c571b343) is **assessed only, not installed or connected**. It is a Colab runtime CLI rather than a video model or Vercel GPU service. Its manifest declares Apache-2.0 without a checked-in license file; its dependency lock has known advisories and its credential storage and remote-shell behavior need hardening. Colab policies and compute availability further limit its suitability as a ViMax backend. See the [detailed review](cgpu-audit.md).
+
 ## Queue concurrency-test dependencies (2026-10-27)
 
 - [`brianc/node-postgres`](https://github.com/brianc/node-postgres/tree/2a5850fb0db18f5e40a642bbb4a4743de412ab54): GitHub metadata reported MIT, unarchived and recently updated; the README describes a pure JavaScript PostgreSQL client, with optional native bindings. Pinned `pg@8.23.1` is a **development-only** dependency for the opt-in isolated multi-connection test, not used by Vercel or the worker. Its transitive npm dependencies are locked; `npm audit` reported no known vulnerabilities at the check time. This is not a full security audit or guarantee.

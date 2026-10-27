@@ -26,6 +26,11 @@ test('requested repositories and references appear exactly once with honest stat
   for (const name of ['shotcut/shotcut', 'electron-vite/electron-vite']) {
     assert.equal(catalog.entries.find(entry => entry.name === name).status, 'unavailable');
   }
+  const cgpu = catalog.entries.find(entry => entry.name === 'RohanAdwankar/cgpu');
+  assert.equal(cgpu.status, 'reviewed');
+  assert.equal(cgpu.revision, '6895aa73c666a66a7220345341998e40c571b343');
+  assert.match(cgpu.security, /Not installed or connected/);
+  assert.match(cgpu.description, /not a video model or a ViMax GPU worker/i);
 });
 
 test('catalog links, features and assessment fields are safe to display', async () => {

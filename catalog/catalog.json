@@ -3423,6 +3423,30 @@
         "pnpm-workspace.yaml"
       ],
       "archived": false
+    },
+    {
+      "id": "rohanadwankar--cgpu",
+      "name": "RohanAdwankar/cgpu",
+      "description": "Colab GPU CLI for interactive CUDA experimentation. Not a video model or a ViMax GPU worker.",
+      "source": "https://github.com/RohanAdwankar/cgpu",
+      "revision": "6895aa73c666a66a7220345341998e40c571b343",
+      "license": "Apache-2.0 declared in package.json; no LICENSE file found",
+      "status": "reviewed",
+      "review_level": "targeted",
+      "category": "GPU compute",
+      "requirements": "Node.js, user-authorized Google Colab account and desktop OAuth client; GPU access and costs depend on the account and Google policies.",
+      "features": [
+        "Colab runtime access",
+        "Remote CUDA experiments"
+      ],
+      "platform": "Interactive CLI; not a durable Vercel worker. Operating-system compatibility and live GPU access unverified.",
+      "security": "Not installed or connected. Five high-severity packages in the checked-in lockfile; plaintext token/client-secret files, remote shell access and Colab usage restrictions require review.",
+      "readme": "README.md",
+      "root_manifests": [
+        "package.json",
+        "package-lock.json"
+      ],
+      "archived": false
     }
   ]
 }
