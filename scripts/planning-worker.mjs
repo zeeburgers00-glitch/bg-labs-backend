@@ -67,6 +67,10 @@ function supabaseClient(config, fetchImpl) {
       response = await fetchImpl(`${config.base}/rest/v1/rpc/${name}`,{method:'POST',
         headers:{apikey:config.key,authorization:`Bearer ${bearer}`,'content-type':'application/json'},
         body:JSON.stringify(data),signal:AbortSignal.timeout(12_000),redirect:'error',cache:'no-store'});
+      // Some PostgREST versions may return an empty 204 for a NULL scalar.
+      // Only claim uses NULL as its expected idle result; every other operation
+      // still requires a JSON confirmation and fails closed otherwise.
+      if (response.status === 204 && name === 'vimax_mission_claim') return null;
       value = await response.json();
     } catch { throw new Error('Worker database operation could not be confirmed.'); }
     if (!response.ok) {

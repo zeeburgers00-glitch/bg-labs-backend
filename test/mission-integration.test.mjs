@@ -57,6 +57,7 @@ async function fixture() {
       try {
         const args=paths[name].map(key=>payload[key] ?? null);
         const result=(await db.query(`select public.${name}(${args.map((_,i)=>`$${i+1}`).join(',')}) as result`,args)).rows[0].result;
+        if(name==='vimax_mission_claim' && result===null) return new Response(null,{status:204});
         return Response.json(result);
       } catch(error) {return Response.json({code:error.code,message:error.message},{status:400});}
     });
