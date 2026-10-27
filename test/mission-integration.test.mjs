@@ -25,7 +25,7 @@ async function fixture() {
     create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
     grant usage on schema auth to anon,authenticated;`);
   for(const id of [owner,other]) await db.query('insert into auth.users(id) values ($1)',[id]);
-  for(const file of ['202610270001_vimax_projects.sql','202610270002_vimax_cloud_ai.sql','202610270003_vimax_ai_finish_token.sql','202610270004_vimax_mission_queue.sql']) await db.exec(await readFile(new URL(`../supabase/migrations/${file}`,import.meta.url),'utf8'));
+  for(const file of ['202610270001_vimax_projects.sql','202610270002_vimax_cloud_ai.sql','202610270003_vimax_ai_finish_token.sql','202610270004_vimax_mission_queue.sql','202610270006_vimax_mission_openai.sql']) await db.exec(await readFile(new URL(`../supabase/migrations/${file}`,import.meta.url),'utf8'));
   let lock=Promise.resolve(), providerMode='success'; const providerCalls=[], network=[];
   async function as(id,operation) {
     const previous=lock; let release; lock=new Promise(resolve=>{release=resolve;}); await previous;
@@ -35,7 +35,7 @@ async function fixture() {
   async function fakeFetch(raw,init={}) {
     const url=new URL(raw); const payload=init.body ? JSON.parse(init.body) : {};
     network.push({host:url.hostname,path:url.pathname,method:init.method});
-    if(url.hostname==='api.groq.com') {
+    if(url.hostname==='api.groq.com' || url.hostname==='api.openai.com') {
       providerCalls.push(payload);
       if(providerMode==='timeout') throw new TypeError('network failure');
       if(providerMode==='rate') return Response.json({secret:'must not be shown'},{status:429});
@@ -119,6 +119,30 @@ test('bridge + simulated PostgREST + real SQL queue + worker + mocked provider',
     const calls=await fx.as(owner,()=>fx.db.query("select status,feature,input_tokens,output_tokens from public.vimax_ai_calls where feature='job_stage' order by created_at"));
     assert.equal(calls.rows.length,3); assert.ok(calls.rows.every(row=>row.status==='succeeded'&&row.input_tokens===12&&row.output_tokens===8));
     assert.ok(fx.network.every(call=>['example.supabase.co','api.groq.com'].includes(call.host)));
+  } finally {await fx.db.close();}
+});
+
+test('OpenAI can be queued and processed through the planning worker with a mocked provider',async()=>{
+  const fx=await fixture();
+  try {
+    const bridge=createBridge({env,fetchImpl:fx.fetch});
+    const profile=(await (await bridge.fetch(req('/api/cloud/mission/channels',{method:'POST',payload:channel}))).json()).channel;
+    const payload={channel_id:profile.id,client_key:randomUUID(),topic:'OpenAI planning test',provider:'openai',model:'gpt-5.4-nano'};
+    let response=await bridge.fetch(req('/api/cloud/mission/jobs',{method:'POST',payload}));
+    assert.equal(response.status,201); const job=(await response.json()).job;
+    response=await bridge.fetch(req('/api/cloud/mission/jobs',{method:'POST',payload}));
+    assert.equal(response.status,200); assert.equal((await response.json()).job.id,job.id);
+    const worker=createPlanningWorker({env:{...workerEnv,OPENAI_API_KEY:'test-only-openai-key'},fetchImpl:fx.fetch,logger:quiet});
+    await worker.tick();
+    assert.equal(fx.providerCalls.length,3);
+    for(const call of fx.providerCalls) {
+      assert.equal(call.model,'gpt-5.4-nano'); assert.equal(call.max_completion_tokens,900);
+      assert.equal(Object.hasOwn(call,'max_tokens'),false);
+    }
+    const detail=await (await bridge.fetch(req(`/api/cloud/mission/jobs/${job.id}`))).json();
+    assert.equal(detail.job.status,'needs_review'); assert.equal(detail.steps.length,3);
+    assert.equal(fx.network.filter(call=>call.host==='api.openai.com' && call.path==='/v1/chat/completions').length,3);
+    assert.equal(fx.network.some(call=>call.host==='api.groq.com'),false);
   } finally {await fx.db.close();}
 });
 

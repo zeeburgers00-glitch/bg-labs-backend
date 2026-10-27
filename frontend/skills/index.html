@@ -150,7 +150,7 @@
           <form id="mission-job-form">
             <label>Profile <select id="mission-job-channel" name="channel_id" required></select></label>
             <label>Topic or brief <textarea name="topic" maxlength="1600" rows="3" required placeholder="What should this video explore?"></textarea></label>
-            <div class="field-grid"><label>Provider <select id="mission-provider" name="provider"><option value="groq">Groq</option><option value="gemini">Gemini</option><option value="mistral">Mistral</option><option value="zai">Z.ai</option><option value="openrouter">OpenRouter</option><option value="huggingface">Hugging Face</option><option value="opencode">OpenCode</option></select></label><label>Model <input id="mission-model" name="model" value="llama-3.1-8b-instant" maxlength="128" required></label></div>
+            <div class="field-grid"><label>Provider <select id="mission-provider" name="provider"><option value="groq">Groq</option><option value="openai">OpenAI</option><option value="gemini">Gemini</option><option value="mistral">Mistral</option><option value="zai">Z.ai</option><option value="openrouter">OpenRouter</option><option value="huggingface">Hugging Face</option><option value="opencode">OpenCode</option></select></label><label>Model <input id="mission-model" name="model" value="llama-3.1-8b-instant" maxlength="128" required></label></div>
             <label>Start planning no earlier than <input name="not_before" type="datetime-local"><small>Optional; interpreted in this browser’s timezone, not the profile timezone. Maximum 30 days. This is not YouTube scheduling.</small></label>
             <button class="button" type="submit">Queue text plan <span>→</span></button>
           </form>

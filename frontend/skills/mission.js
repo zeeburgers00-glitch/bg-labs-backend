@@ -144,7 +144,7 @@
     catch(error){if(active(version)) $('mission-error').textContent=error.message;}
     finally {submit.disabled=false;}
   });
-  const defaults={groq:'llama-3.1-8b-instant',gemini:'gemini-2.5-flash',mistral:'mistral-small-latest',zai:'glm-4.5-flash',openrouter:'openrouter/free',huggingface:'openai/gpt-oss-120b:groq',opencode:''};
+  const defaults={groq:'llama-3.1-8b-instant',openai:'gpt-5.4-nano',gemini:'gemini-2.5-flash',mistral:'mistral-small-latest',zai:'glm-4.5-flash',openrouter:'openrouter/free',huggingface:'openai/gpt-oss-120b:groq',opencode:''};
   $('mission-provider').addEventListener('change',()=>{$('mission-model').value=defaults[$('mission-provider').value]||'';});
   $('mission-job-form').addEventListener('submit',async event=>{
     event.preventDefault(); const version=state.version, form=event.currentTarget, data=Object.fromEntries(new FormData(form)), submit=form.querySelector('button[type=submit]');

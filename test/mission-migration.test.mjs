@@ -22,13 +22,14 @@ test('mission migration isolates owners and implements real, cautious queue tran
       create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
       grant usage on schema auth to anon,authenticated;`);
     for (const id of users) await db.query('insert into auth.users(id) values ($1)', [id]);
-    for (const file of ['202610270001_vimax_projects.sql','202610270002_vimax_cloud_ai.sql','202610270003_vimax_ai_finish_token.sql','202610270004_vimax_mission_queue.sql']) {
+    for (const file of ['202610270001_vimax_projects.sql','202610270002_vimax_cloud_ai.sql','202610270003_vimax_ai_finish_token.sql','202610270004_vimax_mission_queue.sql','202610270006_vimax_mission_openai.sql']) {
       await db.exec(await readFile(new URL(`../supabase/migrations/${file}`, import.meta.url), 'utf8'));
     }
     await t.test('profiles, competitor references, jobs and capabilities are owner-isolated', async () => {
       await db.exec('set role anon;');
       await assert.rejects(db.query('select id from public.vimax_channels'), /permission denied/);
       await assert.rejects(rpc('vimax_mission_claim',randomUUID()), /permission denied/);
+      await assert.rejects(rpc('vimax_mission_submit',randomUUID(),randomUUID(),'Topic','openai','gpt-5.4-nano',null), /permission denied/);
       await role(users[0]);
       const alice = await channel('Alice');
       await db.query("insert into public.vimax_competitors(channel_id,url) values($1,'https://www.youtube.com/@example')",[alice]);

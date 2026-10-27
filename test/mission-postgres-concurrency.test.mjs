@@ -27,7 +27,7 @@ test('real PostgreSQL 17 concurrent queue, provider and private-upload safety', 
       grant usage on schema auth to anon,authenticated;`);
     const users=Array.from({length:12},(_,n)=>`12345678-0000-4000-8000-${String(n+1).padStart(12,'0')}`);
     for(const id of users) await pool.query('insert into auth.users(id) values($1)',[id]);
-    for(const file of ['202610270001_vimax_projects.sql','202610270002_vimax_cloud_ai.sql','202610270003_vimax_ai_finish_token.sql','202610270004_vimax_mission_queue.sql','202610270005_vimax_youtube_uploads.sql']) {
+    for(const file of ['202610270001_vimax_projects.sql','202610270002_vimax_cloud_ai.sql','202610270003_vimax_ai_finish_token.sql','202610270004_vimax_mission_queue.sql','202610270005_vimax_youtube_uploads.sql','202610270006_vimax_mission_openai.sql']) {
       await pool.query(await readFile(new URL(`../supabase/migrations/${file}`,import.meta.url),'utf8'));
     }
     async function as(id,action) {
