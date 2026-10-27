@@ -239,10 +239,13 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   localOnly=true;await page.goto(`${skills}#youtube`,{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>document.getElementById('connection').textContent==='Local companion connected');
   assert.equal(await page.locator('#youtube').isHidden(),true);assert.equal(await page.locator('#youtube-link').isHidden(),true);
-  // The additive ViMax sidebar item reaches the same deep link even when the
-  // original video agent is unavailable.
-  localOnly=false;signedIn=false;youtubeConfigured=false;await page.setViewportSize({width:1280,height:1000});
-  await page.goto(`http://127.0.0.1:${server.address().port}/`,{waitUntil:'domcontentloaded'});
+  await page.setViewportSize({width:1280,height:1000});
+  const localSystem=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/skills/system');
+  await page.goto(`http://127.0.0.1:${server.address().port}/`,{waitUntil:'domcontentloaded'});await localSystem;
+  assert.equal(await page.getByRole('button',{name:'Connect YouTube'}).count(),0);
+  // The additive ViMax sidebar item reaches the same deep link in cloud mode,
+  // even when the original video agent is unavailable.
+  localOnly=false;signedIn=false;youtubeConfigured=false;await page.reload({waitUntil:'domcontentloaded'});
   await page.getByRole('button',{name:'Connect YouTube'}).click();
   await page.waitForURL(`${skills}#youtube`);await page.waitForSelector('#youtube:not([hidden])');
   assert.equal(await page.locator('#yt-connect').isVisible(),true);

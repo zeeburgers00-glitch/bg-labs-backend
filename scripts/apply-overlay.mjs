@@ -15,10 +15,12 @@ export function patchApi(source) {
 export function patchApp(source) {
   const needle = '          <button className={activeView === \'settings\' ? \'is-active\' : \'\'} onClick={onSettings}><Settings size={17} /><span>Settings</span></button>';
   const icon = '  Film,\n';
-  if (source.split(needle).length !== 2 || source.split(icon).length !== 2) throw new Error('ViMax navigation overlay did not match the pinned upstream source.');
-  const added = '          <button onClick={() => window.location.assign(\'/skills/#youtube\')}><Youtube size={17} /><span>Connect YouTube</span></button>\n' +
+  const sidebar = '  onDelete: (session: SessionSummary) => void;\n}) {\n  return (\n';
+  if ([needle,icon,sidebar].some(part => source.split(part).length !== 2)) throw new Error('ViMax navigation overlay did not match the pinned upstream source.');
+  const added = '          {isCloudMode && <button onClick={() => window.location.assign(\'/skills/#youtube\')}><Youtube size={17} /><span>Connect YouTube</span></button>}\n' +
     '          <button onClick={() => window.location.assign(\'/skills/\')}><Film size={17} /><span>Skills &amp; Agents</span></button>\n';
-  return source.replace(icon, `${icon}  Youtube,\n`).replace(needle, added + needle);
+  const cloudCheck = `  onDelete: (session: SessionSummary) => void;\n}) {\n  const [isCloudMode, setIsCloudMode] = useState(false);\n  useEffect(() => {\n    const controller = new AbortController();\n    void fetch('/api/skills/system', {cache: 'no-store', signal: controller.signal})\n      .then(response => response.ok ? response.json() : null)\n      .then(system => { if (!controller.signal.aborted) setIsCloudMode(system?.local_only === false); })\n      .catch(() => {});\n    return () => controller.abort();\n  }, []);\n  return (\n`;
+  return source.replace(icon, `${icon}  Youtube,\n`).replace(sidebar, cloudCheck).replace(needle, added + needle);
 }
 
 export function patchSessionWarning(api, app) {
