@@ -2,7 +2,7 @@
 
 Google app sign-in identifies the user in the existing Supabase Auth project. It does **not** authorize YouTube, Facebook, Gmail, Drive, or arbitrary websites. After an app sign-in that was started in the same browser tab, ViMax can start a separate YouTube consent when no saved channel exists. Google still asks the user to select and authorize the intended channel. Saved YouTube connections are owner-bound and the default is restored when possible; expired or revoked grants require another consent. Up to ten channels can be saved separately. Facebook Pages require a separate Facebook login and developer app.
 
-The app-login code is off by default. Tests simulate Supabase and Google; live consent, identity linking, channel restoration, and Facebook have **not** been verified. The AI chat also needs its own configured text provider. Chat is disabled until a YouTube channel is connected. No full online video generator, YouTube analytics, Gmail/Drive access or chat-controlled Facebook access is implemented by this sign-in flow.
+The app-login code is off by default. Tests simulate Supabase and Google; live consent, identity linking, channel restoration, and Facebook have **not** been verified. The AI chat also needs its own configured text provider. Chat is disabled until a YouTube channel is connected. Read-only [YouTube Analytics charts](youtube-analytics.md) are a separately configured, separately consented feature, not part of app login. No full online video generator, Gmail/Drive access or chat-controlled Facebook access is implemented by this sign-in flow.
 
 ## Owner setup
 

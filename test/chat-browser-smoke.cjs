@@ -20,6 +20,7 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   const alice='aaaaaaaa-0000-4000-8000-000000000001',bob='bbbbbbbb-0000-4000-8000-000000000002';
   const channelA='12345678-0000-4000-8000-000000000010',channelB='12345678-0000-4000-8000-000000000011';
   let signedIn=false,current=alice,configured=false,allowed=true,paused=false,googleConfigured=false,googleAllowed=true,appLoginEnabled=false,fbConfigured=false;
+  let analyticsEnabled=false,analyticsGranted=false,analyticsMode='ok';
   let authorizationUrl='https://accounts.google.com/o/oauth2/v2/auth?state=mock',appAuthorizationUrl='https://fake.supabase.co/auth/v1/authorize?provider=google',holdChat=false,holdOAuth=false,holdProviders=false,releaseChat,releaseOAuth,releaseProviders,notifyChat,notifyOAuth,notifyProviders;
   const selected={[alice]:null,[bob]:null}, histories={
    [alice]:[{prompt:'Alice private question',reply:'<img src=x onerror=alert(1)> safe answer',provider:'groq',model:'openai/gpt-oss-120b'}],
@@ -32,7 +33,7 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   };
   const facebookPage='22345678-0000-4000-8000-000000000010';
   const pages={[alice]:[{id:facebookPage,provider:'facebook',external_id:'12345',display_name:'Alice Page',status:'active',is_default:true}],[bob]:[]};
-  const requests=[],posts=[],chatBodies=[],loginBodies=[],resendBodies=[],selections=[],disconnects=[],facebookSelections=[];
+  const requests=[],posts=[],chatBodies=[],loginBodies=[],resendBodies=[],selections=[],disconnects=[],facebookSelections=[],oauthBodies=[];
   await page.route('**/api/**',async route=>{
    const rq=route.request(),p=new URL(rq.url()).pathname,m=rq.method();let data={},body={};try{body=rq.postDataJSON()||{}}catch{}
    requests.push(p);if(m!=='GET')posts.push(p);
@@ -64,7 +65,7 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
    else if(p==='/api/cloud/youtube/status'){
     const saved=channels[current],active=saved.find(item=>item.id===selected[current]);
     data={configured:googleConfigured,allowed:googleConfigured&&googleAllowed,connected:Boolean(active),channel:active?{id:active.channel_id,title:active.channel_title}:null,
-      connection_id:active?.id||null,saved_channels:saved};
+      connection_id:active?.id||null,saved_channels:saved,analytics_configured:analyticsEnabled,analytics_connected:analyticsGranted};
    }
    else if(p==='/api/cloud/youtube/select'){
     selections.push({owner:current,id:body.id});const item=channels[current].find(value=>value.id===body.id);
@@ -76,7 +77,16 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
     if(index<0)return route.fulfill({status:404,json:{error:'not found'}});
     channels[current].splice(index,1);if(selected[current]===body.id)selected[current]=null;data={disconnected:true,revoked:false};
    }
+   else if(p==='/api/cloud/youtube/analytics'){
+    const active=channels[current].find(item=>item.id===selected[current]);
+    if(!active)return route.fulfill({status:401,json:{error:'not connected'}});
+    data={channel:{id:active.channel_id,title:active.channel_title},requested_start:'2026-09-01',requested_end:'2026-09-30',
+      latest_data:analyticsMode==='empty'?null:'2026-09-29',rows:analyticsMode==='empty'?[]:[
+       {day:'2026-09-01',views:100,estimated_minutes_watched:45,subscribers_gained:2},
+       {day:'2026-09-29',views:220,estimated_minutes_watched:110,subscribers_gained:3}],remaining_user:4};
+   }
    else if(p==='/api/cloud/youtube/oauth/start'){
+    oauthBodies.push(body);
     if(holdOAuth)await new Promise(resolve=>{releaseOAuth=resolve;notifyOAuth();});
     data={authorization_url:authorizationUrl};
    }
@@ -212,7 +222,41 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   await page.goto(`${base}/skills/?youtube=connected#youtube`,{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>document.getElementById('channel-status').textContent.includes('Bob channel'));
   await page.locator('#chat-prompt').fill('Hi');assert.equal(await page.locator('#chat-send').isEnabled(),true);
+  // Analytics is never fabricated: disabled and unconsented cases do not call Google or draw an image.
+  await page.locator('#chat-prompt').fill('analytics ka screenshot bhej do');await page.locator('#chat-send').click();
+  await page.waitForFunction(()=>document.getElementById('messages').textContent.includes('has not been enabled'));
+  assert.equal(posts.filter(value=>value==='/api/cloud/youtube/analytics').length,0);assert.equal(await page.locator('.analytics-canvas').count(),0);
+  analyticsEnabled=true;await page.reload({waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>document.getElementById('channel-status').textContent.includes('Bob channel'));
+  await page.locator('#chat-prompt').fill('show my channel analytics');await page.locator('#chat-send').click();
+  await page.waitForFunction(()=>document.getElementById('messages').textContent.includes('allow Analytics access'));
+  assert.equal(posts.filter(value=>value==='/api/cloud/youtube/analytics').length,0);
+  // A report can be requested even without a configured text model. The chart
+  // is explicitly a ViMax visualization, downloadable and scoped to Bob.
+  analyticsGranted=true;configured=false;await page.reload({waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>document.getElementById('channel-status').textContent.includes('Bob channel'));
+  const beforeChat=chatBodies.length;await page.locator('#chat-prompt').fill('analytics ka screenshot bhej do');
+  await page.waitForFunction(()=>!document.getElementById('chat-send').disabled);await page.locator('#chat-send').click();
+  await page.waitForSelector('.analytics-canvas');assert.equal(chatBodies.length,beforeChat);
+  assert.match(await page.locator('#messages').textContent(),/Bob channel/);assert.match(await page.locator('#messages').textContent(),/not a YouTube Studio screenshot/i);
+  assert.match(await page.locator('.analytics-canvas').getAttribute('aria-label'),/Bob channel/);
+  assert.match(await page.locator('.analytics-summary').textContent(),/320 views · 155 watch minutes · 5 subscribers gained/);
+  assert.ok((await page.locator('.analytics-canvas').evaluate(canvas=>canvas.toDataURL('image/png'))).startsWith('data:image/png;base64,'));
+  if(process.env.VIMAX_CHAT_SCREENSHOT)await page.screenshot({path:process.env.VIMAX_CHAT_SCREENSHOT});
+  const [download]=await Promise.all([page.waitForEvent('download'),page.locator('.analytics-save').click()]);
+  assert.equal(download.suggestedFilename(),'vimax-youtube-analytics.png');
+  analyticsMode='empty';await page.locator('#chat-prompt').fill('send analytics report');await page.locator('#chat-send').click();
+  await page.waitForFunction(()=>document.getElementById('messages').textContent.includes('no daily analytics rows'));
+  assert.equal(await page.locator('.message.assistant').last().locator('.analytics-canvas').count(),0);
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'analytics mobile overflow');
+  holdOAuth=true;const analyticsOAuthReached=new Promise(resolve=>{notifyOAuth=resolve;});
+  await page.locator('#account-button').click();await page.locator('#channel-manage').click();await page.locator('#google-connect').click();await analyticsOAuthReached;
+  assert.deepEqual(oauthBodies.at(-1),{analytics:true});
+  await page.locator('[data-close=channel-dialog]').click();await page.locator('#account-button').click();await page.locator('#logout').click();
+  await page.waitForFunction(()=>document.getElementById('google-signin').offsetParent!==null);
+  releaseOAuth();await page.waitForTimeout(100);holdOAuth=false;assert.ok(page.url().startsWith(base));
+  assert.equal(await page.locator('.analytics-canvas').count(),0);assert.equal(await page.locator('#messages').textContent(),'');
   assert.deepEqual(errors,[]);
-  console.log('Mocked hosted chat smoke passed: Google app login, channel consent/restore, Facebook Pages, chat privacy and mobile.');
+  console.log('Mocked hosted chat smoke passed: Google app login, channel consent/restore, analytics chart, privacy and mobile.');
  } finally {await browser?.close();await new Promise(resolve=>server.close(resolve));}
 })().catch(error=>{console.error(error);process.exitCode=1});

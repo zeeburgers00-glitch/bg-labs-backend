@@ -15,6 +15,7 @@ const GOOGLE_TOKEN = /^[A-Za-z0-9._~+/-]{10,2048}={0,2}$/;
 const PENDING = '__Host-vimax_yt_pending';
 const ACCESS = '__Host-vimax_yt_access';
 const SCOPES = ['https://www.googleapis.com/auth/youtube.readonly','https://www.googleapis.com/auth/youtube.upload'];
+const ANALYTICS_SCOPE = 'https://www.googleapis.com/auth/yt-analytics.readonly';
 const MAX_FILE = 100 * 1024 * 1024;
 const CHUNK = 1024 * 1024;
 const QUANTUM = 256 * 1024;
@@ -130,6 +131,24 @@ function uploadOffset(response,total) {
   if (!Number.isSafeInteger(n) || n<1 || n>total) throw new YouTubeError(502,'Google returned an invalid upload range.');
   return n;
 }
+function analyticsRows(data, start, end) {
+  const names=['day','views','estimatedMinutesWatched','subscribersGained'];
+  if (!Array.isArray(data?.columnHeaders) || data.columnHeaders.length!==names.length
+      || data.columnHeaders.some((column,index)=>column?.name!==names[index])) throw new YouTubeError(502,'YouTube returned an unexpected analytics report.');
+  const rows=data.rows===undefined ? [] : data.rows;
+  if (!Array.isArray(rows) || rows.length>30) throw new YouTubeError(502,'YouTube returned an unexpected analytics report.');
+  let previous='';
+  return rows.map(row=>{
+    const [day,views,minutes,subscribers]=Array.isArray(row)?row:[];
+    if (!Array.isArray(row) || row.length!==4 || typeof day!=='string' || !/^\d{4}-\d{2}-\d{2}$/.test(day)
+        || !Number.isFinite(Date.parse(`${day}T00:00:00Z`)) || new Date(`${day}T00:00:00Z`).toISOString().slice(0,10)!==day
+        || day<start || day>end || day<=previous || !Number.isSafeInteger(views) || views<0 || views>1e12
+        || !Number.isFinite(minutes) || minutes<0 || minutes>1e12 || !Number.isSafeInteger(subscribers) || subscribers<0 || subscribers>1e12)
+      throw new YouTubeError(502,'YouTube returned an unexpected analytics report.');
+    previous=day;
+    return {day,views,estimated_minutes_watched:minutes,subscribers_gained:subscribers};
+  });
+}
 function validateStart(input, channel) {
   const title=typeof input.title==='string' ? input.title.trim() : '';
   const description=typeof input.description==='string' ? input.description.trim() : '';
@@ -145,13 +164,13 @@ function validateStart(input, channel) {
 }
 
 export function createYouTube({env,fetchImpl,supa,body,json}) {
-  async function google(url, init={}) {
+  async function google(url, init={}, failure='Google could not be reached. The upload outcome may be uncertain; check its status before retrying.') {
     try { return await fetchImpl(url,{...init,signal:AbortSignal.timeout(25_000),redirect:'manual',cache:'no-store'}); }
-    catch { throw new YouTubeError(503,'Google could not be reached. The upload outcome may be uncertain; check its status before retrying.'); }
+    catch { throw new YouTubeError(503,failure); }
   }
   async function rpc(session,name,data) {
     const {response,value}=await supa(`/rest/v1/rpc/${name}`,{method:'POST',token:session.access,data});
-    if (!response.ok) throw new YouTubeError(503,'The YouTube upload safety database is unavailable.');
+    if (!response.ok) throw new YouTubeError(503,'The YouTube safety database is unavailable.');
     return value;
   }
   async function databaseAllowed(session) {
@@ -174,10 +193,10 @@ export function createYouTube({env,fetchImpl,supa,body,json}) {
       throw new YouTubeError(401,'The saved channel was disconnected or needs Google authorization again.');
     return auth;
   }
-  function accessCookie(config,owner,id,channel,token,expiresIn) {
+  function accessCookie(config,owner,id,channel,token,expiresIn,analytics=false) {
     const seconds=Math.min(3600,Math.floor(Number(expiresIn)))-60;
     if (seconds<30 || !U.test(id||'') || !GOOGLE_TOKEN.test(token||'')) throw new YouTubeError(502,'Google returned an incomplete authorization.');
-    return ytCookie(ACCESS,seal(config.key,`youtube-access:${owner}`,{owner,connectionId:id,channel,token,expires:Date.now()+seconds*1000}),seconds);
+    return ytCookie(ACCESS,seal(config.key,`youtube-access:${owner}`,{owner,connectionId:id,channel,token,analytics:analytics===true,expires:Date.now()+seconds*1000}),seconds);
   }
   async function channelFor(token) {
     const r=await google('https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true&maxResults=2',
@@ -220,21 +239,26 @@ export function createYouTube({env,fetchImpl,supa,body,json}) {
           'Google could not confirm this reconnect. Connect this channel again rather than retrying an uncertain refresh.');
       }
       const tokens=await boundedJson(response);
-      if (tokens.refresh_token!==undefined) {
-        if (!GOOGLE_TOKEN.test(tokens.refresh_token||'')) throw new YouTubeError(502,'Google returned an incomplete refresh response.');
-        cipher=seal(config.key,`youtube-refresh:${session.user.id}:${claim.channel_id}`,
-          {owner:session.user.id,channelId:claim.channel_id,token:tokens.refresh_token});
-      }
+      if (tokens.refresh_token!==undefined && !GOOGLE_TOKEN.test(tokens.refresh_token||''))
+        throw new YouTubeError(502,'Google returned an incomplete refresh response.');
       if (!GOOGLE_TOKEN.test(tokens.access_token||'') || !Number.isFinite(Number(tokens.expires_in)) || Number(tokens.expires_in)<90
           || (tokens.token_type!==undefined && String(tokens.token_type).toLowerCase()!=='bearer')
           || (tokens.scope!==undefined && (typeof tokens.scope!=='string' || !SCOPES.every(scope=>tokens.scope.split(/\s+/).includes(scope)))))
         throw new YouTubeError(502,'Google returned an incomplete refresh response.');
+      // Old connections have no analytics marker and remain valid for uploads.
+      // A scope returned on refresh is authoritative; if omitted, preserve
+      // only a previously verified analytics grant in the encrypted record.
+      const analytics=tokens.scope===undefined ? stored.analytics===true : tokens.scope.split(/\s+/).includes(ANALYTICS_SCOPE);
+      if (tokens.refresh_token!==undefined || stored.analytics!==analytics) {
+        cipher=seal(config.key,`youtube-refresh:${session.user.id}:${claim.channel_id}`,
+          {owner:session.user.id,channelId:claim.channel_id,token:tokens.refresh_token||stored.token,analytics});
+      }
       const channel=await channelFor(tokens.access_token);
       if (channel.id!==claim.channel_id) {
         await resolve('needs_reauth');
         throw new YouTubeError(409,'Google returned a different channel. Connect the intended channel again.');
       }
-      const access=accessCookie(config,session.user.id,id,channel,tokens.access_token,tokens.expires_in);
+      const access=accessCookie(config,session.user.id,id,channel,tokens.access_token,tokens.expires_in,analytics);
       await resolve('active');
       return {channel,access};
     } catch (error) {
@@ -356,15 +380,19 @@ export function createYouTube({env,fetchImpl,supa,body,json}) {
       const auth=candidate && saved.some(x=>x.id===candidate.connectionId && x.channel_id===candidate.channel.id && x.status==='active') ? candidate : null;
       return json({configured:Boolean(cfg),allowed:permission,connected:Boolean(auth),channel:auth?.channel||null,
         connection_id:auth?.connectionId||null,saved_channels:saved,
+        analytics_configured:Boolean(cfg) && env.VIMAX_YOUTUBE_ANALYTICS_ENABLED==='true',analytics_connected:auth?.analytics===true,
         expires_at:auth?new Date(auth.expires).toISOString():null,privacy:'private',max_file_bytes:MAX_FILE},200,session.updates);
     }
     if (path==='/api/cloud/youtube/oauth/start' && method==='POST') {
-      const cfg=configRequired(env,request,session); await body(request); await requireDatabaseAccess(session);
+      const cfg=configRequired(env,request,session), input=await body(request); await requireDatabaseAccess(session);
+      if (input.analytics!==undefined && typeof input.analytics!=='boolean') throw new YouTubeError(422,'Invalid analytics consent request.');
+      if (input.analytics===true && env.VIMAX_YOUTUBE_ANALYTICS_ENABLED!=='true') throw new YouTubeError(503,'YouTube Analytics is not enabled on this deployment.');
+      const wantsAnalytics=input.analytics===true;
       const state=randomBytes(24).toString('base64url'), verifier=randomBytes(32).toString('base64url');
       const challenge=createHash('sha256').update(verifier).digest('base64url');
-      const pending=seal(cfg.key,`youtube-pending:${owner}`,{owner,state,verifier,expires:Date.now()+600_000});
+      const pending=seal(cfg.key,`youtube-pending:${owner}`,{owner,state,verifier,analytics:wantsAnalytics,expires:Date.now()+600_000});
       const url=new URL('https://accounts.google.com/o/oauth2/v2/auth');
-      for (const [k,v] of Object.entries({client_id:cfg.clientId,redirect_uri:cfg.redirect,response_type:'code',scope:SCOPES.join(' '),
+      for (const [k,v] of Object.entries({client_id:cfg.clientId,redirect_uri:cfg.redirect,response_type:'code',scope:[...SCOPES,...(wantsAnalytics?[ANALYTICS_SCOPE]:[])].join(' '),
         access_type:'offline',prompt:'consent select_account',state,code_challenge:challenge,code_challenge_method:'S256'})) url.searchParams.set(k,v);
       return json({authorization_url:url.href},200,[...session.updates,ytCookie(PENDING,pending,600)]);
     }
@@ -389,14 +417,17 @@ export function createYouTube({env,fetchImpl,supa,body,json}) {
       if (!GOOGLE_TOKEN.test(value.refresh_token||''))
         throw new YouTubeError(409,'Google did not return an offline authorization. Reconnect with consent; you may need to remove the old grant in your Google account first.');
       const channel=await channelFor(value.access_token);
-      const refreshCipher=seal(cfg.key,`youtube-refresh:${owner}:${channel.id}`,{owner,channelId:channel.id,token:value.refresh_token});
+      // Analytics is optional: declining it must not prevent a base channel
+      // connection, but no report can be fetched without the separate grant.
+      const analytics=pending.analytics===true && scopes.includes(ANALYTICS_SCOPE);
+      const refreshCipher=seal(cfg.key,`youtube-refresh:${owner}:${channel.id}`,{owner,channelId:channel.id,token:value.refresh_token,analytics});
       const saved=await rpc(session,'vimax_youtube_connection_save',{p_channel_id:channel.id,p_channel_title:channel.title,p_refresh_cipher:refreshCipher});
       if (!saved?.allowed || !U.test(saved.id||'') || saved.channel_id!==channel.id) {
         const message=saved?.reason==='busy'?'This channel is reconnecting. Wait for it to finish before authorizing again.':
           saved?.reason==='limit'?'You have reached the limit of ten saved YouTube channels. Remove one before connecting another.':'The channel could not be saved.';
         throw new YouTubeError(409,message);
       }
-      const access=accessCookie(cfg,owner,saved.id,channel,value.access_token,value.expires_in);
+      const access=accessCookie(cfg,owner,saved.id,channel,value.access_token,value.expires_in,analytics);
       const headers=new Headers({'location':'/skills/?youtube=connected#youtube','cache-control':'no-store','referrer-policy':'no-referrer','x-content-type-options':'nosniff'});
       for (const c of [...session.updates,ytCookie(PENDING,'',0),access]) headers.append('set-cookie',c);
       return new Response(null,{status:303,headers});
@@ -405,6 +436,36 @@ export function createYouTube({env,fetchImpl,supa,body,json}) {
       const cfg=configRequired(env,request,session); await requireDatabaseAccess(session);
       const input=await body(request), result=await resumeConnection(session,cfg,input.id);
       return json({connected:true,channel:result.channel,connection_id:input.id},200,[...session.updates,result.access]);
+    }
+    if (path==='/api/cloud/youtube/analytics' && method==='POST') {
+      if (env.VIMAX_YOUTUBE_ANALYTICS_ENABLED!=='true') throw new YouTubeError(503,'YouTube Analytics is not enabled on this deployment.');
+      const cfg=configRequired(env,request,session); await body(request); await requireDatabaseAccess(session);
+      const auth=await requireActiveToken(cfg,request,session);
+      if (auth.analytics!==true) throw new YouTubeError(428,'Reconnect this channel with Google and allow YouTube Analytics access.');
+      const reservation=await rpc(session,'vimax_youtube_analytics_reserve',{});
+      if (!reservation?.allowed) {
+        const msg=reservation?.reason==='user_daily_limit'?'The daily analytics request limit for this account was reached.'
+          : reservation?.reason==='global_daily_limit'?'The shared daily analytics request limit was reached.'
+          : 'Analytics access is not enabled for this account.';
+        throw new YouTubeError(reservation?.reason==='not_allowed'?403:429,msg);
+      }
+      // Fixed-host, fixed report, owner-bound channel. Missing days are not
+      // invented; YouTube can return no rows or delayed data.
+      const endTime=Date.now()-86_400_000, startTime=endTime-29*86_400_000;
+      const end=new Date(endTime).toISOString().slice(0,10), start=new Date(startTime).toISOString().slice(0,10);
+      const url=new URL('https://youtubeanalytics.googleapis.com/v2/reports');
+      for (const [key,value] of Object.entries({ids:`channel==${auth.channel.id}`,startDate:start,endDate:end,
+        metrics:'views,estimatedMinutesWatched,subscribersGained',dimensions:'day',sort:'day'})) url.searchParams.set(key,value);
+      const response=await google(url.href,{headers:{authorization:`Bearer ${auth.token}`}},'YouTube Analytics could not be reached. No report was returned.');
+      if (!response.ok) {
+        try {await response.body?.cancel();} catch {}
+        if (response.status===401 || response.status===403) throw new YouTubeError(403,'YouTube Analytics rejected access. Check Google permission, channel ownership and API setup.');
+        if (response.status===429) throw new YouTubeError(429,'YouTube Analytics rate limit or quota was reached.');
+        throw new YouTubeError(502,'YouTube Analytics could not return the report.');
+      }
+      const rows=analyticsRows(await boundedJson(response),start,end);
+      return json({channel:auth.channel,requested_start:start,requested_end:end,latest_data:rows.at(-1)?.day||null,
+        rows,remaining_user:reservation.remaining_user},200,session.updates);
     }
     if (path==='/api/cloud/youtube/disconnect' && method==='POST') {
       const cfg=configuration(env,request), input=await body(request), auth=cfg?tokenSession(cfg,request,owner):null;

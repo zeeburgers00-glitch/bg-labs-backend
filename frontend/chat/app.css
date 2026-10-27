@@ -51,6 +51,11 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .message-text { margin: 0; color: #e8e6ef; font-size: 14px; line-height: 1.75; white-space: pre-wrap; overflow-wrap: anywhere; }
 .message.user .message-text { padding: 12px 15px; border: 1px solid #3d394f; border-radius: 14px 5px 14px 14px; background: #292637; }
 .message.pending .message-text { color: #aaa6b8; }
+.analytics-figure { width: min(640px, 100%); margin: 14px 0 0; }
+.analytics-canvas { display: block; width: 100%; height: auto; border: 1px solid #444052; border-radius: 12px; }
+.analytics-summary { margin: 10px 0 0; color: #e7e1fa; font-size: 12px; font-weight: 650; line-height: 1.5; }
+.analytics-figure figcaption { margin: 7px 0 10px; }
+.analytics-save { min-height: 34px; }
 .composer-wrap { flex: none; padding: 10px 0 23px; }
 .chat-status { min-height: 17px; margin: 0 4px 8px; color: #b1abc4; font-size: 11px; line-height: 1.45; }
 .error { color: #ffaca9; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }

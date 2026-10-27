@@ -27,7 +27,7 @@ test('real PostgreSQL 17 concurrent queue, provider and private-upload safety', 
       grant usage on schema auth to anon,authenticated;`);
     const users=Array.from({length:12},(_,n)=>`12345678-0000-4000-8000-${String(n+1).padStart(12,'0')}`);
     for(const id of users) await pool.query('insert into auth.users(id) values($1)',[id]);
-    for(const file of ['202610270001_vimax_projects.sql','202610270002_vimax_cloud_ai.sql','202610270003_vimax_ai_finish_token.sql','202610270004_vimax_mission_queue.sql','202610270005_vimax_youtube_uploads.sql','202610270006_vimax_mission_openai.sql','202610270007_vimax_gpu_previews.sql','202610270008_vimax_youtube_connections.sql','202610270009_vimax_social_connections.sql']) {
+    for(const file of ['202610270001_vimax_projects.sql','202610270002_vimax_cloud_ai.sql','202610270003_vimax_ai_finish_token.sql','202610270004_vimax_mission_queue.sql','202610270005_vimax_youtube_uploads.sql','202610270006_vimax_mission_openai.sql','202610270007_vimax_gpu_previews.sql','202610270008_vimax_youtube_connections.sql','202610270009_vimax_social_connections.sql','202610280010_vimax_youtube_analytics.sql']) {
       await pool.query(await readFile(new URL(`../supabase/migrations/${file}`,import.meta.url),'utf8'));
     }
     async function as(id,action) {
@@ -85,6 +85,17 @@ test('real PostgreSQL 17 concurrent queue, provider and private-upload safety', 
     // Each subtest operates only in this isolated temporary database. Real
     // connections exercise upload locks, idempotency, budgets and cancellation.
     await pool.query('insert into public.vimax_youtube_allowed_users(owner_id) select unnest($1::uuid[])',[users.slice(0,11)]);
+    await t.test('analytics limits are atomic across concurrent accounts',async()=>{
+      const same=await Promise.all(Array.from({length:24},()=>rpc(users[0],'vimax_youtube_analytics_reserve')));
+      assert.equal(same.filter(x=>x.allowed).length,5);
+      assert.equal(same.filter(x=>x.reason==='user_daily_limit').length,19);
+      const others=await Promise.all(users.slice(1,6).flatMap(id=>Array.from({length:8},()=>rpc(id,'vimax_youtube_analytics_reserve'))));
+      assert.equal(others.filter(x=>x.allowed).length,15);
+      assert.ok(others.filter(x=>!x.allowed).every(x=>['user_daily_limit','global_daily_limit'].includes(x.reason)));
+      assert.equal((await pool.query('select attempts from public.vimax_youtube_analytics_daily_budget')).rows[0].attempts,20);
+      assert.ok((await pool.query('select max(attempts)::int n from public.vimax_youtube_analytics_user_budget')).rows[0].n<=5);
+      assert.equal((await rpc(users[11],'vimax_youtube_analytics_reserve')).reason,'not_allowed');
+    });
     await t.test('saved-channel limits, owner isolation and one refresh lease hold across concurrent connections',async()=>{
       const cipher='v1.'+'a'.repeat(60), channelId=n=>`UC${String(n).padStart(22,'0')}`;
       const saves=await Promise.all(Array.from({length:16},(_,n)=>rpc(users[0],'vimax_youtube_connection_save',channelId(n),'A channel',cipher)));

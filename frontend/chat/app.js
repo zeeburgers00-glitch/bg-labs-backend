@@ -6,7 +6,7 @@
     deployment:{chat:'checking', youtube:'checking'},
     google:{status:'checking', busy:false, error:''},
     chat:{providers:[], allowed:false, paused:false, settingsReady:false, historyReady:false, busy:false, turns:[], pending:null, note:'', error:''},
-    channel:{ready:false, configured:false, allowed:false, busy:false, connected:null, connectionId:null, saved:[], autoAttempted:false, sequence:0, notice:'', error:''},
+    channel:{ready:false, configured:false, allowed:false, analyticsConfigured:false, analyticsConnected:false, busy:false, connected:null, connectionId:null, saved:[], autoAttempted:false, sequence:0, notice:'', error:''},
     facebook:{ready:false, configured:false, allowed:false, busy:false, saved:[], verified:null, autoAttempted:false, sequence:0, notice:'', error:''},
   };
   let autoConnectAfterLogin = false;
@@ -63,9 +63,18 @@
     if (Array.from(fallback.options).some(option => option.value === previous)) fallback.value = previous;
     updateModels();
   }
+  function isAnalyticsRequest(text) {
+    const value = String(text || '').trim();
+    if (!/\banalytics\b/i.test(value) && !/تجزیات/.test(value)) return false;
+    if (/\b(show|send|image|picture|screenshot|chart|report|dikha\w*|dekha\w*|bhej\w*|bata\w*|bta\w*)\b/i.test(value)
+        || /دکھا|بھیج|تصویر|رپورٹ/.test(value)) return true;
+    if (/\b(explain|what|how|why|meaning|kya|kaise|kyun)\b/i.test(value)) return false;
+    return value.split(/\s+/).length <= 4;
+  }
   function canChat() {
+    const analytics = isAnalyticsRequest($('chat-prompt').value);
     return Boolean(state.user && state.channel.ready && state.channel.connected && state.chat.settingsReady && state.chat.historyReady
-      && state.chat.allowed && !state.chat.paused && !state.chat.busy && $('provider').value && $('model').value);
+      && state.chat.allowed && !state.chat.paused && !state.chat.busy && (analytics || ($('provider').value && $('model').value)));
   }
   function updateChatControls() {
     const chat = state.chat;
@@ -95,11 +104,55 @@
     else if (!state.channel.allowed) status = 'YouTube channel access is not enabled for this account.';
     else if (state.channel.busy) status = 'Restoring your channel…';
     else if (!state.channel.connected) status = 'Connect a YouTube channel in Account before chatting.';
-    else if (!availableProviders().length) status = 'No AI provider is configured. The deployment owner needs to finish setup.';
     else if (chat.busy) status = 'Waiting for a reply…';
+    else if (!availableProviders().length && isAnalyticsRequest($('chat-prompt').value) && state.channel.analyticsConfigured)
+      status = 'Analytics can be requested separately; an AI provider is still needed for general chat.';
+    else if (!availableProviders().length) status = 'No AI provider is configured. The deployment owner needs to finish setup.';
     else status = chat.note || 'Provider configured; it has not necessarily been verified. Calls may incur charges.';
     $('chat-status').textContent = status;
     $('chat-error').textContent = chat.error;
+  }
+  function analyticsFigure(report) {
+    const figure = element('figure', null, 'analytics-figure');
+    const canvas = element('canvas', null, 'analytics-canvas'); canvas.width = 1000; canvas.height = 590;
+    canvas.setAttribute('role', 'img'); canvas.setAttribute('aria-label', `ViMax visualization of YouTube Analytics for ${report.channel.title}`);
+    const ctx = canvas.getContext('2d'), rows = report.rows, version = state.version;
+    const number = n => new Intl.NumberFormat('en', {maximumFractionDigits:1, notation:n>=1e7?'compact':'standard'}).format(n);
+    const views = rows.reduce((sum,row) => sum + row.views, 0);
+    const minutes = rows.reduce((sum,row) => sum + row.estimated_minutes_watched, 0);
+    const subscribers = rows.reduce((sum,row) => sum + row.subscribers_gained, 0);
+    ctx.fillStyle = '#151622'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#c1b2ff'; ctx.font = '700 19px sans-serif'; ctx.fillText('VIMAX  /  YOUTUBE ANALYTICS', 48, 52);
+    ctx.fillStyle = '#f5f2ff'; ctx.font = '700 32px sans-serif'; ctx.fillText(report.channel.title, 48, 101, 900);
+    ctx.fillStyle = '#b7b2ca'; ctx.font = '18px sans-serif';
+    ctx.fillText(`Requested ${report.requested_start} to ${report.requested_end}  •  latest reported ${report.latest_data}`, 48, 134, 900);
+    const cards = [['VIEWS',number(views)], ['WATCH TIME (MIN)',number(minutes)], ['SUBSCRIBERS GAINED',number(subscribers)]];
+    cards.forEach(([label,value],i)=>{
+      const x=48+i*305; ctx.fillStyle='#232435'; ctx.fillRect(x,164,280,90);
+      ctx.fillStyle='#aba5bf'; ctx.font='700 14px sans-serif'; ctx.fillText(label,x+16,193,248);
+      ctx.fillStyle='#f6f3ff'; ctx.font='700 28px sans-serif'; ctx.fillText(value,x+16,229,248);
+    });
+    ctx.fillStyle='#d9d3ea'; ctx.font='700 17px sans-serif'; ctx.fillText('Views by reported day',48,297);
+    const max=Math.max(1,...rows.map(row=>row.views)), left=48, top=321, width=900, height=168, step=width/rows.length;
+    ctx.fillStyle='#aaa4ba'; ctx.font='14px sans-serif'; ctx.fillText(number(max),left,top-7);
+    ctx.strokeStyle='#464257'; ctx.beginPath(); ctx.moveTo(left,top+height); ctx.lineTo(left+width,top+height); ctx.stroke();
+    rows.forEach((row,i)=>{
+      const barHeight=row.views/max*height, barWidth=Math.max(4,Math.min(24,step*.65));
+      ctx.fillStyle='#b3a0ff'; ctx.fillRect(left+i*step+(step-barWidth)/2,top+height-barHeight,barWidth,barHeight);
+    });
+    ctx.fillStyle='#aaa4ba'; ctx.font='14px sans-serif'; ctx.fillText(rows[0].day,left,514); ctx.textAlign='right';
+    ctx.fillText(rows.at(-1).day,left+width,514); ctx.textAlign='left';
+    ctx.fillStyle='#9e98ad'; ctx.font='14px sans-serif';
+    ctx.fillText('ViMax visualization, not a YouTube Studio screenshot. Data may be delayed.',48,559,900);
+    const summary = element('p', `${number(views)} views · ${number(minutes)} watch minutes · ${number(subscribers)} subscribers gained`, 'analytics-summary');
+    const caption = element('figcaption', 'ViMax visualization from YouTube Analytics. Missing days are not estimated; data may be delayed. The chart is not saved in chat history; save a copy if needed.', 'hint');
+    const save = element('button', 'Save image', 'secondary-button analytics-save'); save.type = 'button';
+    save.addEventListener('click', () => canvas.toBlob(blob => {
+      if (!blob || !isCurrent(version)) return;
+      const url = URL.createObjectURL(blob), link = element('a'); link.href = url; link.download = 'vimax-youtube-analytics.png'; link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }, 'image/png'));
+    figure.append(canvas, summary, caption, save); return figure;
   }
   function renderMessages() {
     const container = $('messages'); container.replaceChildren();
@@ -109,11 +162,14 @@
       const avatar = element('div', role === 'user' ? 'Y' : '✦', 'message-avatar'); avatar.setAttribute('aria-hidden', 'true');
       const body = element('div', null, 'message-body');
       body.append(element('p', role === 'user' ? 'You' : 'ViMax', 'message-role'), element('p', text, 'message-text'));
-      row.append(avatar, body); container.append(row);
+      row.append(avatar, body); container.append(row); return body;
     };
     for (const turn of turns) {
       if (typeof turn.prompt === 'string') add('user', turn.prompt);
-      if (typeof turn.reply === 'string') add('assistant', turn.reply);
+      if (typeof turn.reply === 'string') {
+        const body = add('assistant', turn.reply);
+        if (turn.analytics && Array.isArray(turn.analytics.rows) && turn.analytics.rows.length) body.append(analyticsFigure(turn.analytics));
+      }
     }
     if (state.chat.pending) { add('user', state.chat.pending); add('assistant', 'Thinking…', true); }
     $('welcome').hidden = Boolean(turns.length || state.chat.pending);
@@ -216,7 +272,7 @@
     state.user = user && typeof user.id === 'string' ? {id:user.id, email:typeof user.email === 'string' ? user.email : ''} : null;
     state.session = state.user ? 'signed-in' : sessionState;
     state.chat = {providers:[], allowed:false, paused:false, settingsReady:false, historyReady:false, busy:false, turns:[], pending:null, note:'', error:''};
-    state.channel = {ready:false, configured:false, allowed:false, busy:false, connected:null, connectionId:null, saved:[], autoAttempted:false, sequence:0, notice:'', error:''};
+    state.channel = {ready:false, configured:false, allowed:false, analyticsConfigured:false, analyticsConnected:false, busy:false, connected:null, connectionId:null, saved:[], autoAttempted:false, sequence:0, notice:'', error:''};
     state.facebook = {ready:false, configured:false, allowed:false, busy:false, saved:[], verified:null, autoAttempted:false, sequence:0, notice:'', error:''};
     $('chat-prompt').value = ''; $('account-password').value = ''; $('speak-replies').checked = false;
     $('settings-message').textContent = ''; $('account-error').textContent = ''; $('account-message').textContent = '';
@@ -253,9 +309,11 @@
       if (!isCurrent(version) || sequence !== state.channel.sequence) return;
       const channel = state.channel;
       channel.ready = true; channel.configured = data.configured === true; channel.allowed = data.allowed === true;
+      channel.analyticsConfigured = data.analytics_configured === true; channel.analyticsConnected = data.analytics_connected === true;
       channel.saved = Array.isArray(data.saved_channels) ? data.saved_channels.filter(item => item && typeof item.id === 'string'
         && typeof item.channel_id === 'string' && typeof item.channel_title === 'string' && ['active','needs_reauth','uncertain'].includes(item.status)) : [];
-      channel.connected = data.connected === true && typeof data.channel?.title === 'string' ? {title:data.channel.title} : null;
+      channel.connected = data.connected === true && typeof data.channel?.title === 'string' && typeof data.channel?.id === 'string'
+        ? {id:data.channel.id, title:data.channel.title} : null;
       channel.connectionId = typeof data.connection_id === 'string' ? data.connection_id : null;
       channel.error = '';
       state.deployment.youtube = channel.configured ? 'configured_unverified' : 'unavailable';
@@ -446,27 +504,57 @@
     event.preventDefault(); if (!canChat()) return;
     const prompt = $('chat-prompt').value.trim(), version = state.version;
     if (!prompt || Array.from(prompt).length > 1600) return;
+    const analytics = isAnalyticsRequest(prompt), connectionId = state.channel.connectionId, channelId = state.channel.connected?.id;
     const provider = $('provider').value, model = $('model').value, fallbackValue = $('fallback').value, divider = fallbackValue.indexOf('|');
     const fallback = fallbackValue && divider > 0 ? {provider:fallbackValue.slice(0, divider), model:fallbackValue.slice(divider + 1)} : null;
-    if (fallback && fallback.provider === provider && fallback.model === model) { state.chat.error = 'Choose a different fallback or turn it off.'; updateChatControls(); return; }
+    if (!analytics && fallback && fallback.provider === provider && fallback.model === model) { state.chat.error = 'Choose a different fallback or turn it off.'; updateChatControls(); return; }
     state.chat.busy = true; state.chat.pending = prompt; state.chat.error = ''; state.chat.note = '';
     renderMessages(); updateChatControls();
     try {
-      const data = await post('/api/cloud/chat', {provider, model, mode:'chat', length:$('answer-length').value, prompt, fallback});
-      if (!isCurrent(version)) return;
-      if (typeof data?.reply !== 'string' || !data.reply.trim()) throw new Error('The provider returned no text.');
-      state.chat.turns.push({prompt, reply:data.reply}); state.chat.pending = null;
-      if ($('chat-prompt').value.trim() === prompt) $('chat-prompt').value = '';
-      const notices = [];
-      if (data.used_fallback) notices.push('A fallback provider responded.');
-      if (data.truncated) notices.push('The reply was truncated.');
-      if (!data.history_saved) notices.push('This reply could not be saved.');
-      if (!data.audit_saved) notices.push('The usage result could not be saved.');
-      if (Number.isInteger(data.remaining_user)) notices.push(`${data.remaining_user} request attempt(s) remain today.`);
-      state.chat.note = notices.join(' ') || 'Reply received.';
-      renderMessages(); if ($('speak-replies').checked) speak(data.reply);
+      if (analytics) {
+        if (!state.channel.analyticsConfigured) throw new Error('YouTube Analytics has not been enabled by the deployment owner.');
+        if (!state.channel.analyticsConnected) throw new Error('Open Account → YouTube channels → Add channel with Google, and allow Analytics access for this channel.');
+        const data = await post('/api/cloud/youtube/analytics');
+        if (!isCurrent(version)) return;
+        if (connectionId !== state.channel.connectionId || data?.channel?.id !== channelId) throw new Error('The selected channel changed. Select the intended channel and ask again.');
+        if (!Array.isArray(data.rows) || data.rows.length > 30 || typeof data.channel.title !== 'string'
+            || typeof data.requested_start !== 'string' || typeof data.requested_end !== 'string'
+            || (data.rows.length && data.latest_data !== data.rows.at(-1)?.day)
+            || data.rows.some(row => !row || typeof row.day !== 'string' || !Number.isSafeInteger(row.views) || row.views < 0
+              || !Number.isFinite(row.estimated_minutes_watched) || row.estimated_minutes_watched < 0
+              || !Number.isSafeInteger(row.subscribers_gained) || row.subscribers_gained < 0)) throw new Error('YouTube returned an invalid report.');
+        const reply = data.rows.length
+          ? `Here is a ViMax chart for ${data.channel.title}, using the available YouTube Analytics data from ${data.requested_start} to ${data.requested_end}. The latest reported day is ${data.latest_data}; data can be delayed. This is not a YouTube Studio screenshot.`
+          : `YouTube returned no daily analytics rows for ${data.channel.title} from ${data.requested_start} to ${data.requested_end}. No image was created; the data may not be available yet.`;
+        state.chat.turns.push({prompt, reply, analytics:data.rows.length ? data : null}); state.chat.pending = null;
+        if ($('chat-prompt').value.trim() === prompt) $('chat-prompt').value = '';
+        state.chat.note = 'Analytics report is only kept in this browser tab; request it again after refreshing.';
+        renderMessages(); if ($('speak-replies').checked) speak(reply);
+      } else {
+        const data = await post('/api/cloud/chat', {provider, model, mode:'chat', length:$('answer-length').value, prompt, fallback});
+        if (!isCurrent(version)) return;
+        if (typeof data?.reply !== 'string' || !data.reply.trim()) throw new Error('The provider returned no text.');
+        state.chat.turns.push({prompt, reply:data.reply}); state.chat.pending = null;
+        if ($('chat-prompt').value.trim() === prompt) $('chat-prompt').value = '';
+        const notices = [];
+        if (data.used_fallback) notices.push('A fallback provider responded.');
+        if (data.truncated) notices.push('The reply was truncated.');
+        if (!data.history_saved) notices.push('This reply could not be saved.');
+        if (!data.audit_saved) notices.push('The usage result could not be saved.');
+        if (Number.isInteger(data.remaining_user)) notices.push(`${data.remaining_user} request attempt(s) remain today.`);
+        state.chat.note = notices.join(' ') || 'Reply received.';
+        renderMessages(); if ($('speak-replies').checked) speak(data.reply);
+      }
     } catch (error) {
-      if (isCurrent(version) && error.name !== 'AbortError') { state.chat.pending = null; state.chat.error = error.message; state.chat.note = 'No reply received.'; renderMessages(); }
+      if (isCurrent(version) && error.name !== 'AbortError') {
+        state.chat.pending = null;
+        if (analytics) {
+          state.chat.turns.push({prompt,reply:`I could not create an analytics image. ${error.message}`});
+          if ($('chat-prompt').value.trim() === prompt) $('chat-prompt').value = '';
+          state.chat.note = 'No analytics image was created.';
+        } else { state.chat.error = error.message; state.chat.note = 'No reply received.'; }
+        renderMessages();
+      }
     } finally { if (isCurrent(version)) { state.chat.busy = false; updateChatControls(); } }
   });
   $('toggle-pause').addEventListener('click', async () => {
@@ -493,7 +581,7 @@
     if (!isCurrent(version) || !canConnect()) return;
     state.channel.busy = true; state.channel.error = ''; state.channel.notice = ''; updateChannelControls();
     try {
-      const data = await post('/api/cloud/youtube/oauth/start');
+      const data = await post('/api/cloud/youtube/oauth/start', state.channel.analyticsConfigured ? {analytics:true} : {});
       let url;
       try { url = new URL(data?.authorization_url); } catch { throw new Error('Invalid Google authorization URL.'); }
       if (url.origin !== 'https://accounts.google.com' || url.pathname !== '/o/oauth2/v2/auth' || url.username || url.password) throw new Error('Invalid Google authorization URL.');
