@@ -106,3 +106,14 @@ test('misconfigured upstream or unavailable Supabase does not claim a backend is
   const res = await down.fetch(request('/api/health')); assert.equal(res.status,503);
   assert.match((await res.json()).error,/unreachable/);
 });
+
+test('health reports syntactically configured YouTube and OpenAI as unverified, not live',async()=>{
+  const fake=fakeSupabase();
+  const configured={...env,OPENAI_API_KEY:'fake-only-openai-key',
+    VIMAX_YOUTUBE_CLIENT_ID:'1234567890-test.apps.googleusercontent.com',VIMAX_YOUTUBE_CLIENT_SECRET:'fake-only-google-secret',
+    VIMAX_YOUTUBE_TOKEN_KEY:'12'.repeat(32),VIMAX_YOUTUBE_REDIRECT_URI:'https://vimax.example/api/cloud/youtube/callback'};
+  const health=await (await createBridge({env:configured,fetchImpl:fake.fetch}).fetch(request('/api/health'))).json();
+  assert.equal(health.text_chat,'configured_unverified');assert.equal(health.youtube_upload,'configured_unverified');
+  assert.equal(health.video_agent,'unavailable');
+  assert.ok(fake.calls.every(call=>call.path.startsWith('/auth/')||call.path==='/rest/v1/rpc/vimax_cloud_health'));
+});

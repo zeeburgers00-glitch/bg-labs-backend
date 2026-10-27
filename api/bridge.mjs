@@ -1,14 +1,15 @@
 // Public, stateless Supabase API. It never exposes ViMax's unauthenticated
 // single-workspace local server or server-side provider keys to the Internet.
-import {ProviderError, providerStatus, pexelsStatus, validateSelection, chatCompletion, searchPexels} from './providers.mjs';
+import {ProviderError, providerStatus, pexelsStatus, validateSelection, chatCompletion, searchPexels, githubRepositoryInput, getGithubRepository} from './providers.mjs';
+import {YouTubeError, createYouTube, clearYouTubeCookies} from './youtube.mjs';
 
 const ACCESS_COOKIE = '__Host-vimax_access';
 const REFRESH_COOKIE = '__Host-vimax_refresh';
 const MAX_BODY = 8192;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const AGENT_UNAVAILABLE = 'The online ViMax video agent and YouTube upload are not connected yet. Open Skills & Agents for saved ideas and cloud text planning when configured.';
-const SYSTEM_PROMPT = 'You are ViMax’s text-planning assistant for original, legitimate video projects. You cannot browse, verify facts, render videos, access YouTube, publish or run background jobs. Never claim you performed those actions. Distinguish suggestions from verified facts, say when sources need checking, respect copyright, and do not suggest fake engagement or spam.';
-const MODES = Object.freeze({chat:'Help the user plan their video project.', ideas:'Brainstorm distinct, original video ideas with audiences and hooks.', script:'Draft a clear narration script with a hook and structure; flag claims needing verification.', review:'Review the provided material for unsupported claims, originality risks and unclear wording; do not claim independent verification.'});
+const AGENT_UNAVAILABLE = 'The online ViMax video generation agent is not connected yet. Open Skills & Agents for saved ideas, text chat and separately configured private YouTube upload.';
+const SYSTEM_PROMPT = 'You are ViMax’s helpful text assistant for general questions, writing, code and original video projects. You cannot browse, verify facts, render videos, access YouTube, Gmail or GitHub, publish or run background jobs. Never claim you performed those actions. Distinguish suggestions from verified facts, say when sources need checking, respect copyright, and do not suggest fake engagement or spam.';
+const MODES = Object.freeze({chat:'Help with the user’s question or task; give clear, useful answers.', ideas:'Brainstorm distinct, original video ideas with audiences and hooks.', script:'Draft a clear narration script with a hook and structure; flag claims needing verification.', review:'Review the provided material for unsupported claims, originality risks and unclear wording; do not claim independent verification.'});
 
 class HttpError extends Error {
   constructor(status, message) { super(message); this.status = status; }
@@ -29,7 +30,7 @@ function sessionCookies(session) {
   const age = Math.max(1, Math.min(Number(session.expires_in) || 3600, 3600));
   return [cookie(ACCESS_COOKIE, session.access_token, age), cookie(REFRESH_COOKIE, session.refresh_token, 30 * 24 * 3600)];
 }
-function clearCookies() { return [cookie(ACCESS_COOKIE, '', 0), cookie(REFRESH_COOKIE, '', 0)]; }
+function clearCookies() { return [cookie(ACCESS_COOKIE, '', 0), cookie(REFRESH_COOKIE, '', 0), ...clearYouTubeCookies()]; }
 function readCookies(request) {
   const result = Object.create(null);
   for (const part of (request.headers.get('cookie') || '').split(';')) {
@@ -148,7 +149,7 @@ function missionJobInput(input) {
   const topic = typeof input.topic === 'string' ? input.topic.trim() : '';
   if (typeof input.channel_id !== 'string' || !UUID.test(input.channel_id) || typeof input.client_key !== 'string' || !UUID.test(input.client_key)
       || !topic || Array.from(topic).length > 1600 || /[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(topic)
-      || !['groq','gemini','mistral','zai','openrouter','huggingface','opencode'].includes(input.provider)
+      || !['openai','groq','gemini','mistral','zai','openrouter','huggingface','opencode'].includes(input.provider)
       || typeof input.model !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$/.test(input.model)) throw new HttpError(422, 'Choose a channel, topic, supported provider and model.');
   let when = null;
   if (input.not_before !== undefined && input.not_before !== null && input.not_before !== '') {
@@ -260,6 +261,7 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch} =
       throw error;
     }
   }
+  const youtube = createYouTube({env, fetchImpl, supa, body, json});
   async function handler(request) {
     let sessionUpdates = [];
     try {
@@ -274,9 +276,14 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch} =
       if (!['GET', 'HEAD', 'POST', 'PATCH', 'DELETE'].includes(method)) throw new HttpError(405, 'Method not allowed.');
       if (!['GET', 'HEAD'].includes(method) && !sameOrigin(request)) throw new HttpError(403, 'A same-origin request is required.');
 
+      if (path.startsWith('/api/cloud/youtube/')) {
+        const session = await authenticated();
+        return await youtube.handle({request,path,method,session});
+      }
+
       if (method === 'GET' && path === '/api/health') {
         await databaseReady();
-        return json({ok:true, database:'connected', text_chat:providerStatus(env).some(p => p.state === 'configured_unverified') ? 'configured_unverified' : 'unconfigured', video_agent:'unavailable', youtube_upload:'unavailable'});
+        return json({ok:true, database:'connected', text_chat:providerStatus(env).some(p => p.state === 'configured_unverified') ? 'configured_unverified' : 'unconfigured', video_agent:'unavailable', youtube_upload:youtube.configured(request) ? 'configured_unverified' : 'unavailable'});
       }
       if (method === 'GET' && path === '/api/sessions') {
         await databaseReady();
@@ -510,6 +517,14 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch} =
           history_saved:saved, audit_saved:completed.auditSaved, remaining_user:completed.remaining,
           usage:{input_tokens:completed.result.inputTokens, output_tokens:completed.result.outputTokens}}, 200, session.updates);
       }
+      if (method === 'POST' && path === '/api/cloud/github/repository') {
+        const session = await authenticated(); requireAiAccess(session);
+        const input=githubRepositoryInput((await body(request)).repository);
+        // Shares the existing attempt limit and per-account pause; no GitHub
+        // token or access to private repositories is used.
+        const result=await attempt(session,'stock_search',{provider:'github',model:''},()=>getGithubRepository({fetchImpl,...input}));
+        return json({repository:result.result,remaining_user:result.remaining,audit_saved:result.auditSaved},200,session.updates);
+      }
       if (method === 'POST' && path === '/api/cloud/stock-search') {
         const session = await authenticated(); requireAiAccess(session);
         const input = stockInput(await body(request));
@@ -520,7 +535,7 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch} =
       if (path.startsWith('/api/')) throw new HttpError(503, AGENT_UNAVAILABLE);
       throw new HttpError(404, 'Not found.');
     } catch (error) {
-      const status = error instanceof HttpError || error instanceof ProviderError ? error.status : 500;
+      const status = error instanceof HttpError || error instanceof ProviderError || error instanceof YouTubeError ? error.status : 500;
       return json({error:status === 500 ? 'The request could not be completed.' : error.message}, status, sessionUpdates);
     }
   }

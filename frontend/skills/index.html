@@ -11,6 +11,7 @@
   <script src="/skills/auth-clean.js"></script>
   <script src="/skills/cloud.js" defer></script>
   <script src="/skills/mission.js" defer></script>
+  <script src="/skills/youtube.js" defer></script>
   <script src="/skills/app.js" defer></script>
 </head>
 <body>
@@ -26,7 +27,7 @@
       <div class="eyebrow"><span class="spark">✳</span> CREATOR TOOLKIT</div>
       <h1>Make more with ViMax.</h1>
       <p>Explore reviewed creator skills and produce a simple, narrated video with your own script—without replacing your ViMax workspace.</p>
-      <div class="hero-nav"><a id="cloud-ai-link" href="#account">Cloud AI planning <span>↗</span></a><a id="mission-link" href="#account" class="secondary">Mission control</a><a href="#studio" class="secondary">Open local studio</a><a href="#catalog" class="secondary">Browse the catalog</a></div>
+      <div class="hero-nav"><a id="cloud-ai-link" href="#account">AI chat <span>↗</span></a><a id="youtube-link" href="#account" class="secondary">YouTube upload</a><a id="mission-link" href="#account" class="secondary">Mission control</a><a href="#studio" class="secondary">Open local studio</a><a href="#catalog" class="secondary">Browse the catalog</a></div>
     </section>
     <aside class="notice" id="notice" role="status">
       <strong>Local companion required.</strong> The public Vercel site has no video backend yet. This catalog is available, but generation only works after the local companion is set up. It is not a shared or multi-user service.
@@ -53,15 +54,15 @@
           <p id="cloud-project-error" class="error" role="alert"></p>
           <ul id="cloud-project-list" class="cloud-project-list"></ul>
         </div>
-        <div class="panel" id="cloud-info"><h3>What is connected?</h3><p class="form-note">The account and saved ideas use Supabase. Text planning can be enabled with a server-side provider key. Cloud rendering, verified web research and YouTube OAuth/upload are not connected. Scheduled text planning needs a separately hosted worker. Use the local companion below for the tested CPU text-card renderer.</p></div>
+        <div class="panel" id="cloud-info"><h3>What is connected?</h3><p class="form-note">The account and saved ideas use Supabase. Text planning can be enabled with a server-side provider key. Cloud rendering and verified web research are not connected. Private YouTube upload requires deployment configuration and your Google authorization. Scheduled text planning needs a separately hosted worker. Use the local companion below for the tested CPU text-card renderer.</p></div>
       </div>
     </section>
 
     <section id="cloud-ai" class="section" hidden>
-      <div class="section-heading"><div><div class="eyebrow">CLOUD / TEXT PLANNING</div><h2>Think through the next video.</h2><p>Ask for ideas, a script or a review. This assistant cannot browse, verify facts, render video or publish. Check its output and sources yourself.</p></div><span class="tag">ACCOUNT REQUIRED</span></div>
+      <div class="section-heading"><div><div class="eyebrow">CLOUD / TEXT ASSISTANT</div><h2>Ask, create and plan.</h2><p>Ask general questions or get help with code, ideas, scripts and reviews. This assistant cannot browse, use Gmail or GitHub, verify facts, render video or publish. Check its output and sources yourself.</p></div><span class="tag">ACCOUNT REQUIRED</span></div>
       <div class="studio-grid">
         <div class="panel">
-          <div class="panel-heading"><div><h3>Planning chat</h3><p>Replies and prompts are saved privately in your account when possible.</p></div><button type="button" id="clear-chat" class="small-button">Delete history</button></div>
+          <div class="panel-heading"><div><h3>AI chat</h3><p>Replies and prompts are saved privately in your account when possible.</p></div><button type="button" id="clear-chat" class="small-button">Delete history</button></div>
           <div id="chat-history" class="chat-history" aria-live="polite"><p class="form-note">No conversation yet.</p></div>
           <form id="chat-form">
             <div class="field-grid">
@@ -70,11 +71,11 @@
               <label>Planning mode <select id="ai-mode"><option value="chat">Chat</option><option value="ideas">Brainstorm ideas</option><option value="script">Draft a script</option><option value="review">Review supplied text</option></select></label>
               <label>Optional fallback <select id="ai-fallback"><option value="">No fallback</option></select></label>
             </div>
-            <label>Your message <textarea id="chat-prompt" maxlength="1600" rows="4" required placeholder="Describe the video you want to plan…"></textarea></label>
+            <label>Your message <textarea id="chat-prompt" maxlength="1600" rows="4" required placeholder="Ask a question or describe what you want to create…"></textarea></label>
             <div class="chat-actions"><button class="button primary" id="chat-send" type="submit" disabled>Send message <span>→</span></button><button class="button secondary-button" id="ai-test" type="button" disabled>Test provider</button></div>
           </form>
           <p id="chat-status" class="form-note" role="status">Sign in and configure a provider to use text planning.</p><p id="chat-error" class="error" role="alert"></p>
-          <p class="form-note">Your prompt and up to three previous turns are sent to the selected provider. Choosing a fallback also permits sending that conversation to the fallback after an explicit provider failure. Calls may be paid; check provider pricing and privacy terms. Limits: 10 attempts per account and 50 shared per UTC day, including tests and stock searches. These are not dollar spending caps.</p>
+          <p class="form-note">Your prompt and up to three previous turns are sent to the selected provider. Choosing a fallback also permits sending that conversation to the fallback after an explicit provider failure. Calls may be paid; check provider pricing and privacy terms. Limits: 10 attempts per account and 50 shared per UTC day, including tests, stock searches and GitHub lookups. These are not dollar spending caps.</p>
           <div class="voice-tools">
             <h3>Voice input &amp; playback</h3>
             <p class="form-note">Browser speech services may send audio or text to a third party. Dictation fills the message for review; it does not send automatically. Available languages and male/female voices depend on your browser and device.</p>
@@ -104,6 +105,15 @@
             </form>
             <p id="stock-status" class="form-note" role="status"></p><ul id="stock-results" class="stock-results"></ul>
             <p class="form-note">Videos provided by <a href="https://www.pexels.com" target="_blank" rel="noopener noreferrer">Pexels</a>. Review each asset and the <a href="https://www.pexels.com/license/" target="_blank" rel="noopener noreferrer">license</a> before use; credit creators when possible.</p>
+          </div>
+          <div class="panel stock-panel">
+            <div class="panel-heading"><div><h3>GitHub public repository</h3><p>Look up public metadata; no private repositories, code changes or account connection.</p></div></div>
+            <form id="github-form">
+              <label>Repository <input id="github-repository" maxlength="200" required placeholder="owner/repository"></label>
+              <button class="button secondary-button" id="github-lookup" type="submit" disabled>Inspect public repository</button>
+            </form>
+            <p id="github-status" class="form-note" role="status">Requires account access; GitHub rate limits apply.</p><div id="github-result" class="stock-results"></div>
+            <p class="form-note">This uses GitHub's public API, consumes the shared request-attempt budget, and is not a security or license audit. The AI chat does not automatically use it.</p>
           </div>
         </div>
       </div>
@@ -151,6 +161,35 @@
       <details class="mission-help"><summary>Worker setup and limits</summary><p>The worker runs separately on a trusted always-on machine, signs in as this account and uses server-side provider keys. Start it with <code>npm run worker:planning</code> after configuring the environment documented in the repository. Nothing runs continuously on Vercel. Stored jobs may remain queued when no worker is online.</p><p>The queue allows up to 1,000 active jobs per account, subject to shared storage caps; this is not a tested throughput guarantee or 1,000 processes. Default provider budgets are 10 attempts per user and 50 globally per UTC day, with one provider call at a time per user. Pause stops new stages and requests cancellation of running jobs; an already-started call can finish or be billed.</p></details>
     </section>
 
+    <section id="youtube" class="section" hidden>
+      <div class="section-heading"><div><div class="eyebrow">YOUTUBE / PRIVATE UPLOAD</div><h2>Send a video for review.</h2><p>Connect one Google-selected channel and upload your own MP4 privately. This does not generate videos, schedule them or publish publicly.</p></div><span class="tag">PRIVATE · MANUAL</span></div>
+      <div class="studio-grid mission-grid">
+        <div class="panel">
+          <div class="panel-heading"><div><h3>Channel authorization</h3><p>Google permission is short-lived; reconnect to switch channels or resume after expiry.</p></div><span class="step-number">01</span></div>
+          <p id="yt-connection" class="form-note" role="status">Checking YouTube configuration…</p>
+          <div class="mission-controls"><button type="button" id="yt-connect" class="small-button" disabled>Connect YouTube</button><button type="button" id="yt-disconnect" class="small-button" hidden>Disconnect &amp; revoke</button><button type="button" id="yt-refresh" class="small-button">Refresh</button></div>
+          <p class="form-note">Only the channel selected on Google’s consent screen is used. Permission expires after about one hour. Connecting another channel replaces this browser’s current connection; simultaneous unattended channels are not supported.</p>
+          <p class="form-note">Upload attempts use Google API quota and may incur hosting costs. ViMax limits new upload sessions to 3 per account and 10 shared per UTC day. A stopped or timed-out upload might still exist privately in YouTube Studio.</p>
+          <p id="yt-error" class="error" role="alert"></p><p id="yt-notice" class="form-note" role="status"></p>
+        </div>
+        <div class="panel">
+          <div class="panel-heading"><div><h3>Upload your MP4</h3><p>Maximum 100 MiB. Keep this page open while uploading.</p></div><span class="step-number">02</span></div>
+          <form id="yt-form">
+            <label>Video file <input id="yt-file" type="file" accept="video/mp4,.mp4" required></label>
+            <label>Title <input name="title" maxlength="100" required></label>
+            <label>Description <textarea name="description" maxlength="5000" rows="3"></textarea></label>
+            <label>Made for kids? <select name="audience" required><option value="">Choose one</option><option value="no">No, not made for kids</option><option value="yes">Yes, made for kids</option></select></label>
+            <label class="checkbox-label"><input type="checkbox" name="confirm_private" required> I have the rights to this video and authorize a private upload to the connected channel.</label>
+            <button id="yt-upload" class="button primary" type="submit" disabled>Upload privately <span>→</span></button>
+          </form>
+          <p id="yt-progress" class="form-note" role="status">No upload in progress.</p>
+          <button type="button" id="yt-clear-pending" class="small-button" hidden>Clear uncertain start attempt…</button>
+          <p class="form-note">If a start was interrupted, check the history below and YouTube Studio before clearing its saved attempt; clearing may permit a duplicate.</p>
+          <div class="mission-subsection"><div class="panel-heading"><div><h3>Upload history</h3><p>Resume requires the exact same file and channel.</p></div><button type="button" id="yt-history-refresh" class="small-button">Refresh</button></div><div id="yt-history" class="mission-list"></div></div>
+        </div>
+      </div>
+    </section>
+
     <section id="studio" class="section">
       <div class="section-heading"><div><div class="eyebrow">01 / LOCAL STUDIO</div><h2>A small video, made for review.</h2><p>Provide the facts and script. Piper narrates locally and FFmpeg assembles text cards with captions. After rendering, detect visual cuts and export a short scene clip on your own computer.</p></div><span class="tag">CPU · NO API CALLS</span></div>
       <div class="studio-grid">
@@ -192,7 +231,7 @@
               </div>
             </div>
             <div class="actions"><button class="button secondary-button" type="button" id="retry-button" hidden>Retry failed job</button><button class="button primary" type="button" id="approve-button" hidden>I reviewed and approve</button></div>
-            <p class="form-note">YouTube upload is not implemented; approval does not publish anything.</p>
+            <p class="form-note">Local approval does not publish anything. Private upload is a separate, manually configured feature above.</p>
             <ol id="job-events" class="events" aria-live="polite"></ol>
           </div>
           <div class="hardware" id="hardware">Checking hardware and installed dependencies…</div>

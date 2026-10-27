@@ -1,6 +1,7 @@
 // Server-only, fixed-host provider adapters. Browser input can choose only a
 // configured provider/model; it never supplies a URL, key, or arbitrary model.
 const SPECS = Object.freeze([
+  {id:'openai', label:'OpenAI', key:'OPENAI_API_KEY', models:'OPENAI_MODELS', defaults:['gpt-5.4-nano'], url:'https://api.openai.com/v1/chat/completions', maxTokenField:'max_completion_tokens'},
   {id:'groq', label:'Groq', key:'GROQ_API_KEY', models:'GROQ_MODELS', defaults:['llama-3.1-8b-instant'], url:'https://api.groq.com/openai/v1/chat/completions'},
   {id:'gemini', label:'Gemini', key:'GEMINI_API_KEY', models:'GEMINI_MODELS', defaults:['gemini-2.5-flash'], url:'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'},
   {id:'mistral', label:'Mistral', key:'MISTRAL_API_KEY', models:'MISTRAL_MODELS', defaults:['mistral-small-latest'], url:'https://api.mistral.ai/v1/chat/completions'},
@@ -95,7 +96,7 @@ export async function chatCompletion({env, fetchImpl, id, model, messages, maxTo
   let value;
   try {
     const response = await fetchImpl(spec.url, {method:'POST', headers:{authorization:`Bearer ${key}`, 'content-type':'application/json'},
-      body:JSON.stringify({model, messages, max_tokens:maxTokens}), signal:AbortSignal.timeout(25_000), redirect:'error', cache:'no-store'});
+      body:JSON.stringify({model, messages, [spec.maxTokenField || 'max_tokens']:maxTokens}), signal:AbortSignal.timeout(25_000), redirect:'error', cache:'no-store'});
     value = await readResponse(response);
   } catch (error) {
     if (error instanceof ProviderError) throw error;
@@ -135,4 +136,36 @@ export async function searchPexels({env, fetchImpl, query, orientation}) {
       width:Number.isSafeInteger(video.width) && video.width > 0 ? video.width : null,
       height:Number.isSafeInteger(video.height) && video.height > 0 ? video.height : null};
   }).filter(Boolean);
+}
+
+// Public GitHub repository metadata only. No OAuth token, private repository,
+// branch content, write action, or user-supplied outbound URL is supported.
+export function githubRepositoryInput(value) {
+  const text=typeof value==='string'?value.trim():'';
+  const match=/^(?:https:\/\/github\.com\/)?([A-Za-z0-9](?:[A-Za-z0-9-]{0,38}))\/([A-Za-z0-9._-]{1,100})\/?$/i.exec(text);
+  if (!match || match[1].endsWith('-') || ['.','..'].includes(match[2])) throw new ProviderError(422,'Enter a public GitHub repository as owner/name or a github.com repository URL.');
+  return {owner:match[1],repo:match[2]};
+}
+const cleanGithubText=(value,max)=>typeof value==='string'?Array.from(value.replace(/[\u0000-\u001f\u007f]/g,' ')).slice(0,max).join(''):'';
+export async function getGithubRepository({fetchImpl,owner,repo}) {
+  // Revalidate even if called outside the bridge, and construct a fixed host.
+  const input=githubRepositoryInput(`${owner}/${repo}`);
+  const url=`https://api.github.com/repos/${encodeURIComponent(input.owner)}/${encodeURIComponent(input.repo)}`;
+  let value;
+  try {
+    const response=await fetchImpl(url,{method:'GET',headers:{accept:'application/vnd.github+json','user-agent':'ViMax-public-repository-lookup','x-github-api-version':'2026-03-10'},
+      signal:AbortSignal.timeout(12_000),redirect:'error',cache:'no-store'});
+    if (response.status===404) throw new ProviderError(404,'That public repository was not found. Private repositories are not supported.');
+    if ([403,429].includes(response.status)) throw new ProviderError(429,'GitHub public API quota was reached or access was denied. Try later.');
+    value=await readResponse(response);
+  } catch (error) {
+    if(error instanceof ProviderError)throw error;
+    throw new ProviderError(503,'GitHub could not be reached. No private repository access was attempted.');
+  }
+  const full=cleanGithubText(value?.full_name,140);
+  if (value?.private!==false || full.toLowerCase()!==`${input.owner}/${input.repo}`.toLowerCase()) throw new ProviderError(502,'GitHub returned an unexpected repository.');
+  const date=typeof value.updated_at==='string' && Number.isFinite(Date.parse(value.updated_at)) ? new Date(value.updated_at).toISOString() : null;
+  return {name:full,url:`https://github.com/${encodeURIComponent(input.owner)}/${encodeURIComponent(input.repo)}`,
+    description:cleanGithubText(value.description,500),stars:safeCount(value.stargazers_count),forks:safeCount(value.forks_count),
+    license:cleanGithubText(value.license?.spdx_id,80)||'Not specified',updated_at:date,archived:value.archived===true};
 }

@@ -55,6 +55,7 @@ const input = {provider:'groq', model:'llama-3.1-8b-instant', prompt:'Plan a sho
 
 test('fixed-host chat adapters use server-only credentials and enforce model allowlists', async () => {
   const cases = [
+    ['openai','OPENAI_API_KEY','gpt-5.4-nano','https://api.openai.com/v1/chat/completions'],
     ['groq','GROQ_API_KEY','llama-3.1-8b-instant','https://api.groq.com/openai/v1/chat/completions'],
     ['gemini','GEMINI_API_KEY','gemini-2.5-flash','https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'],
     ['mistral','MISTRAL_API_KEY','mistral-small-latest','https://api.mistral.ai/v1/chat/completions'],
@@ -70,7 +71,7 @@ test('fixed-host chat adapters use server-only credentials and enforce model all
       captured = {target, init}; return Response.json({choices:[{message:{content:'Hello'}}], usage:{prompt_tokens:1, completion_tokens:2}});
     }});
     assert.equal(captured.target,url); assert.equal(captured.init.headers.authorization,'Bearer test-only-key');
-    assert.equal(captured.init.redirect,'error'); assert.equal(JSON.parse(captured.init.body).max_tokens,600);
+    assert.equal(captured.init.redirect,'error'); assert.equal(JSON.parse(captured.init.body)[provider === 'openai' ? 'max_completion_tokens' : 'max_tokens'],600);
     assert.deepEqual(result,{text:'Hello', inputTokens:1, outputTokens:2});
     assert.equal(JSON.stringify(providerStatus(env)).includes('test-only-key'),false);
     assert.throws(() => validateSelection(env,provider,'arbitrary-expensive-model'), /allowed/);
@@ -166,4 +167,32 @@ test('provider health test is a real metered call; Pexels uses fixed host and fi
   assert.equal(url.searchParams.get('query'),'beach & waves'); assert.equal(fake.external[1].init.headers.authorization,'test-only-pexels');
   assert.equal(JSON.stringify(result).includes('test-only-pexels'),false); assert.equal(fake.usage[1].feature,'stock_search');
   await assert.rejects(searchPexels({env:{},fetchImpl:fake.fetchImpl,query:'x'}), /not configured/);
+});
+
+test('GitHub lookup is authenticated, budgeted, public-only, fixed-host and sanitized',async()=>{
+  const fake=mockBackend({provider:async target=>{
+    assert.equal(target.hostname,'api.github.com');assert.equal(target.pathname,'/repos/octocat/Hello-World');
+    return Response.json({private:false,full_name:'octocat/Hello-World',description:'<img src=x>\u0000demo',html_url:'https://evil.example/',
+      stargazers_count:12,forks_count:3,license:{spdx_id:'MIT'},archived:false,updated_at:'2026-01-01T00:00:00Z'});
+  }});
+  const bridge=createBridge({env:testEnv,fetchImpl:fake.fetchImpl});
+  assert.equal((await bridge.fetch(req('/api/cloud/github/repository',{method:'POST',user:null,body:{repository:'octocat/Hello-World'}}))).status,401);
+  assert.equal((await bridge.fetch(req('/api/cloud/github/repository',{method:'POST',origin:'https://evil.example',body:{repository:'octocat/Hello-World'}}))).status,403);
+  for(const repository of ['https://evil.example/octocat/Hello-World','octocat/../x','github.com/octocat/Hello-World','octocat/..','octocat/x?x=1']) {
+    assert.equal((await bridge.fetch(req('/api/cloud/github/repository',{method:'POST',body:{repository}}))).status,422);
+  }
+  assert.equal(fake.external.length,0);assert.equal(fake.usage.length,0);
+  const r=await bridge.fetch(req('/api/cloud/github/repository',{method:'POST',body:{repository:'https://github.com/octocat/Hello-World'}}));
+  assert.equal(r.status,200);const result=await r.json();
+  assert.equal(result.repository.url,'https://github.com/octocat/Hello-World');assert.equal(result.repository.license,'MIT');
+  assert.equal(result.repository.description,'<img src=x> demo');assert.equal(fake.usage[0].provider,'github');assert.equal(fake.usage[0].feature,'stock_search');
+  assert.equal(fake.external[0].init.redirect,'error');assert.equal(fake.external[0].init.headers.authorization,undefined);
+  const denied=createBridge({env:{...testEnv,VIMAX_AI_ALLOW_ALL_AUTHENTICATED:'false'},fetchImpl:fake.fetchImpl});
+  assert.equal((await denied.fetch(req('/api/cloud/github/repository',{method:'POST',body:{repository:'octocat/Hello-World'}}))).status,403);
+  const privateApi=mockBackend({provider:async()=>Response.json({private:true,full_name:'octocat/Hello-World'})});
+  const failed=await createBridge({env:testEnv,fetchImpl:privateApi.fetchImpl}).fetch(req('/api/cloud/github/repository',{method:'POST',body:{repository:'octocat/Hello-World'}}));
+  assert.equal(failed.status,502);assert.equal(privateApi.usage[0].status,'failed');
+  const limited=mockBackend({provider:async()=>Response.json({message:'not for clients'},{status:403})});
+  const quota=await createBridge({env:testEnv,fetchImpl:limited.fetchImpl}).fetch(req('/api/cloud/github/repository',{method:'POST',body:{repository:'octocat/Hello-World'}}));
+  assert.equal(quota.status,429);assert.match((await quota.json()).error,/quota/);
 });

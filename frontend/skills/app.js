@@ -77,7 +77,7 @@ async function loadSystem() {
     $('connection').classList.add('ready');
     if (!system.local_only) {
       $('connection').textContent = 'Database connected · video worker offline';
-      $('notice').textContent = `Supabase accounts and private ideas are connected. Cloud text planning is ${system.text_chat === 'configured_unverified' ? 'configured but not yet verified' : 'not configured'}. Online video generation, web research and automatic YouTube upload are not connected. The renderer below runs only on a locally configured computer.`;
+      $('notice').textContent = `Supabase accounts and private ideas are connected. Cloud text planning is ${system.text_chat === 'configured_unverified' ? 'configured but not yet verified' : 'not configured'}. Online video generation, web research and automatic YouTube publishing are not connected. Private manual upload requires Google configuration and authorization. The renderer below runs only on a locally configured computer.`;
       $('account').hidden = false;
       $('hardware').textContent = system.warnings.join(' ');
       setupVoices(system); renderCatalog();
@@ -225,8 +225,9 @@ async function loadAccount() {
   $('account-form').hidden = loggedIn; $('cloud-projects').hidden = !loggedIn; $('cloud-info').hidden = loggedIn;
   const cloud = window.vimaxCloud.onSession(loggedIn);
   const mission = window.vimaxMission.onSession(loggedIn);
+  const youtube = window.vimaxYouTube.onSession(data.user);
   if (loggedIn) { $('account-identity').textContent = `${data.user.email} · Account ID: ${data.user.id}`; await loadProjects(); }
-  await Promise.all([cloud, mission]);
+  await Promise.all([cloud, mission, youtube]);
   try {
     const confirmed = sessionStorage.getItem('vimax-email-confirmed');
     if (confirmed) { $('account-message').textContent = confirmed === 'yes' ? 'Email confirmed. Please sign in.' : 'Email confirmation failed or expired; please try again.'; sessionStorage.removeItem('vimax-email-confirmed'); }

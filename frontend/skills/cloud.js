@@ -23,6 +23,7 @@
     const canChat = canRequest && Boolean($('ai-provider').value && $('ai-model').value);
     $('chat-send').disabled = !canChat; $('ai-test').disabled = !canChat;
     $('stock-search').disabled = !canRequest || state.pexels !== 'configured_unverified';
+    $('github-lookup').disabled = !canRequest;
     $('clear-chat').disabled = !state.loggedIn || state.busy;
     $('ai-pause').disabled = !state.loggedIn || !state.settingsReady || state.pauseBusy;
     $('ai-pause').textContent = state.paused ? 'Resume my provider calls' : 'Pause my provider calls';
@@ -109,15 +110,16 @@
   }
   async function onSession(loggedIn) {
     const version = ++state.version; state.loggedIn = loggedIn; state.busy = false; state.allowed = false; state.paused = false; state.settingsReady = false; state.pauseBusy = false;
+    // Never retain the previous account's private history or in-progress form
+    // while the next session is loading (including direct account switches).
+    stopAllSpeech(); state.providers = []; state.pexels = 'not_configured'; state.pexelsVerified = false; state.turns = []; state.tests.clear();
+    $('chat-prompt').value = ''; $('chat-error').textContent = ''; $('stock-query').value = ''; $('github-repository').value='';
+    $('chat-status').textContent = ''; $('stock-status').textContent = ''; $('github-status').textContent=''; $('usage-list').replaceChildren(); $('stock-results').replaceChildren(); $('github-result').replaceChildren();
     $('cloud-ai').hidden = !loggedIn; $('cloud-ai-link').setAttribute('href', loggedIn ? '#cloud-ai' : '#account');
-    if (!loggedIn) {
-      stopAllSpeech(); state.providers = []; state.pexels = 'not_configured'; state.pexelsVerified = false; state.turns = []; state.tests.clear();
-      $('chat-prompt').value = ''; $('chat-error').textContent = ''; $('stock-query').value = '';
-      $('chat-status').textContent = ''; $('stock-status').textContent = ''; $('usage-list').replaceChildren(); $('stock-results').replaceChildren();
-      renderTurns(); renderProviders(); return;
-    }
-    $('chat-error').textContent = ''; $('chat-status').textContent = 'Loading provider settings…';
-    renderProviders(); await loadCloud(version);
+    renderTurns();renderProviders();
+    if (!loggedIn) return;
+    $('chat-status').textContent = 'Loading provider settings…';
+    await loadCloud(version);
   }
   window.vimaxCloud = {onSession};
   $('ai-provider').addEventListener('change', chooseModels);
@@ -179,6 +181,19 @@
       $('stock-status').textContent = `${data.videos.length} result(s). ${data.remaining_user} request attempt(s) remain today.${data.audit_saved ? '' : ' Warning: usage result could not be saved.'}`;
     } catch (error) { if (active(version)) $('stock-status').textContent = error.message; }
     finally { if (active(version)) { state.busy = false; updateControls(); loadUsage(version).catch(() => {}); } }
+  });
+
+  $('github-form').addEventListener('submit', async event => {
+    event.preventDefault(); if (state.busy) return;
+    const version=state.version;state.busy=true;updateControls();$('github-status').textContent='Checking GitHub’s public API…';$('github-result').replaceChildren();
+    try {
+      const data=await api('/api/cloud/github/repository',{method:'POST',body:JSON.stringify({repository:$('github-repository').value})});
+      if(!active(version))return;
+      const repo=data.repository,link=node('a',`${repo.name} ↗`);link.href=repo.url;link.target='_blank';link.rel='noopener noreferrer';
+      $('github-result').append(link,node('p',repo.description||'No description provided.'),node('p',`Stars: ${repo.stars ?? '?'} · Forks: ${repo.forks ?? '?'} · License: ${repo.license}${repo.archived?' · Archived':''}`));
+      $('github-status').textContent=`Public metadata received. ${data.remaining_user} request attempt(s) remain today.${data.audit_saved?'':' Warning: usage result could not be saved.'}`;
+    } catch(error){if(active(version))$('github-status').textContent=error.message;}
+    finally{if(active(version)){state.busy=false;updateControls();loadUsage(version).catch(()=>{});}}
   });
 
   // Browser speech APIs vary widely. Dictation is always reviewed before send,
