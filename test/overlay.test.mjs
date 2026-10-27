@@ -54,3 +54,8 @@ test('the optional cloud warning is surfaced without changing local sessions', (
   assert.match(result.app, /if \(state.warning\) setLoadError\(state.warning\)/);
   assert.throws(() => patchSessionWarning('bad', 'bad'), /did not match/);
 });
+
+test('Vercel web entry exports the same tested handler', async () => {
+  const deployed = await import('../web/api/bridge.mjs');
+  assert.equal(deployed.default, bridge);
+});

@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/bridge.mjs": {"maxDuration": 300}
+  },
+  "rewrites": [
+    {"source": "/api/:path*", "destination": "/api/bridge?__vimax_path=:path*"}
+  ]
+}
