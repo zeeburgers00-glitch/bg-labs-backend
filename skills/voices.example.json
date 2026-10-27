@@ -1,0 +1,11 @@
+{
+  "voices": [
+    {
+      "id": "en-example",
+      "label": "English local voice (edit this example)",
+      "language": "en-US",
+      "model": "C:/Users/YourName/voices/en_US-voice.onnx",
+      "speaker": null
+    }
+  ]
+}

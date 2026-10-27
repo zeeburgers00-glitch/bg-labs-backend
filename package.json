@@ -1,0 +1,12 @@
+{
+  "name": "vimax-skills-overlay",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "start:local": "node scripts/local.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": {"node": ">=22"}
+}

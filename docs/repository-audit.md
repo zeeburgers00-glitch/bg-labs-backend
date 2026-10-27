@@ -1,0 +1,83 @@
+# ViMax skills: repository triage and licensing
+
+Assessed 2026-10-27 from the linked README, GitHub license metadata, root dependency manifests when present, and topic searches. Links below pin the default-branch revision reviewed. This is a **triage**, not a full security audit or legal opinion. Only the explicitly named vendored scripts were reviewed line by line. No third-party install script was run. Missing information is unknown, not proof of safety.
+
+“Partial” means only the named adapter/operations are supplied; it does not mean the whole upstream repository is installed. The original Piper project is archived; the tested `piper-tts` 1.8.0 successor is GPL-3.0-or-later. Voice weights have separate terms. FFmpeg licensing depends on build configuration. The selected Linux imageio-ffmpeg binary reports `--enable-gpl --enable-version3` (GPL v3); assess each Windows binary separately.
+
+| Repository / pinned README | License | Dependencies and compatibility | Security / next step | Status |
+|---|---|---|---|---|
+| [Jakeschincariol/youtube-agent-skill](https://github.com/Jakeschincariol/youtube-agent-skill/blob/a2feb2104981a375ffd4f87ee04f4f5344ac43c6/README.md) | MIT | Python 3; selected scripts use the standard library. Python runs on Windows, macOS and Linux. | Treat skill instructions as untrusted; heuristics do not predict results. Reviewed and vendored only hookscore, hooks.json and title.py. | Partial adapter |
+| [Jakeschincariol/chatgpt-youtube-agent-skill](https://github.com/Jakeschincariol/chatgpt-youtube-agent-skill/blob/6314d3c17dfa1e596096654204e8a09e28cdfd74/README.md) | MIT | Python 3 and compatible host for prompt skills. Windows/macOS/Linux with Python; ChatGPT host may require account. | Untrusted prompt instructions; overlaps first repository; no code installed. | Assessed only |
+| [Sarim78/Claude-YouTube-Agent-Skill](https://github.com/Sarim78/Claude-YouTube-Agent-Skill) | Not identified | Unknown; README and manifest unavailable. Unknown. | Cannot verify license, dependencies, safety or existence; do not install. | Unavailable |
+| [darkzOGx/youtube-automation-agent](https://github.com/darkzOGx/youtube-automation-agent/blob/e973d515aef90c467da2289144df737a3bd03859/README.md) | MIT | Node >=18.17; Playwright/Chromium, FFmpeg, provider keys, Google OAuth. Self-hosted Node platforms; browser binaries and codecs vary. | OAuth and provider secrets, cloud spend, publishing side effects and untrusted content; entire agent not reviewed. | Assessed only |
+| [Hamza-Maqsood1/youtube-automation-agent](https://github.com/Hamza-Maqsood1/youtube-automation-agent/blob/d8e79722ad520f3d9d68ede74d44bb07c948055d/README.md) | MIT | Node >=18; Playwright, FFmpeg, Google OAuth, optional providers. Node platforms; local server; Vercel serverless not suitable as-is. | Local-only boundary is not multi-tenant auth; OAuth, spend and uploads need explicit consent. | Assessed only |
+| [joshcohen-ai/yt-agent](https://github.com/joshcohen-ai/yt-agent/blob/260d7a94ab2d5bb2a98ce6620bfda7efd56ebd6b/README.md) | MIT | Node >=18; Playwright, SQLite, provider keys; optional Python. Node platforms; native modules/Chromium need platform builds. | Private analytics, OAuth tokens, third-party code, spend and publication need scoped access. | Assessed only |
+| [tubealfred/youtube-skills](https://github.com/tubealfred/youtube-skills/blob/d4a960bfb0c958890d62957bbb20f7e0fa24cb47/README.md) | MIT | Skill-capable client; TubeAlfred MCP/OAuth or API key; service credits. Client and remote MCP supported; service access required. | Remote data leaves host; consent to credit spend and protect API keys. | Assessed only |
+| [ahmedsakri/youtube-agent-pro](https://github.com/ahmedsakri/youtube-agent-pro/blob/45e8e2603d4bf8e17c1147ba870a4ea00eaecbc5/README.md) | MIT | Python >=3.9; selected ideascore.py is standard-library only. Python platforms including Windows; only selected script verified. | Prompt and analytics content are untrusted; score is a heuristic, not evidence of demand. | Partial adapter |
+| [yadkinlabs/agentic-video](https://github.com/yadkinlabs/agentic-video/blob/b9289dd294229262a8a578f609e29b5e07109e76/README.md) | MIT | Node >=18; Python >=3.11; PostgreSQL/Prisma, JWT/encryption keys and providers. Self-hosted worker on supported OS; not drop-in Vercel Function. | Authentication, database/encryption key custody, remote providers and OAuth need review. | Assessed only |
+| [NesDevr/video-factory](https://github.com/NesDevr/video-factory/blob/221cdcaed42513ea78e7f11da15775b4eb46a95d/README.md) | MIT | Python >=3.11; Node >=18, FFmpeg, Pillow, OpenCV, Google services, Remotion. Windows setup documented; native codecs/GPU vary; long-running worker. | Provider credentials, uploaded content, cloud spend and Remotion license; no execution reviewed. | Assessed only |
+| [agentino-os/agentino-pipeline-script-to-video](https://github.com/agentino-os/agentino-pipeline-script-to-video/blob/24a81e199dadd38cfd753c9f45c882701445061a/README.md) | MIT | Agentino skill host, FFmpeg, TTS, OpenAI image provider/key. Cross-platform depends on individual skills and FFmpeg. | Remote provider spend, prompt injection and third-party assets; separate skills need their own review. | Assessed only |
+| [adro0303/youtube-ai-pipeline](https://github.com/adro0303/youtube-ai-pipeline/blob/3a6263979f0260d78482bbfc6ed17ff677093991/README.md) | Not identified | Docker, n8n, ComfyUI, Kokoro, models, GPU and optional cloud. Docker/GPU-dependent; Windows via supported Docker; not Vercel Functions. | No repository license identified; untrusted n8n code/nodes, keys, models and GPU service exposure. | Assessed only |
+| [596600892/video-agent](https://github.com/596600892/video-agent/blob/5d1a486f8eb08156baf828d62616eb9c8f2ce1ad/README.md) | MIT | Python, moviepy, Pillow, numpy and pydantic. Python native dependencies vary by OS; Windows unverified. | Treat scripts and file inputs as untrusted; validate asset rights and paths. | Assessed only |
+| [thisistanujjoshi/ai-video-factory](https://github.com/thisistanujjoshi/ai-video-factory/blob/94ef34e10c9ed1960fda3cf1251bd12fa783f6a8/README.md) | Not identified | Python/uv, Node, FFmpeg; Docker and optional AI providers. Docker/local; platform details depend on providers. | No repository license identified; default mock providers must not be mistaken for real output; OAuth/spend need review. | Assessed only |
+| [metiutek/tube-assistant](https://github.com/metiutek/tube-assistant/blob/dd232683ff6d3233e1abc6eb91bdefba2eda9609/README.md) | MIT | Python >=3.11, FFmpeg, Telegram, Edge TTS, provider and stock API keys. README states Windows/macOS/Linux; actual provider access varies. | Autonomous publishing and chat bot control require authorization; keys, asset rights and external services. | Assessed only |
+| [raunakpatil/youtube-agentic-ai-studio](https://github.com/raunakpatil/youtube-agentic-ai-studio/blob/c693e7ff9bb128ad63e0f06ab912e60876c15299/README.md) | MIT | Python >=3.10, Flask, FFmpeg, edge-tts, MoviePy, Gemini/Pexels, optional OAuth. Cross-platform Python; dependency and FFmpeg availability vary. | Provider quotas, stock licensing and publishing permissions; never trust automatic fact-check claims without review. | Assessed only |
+| [TheUnknown550/ScriptSmith-Engine](https://github.com/TheUnknown550/ScriptSmith-Engine/blob/22c8c5847f20e5e9cea5aa7b190e32e7bf35ef9d/README.md) | MIT | Python, google-genai, Runware, faster-whisper, FFmpeg and API keys. Python platforms; native inference dependencies may vary. | Provider costs, downloaded audio rights, keys and generated claims require review. | Assessed only |
+| [strangedeev/youtube-automation](https://github.com/strangedeev/youtube-automation/blob/9b61cca51f1958647a6ef75f3e81fe6360c89a6c/README.md) | MIT | Node >=18; FFmpeg, Playwright, whisper-cpp and provider/OAuth keys. README uses macOS/Homebrew; other platforms unverified. | Autonomous scheduled publishing and local credential files need isolation and approval. | Assessed only |
+| [adityaarsharma/youtube-marketing-skills](https://github.com/adityaarsharma/youtube-marketing-skills/blob/e9136cb39379a82801ee5ae542ff53a1d1109bd2/README.md) | MIT | Node >=18; Google Cloud OAuth, YouTube Data and Analytics APIs. Node platforms; OAuth desktop/client configuration required. | Private analytics and channel writes need least privilege; no artificial engagement. | Assessed only |
+| [harry0703/MoneyPrinterTurbo](https://github.com/harry0703/MoneyPrinterTurbo/blob/950ba89899d3b6ef080c18ad5791e7c9ead0ac66/README.md) | MIT | Python >=3.11, FFmpeg, MoviePy, Streamlit/FastAPI, providers and keys. README supports Windows/macOS/Linux; GPU/codec/provider features vary. | API costs, keys, file uploads and auto-publishing need security review; do not run installers blindly. | Assessed only |
+| [Comfy-Org/ComfyUI](https://github.com/Comfy-Org/ComfyUI/blob/426f5eea52a7ece1dd599fff4cb6cd1f352ddd24/README.md) | GPL-3.0 | Python >=3.10; PyTorch, model checkpoints and substantial RAM/VRAM. Windows/macOS/Linux; supported hardware depends on model/backend. | GPL-3.0; custom nodes execute code; restrict networks, review model licenses and GPU resources. | Assessed only |
+| [Wan-Video/Wan2.2](https://github.com/Wan-Video/Wan2.2/blob/1ea34ff48f87168174e12956e200b1d908b1c5ff/README.md) | Apache-2.0 | Python >=3.10, PyTorch, diffusers, model weights, usually NVIDIA GPU/VRAM. Linux/NVIDIA-first; Windows and CPU performance unverified. | Model weights and dependencies have separate licenses; resource exhaustion and unsafe checkpoints. | Assessed only |
+| [Lightricks/LTX-Video](https://github.com/Lightricks/LTX-Video/blob/4b2d053057623ddd4d0a1d3e9cd28890e9ef487f/README.md) | Apache-2.0 | Python >=3.10, PyTorch, diffusers and model checkpoints; GPU recommended. Hardware/model-specific; verify Windows/MPS and VRAM per checkpoint. | Repository Apache-2.0 does not automatically license all model weights; check model-specific terms. | Assessed only |
+| [rhasspy/piper](https://github.com/rhasspy/piper/blob/73c04d81d5590ecc46e522de3601ce7fb29fc2be/README.md) | MIT | Local Piper executable/package and a separately licensed ONNX voice + config. Original project archived; maintained piper-tts 1.8 supports major desktop platforms. | Successor is GPL-3.0-or-later, not MIT; model licenses vary. Only local CLI adapter tested; no model bundled. | Partial adapter |
+| [FFmpeg/FFmpeg](https://github.com/FFmpeg/FFmpeg/blob/86444dd36834875f274f57705762c5448379d644/README.md) | LGPL-2.1-or-later / GPL (build-dependent) | FFmpeg binary; codec/filter availability depends on the build. Windows/macOS/Linux builds available; not long-running Vercel Function. | FFmpeg source is LGPL/GPL depending on configuration; supplied imageio static build is GPL. Check redistributed binaries. | Partial adapter |
+| [remotion-dev/remotion](https://github.com/remotion-dev/remotion/blob/b06501102c5579c0347fa805cc7c063548ea759c/README.md) | Remotion custom license | Node, React, browser/Chromium and Remotion packages. Windows/macOS/Linux subject to rendering dependencies. | Custom Remotion license restricts some company/commercial scenarios; verify terms before installation. | Assessed only |
+| [n8n-io/n8n](https://github.com/n8n-io/n8n/blob/5ca227c513cfb4c81373b71dcf28993d84f056b3/README.md) | Sustainable Use / Enterprise (fair-code) | Node >=24 and pnpm per root manifest; or Docker/self-hosted service. Self-hosted/Docker; not a drop-in Vercel Function. | Fair-code Sustainable Use and enterprise licenses; arbitrary nodes can execute code; secure credentials. | Assessed only |
+| [ollama/ollama](https://github.com/ollama/ollama/blob/8ec9ecdf692e417798169ff8d5972159078d3754/README.md) | MIT | Ollama app/service and separately downloaded models. Windows/macOS/Linux; CPU/GPU support and RAM depend on model. | Model licenses vary; protect local API from remote access; no adapter installed. | Assessed only |
+
+## Revisions and manifests
+
+The README links pin the revision; root manifests checked (when present) are listed below. Some projects have nested manifests or installation requirements in their README; absence at root is not evidence of no dependencies. No license detected means redistribution/integration must wait for clarification.
+
+- `Jakeschincariol/youtube-agent-skill` — `a2feb2104981a375ffd4f87ee04f4f5344ac43c6`; root files: LICENSE.
+- `Jakeschincariol/chatgpt-youtube-agent-skill` — `6314d3c17dfa1e596096654204e8a09e28cdfd74`; root files: LICENSE.
+- `Sarim78/Claude-YouTube-Agent-Skill` — `unavailable`; root files: none found at root / unavailable.
+- `darkzOGx/youtube-automation-agent` — `e973d515aef90c467da2289144df737a3bd03859`; root files: LICENSE, package.json.
+- `Hamza-Maqsood1/youtube-automation-agent` — `d8e79722ad520f3d9d68ede74d44bb07c948055d`; root files: LICENSE, package.json.
+- `joshcohen-ai/yt-agent` — `260d7a94ab2d5bb2a98ce6620bfda7efd56ebd6b`; root files: LICENSE, package.json.
+- `tubealfred/youtube-skills` — `d4a960bfb0c958890d62957bbb20f7e0fa24cb47`; root files: LICENSE.
+- `ahmedsakri/youtube-agent-pro` — `45e8e2603d4bf8e17c1147ba870a4ea00eaecbc5`; root files: LICENSE.
+- `yadkinlabs/agentic-video` — `b9289dd294229262a8a578f609e29b5e07109e76`; root files: LICENSE, package.json.
+- `NesDevr/video-factory` — `221cdcaed42513ea78e7f11da15775b4eb46a95d`; root files: LICENSE, requirements.txt.
+- `agentino-os/agentino-pipeline-script-to-video` — `24a81e199dadd38cfd753c9f45c882701445061a`; root files: LICENSE.
+- `adro0303/youtube-ai-pipeline` — `3a6263979f0260d78482bbfc6ed17ff677093991`; root files: docker-compose.yml.
+- `596600892/video-agent` — `5d1a486f8eb08156baf828d62616eb9c8f2ce1ad`; root files: LICENSE, requirements.txt, setup.py.
+- `thisistanujjoshi/ai-video-factory` — `94ef34e10c9ed1960fda3cf1251bd12fa783f6a8`; root files: docker-compose.yml.
+- `metiutek/tube-assistant` — `dd232683ff6d3233e1abc6eb91bdefba2eda9609`; root files: LICENSE, pyproject.toml, requirements.txt.
+- `raunakpatil/youtube-agentic-ai-studio` — `c693e7ff9bb128ad63e0f06ab912e60876c15299`; root files: LICENSE, requirements.txt.
+- `TheUnknown550/ScriptSmith-Engine` — `22c8c5847f20e5e9cea5aa7b190e32e7bf35ef9d`; root files: LICENSE, requirements.txt.
+- `strangedeev/youtube-automation` — `9b61cca51f1958647a6ef75f3e81fe6360c89a6c`; root files: LICENSE, package.json.
+- `adityaarsharma/youtube-marketing-skills` — `e9136cb39379a82801ee5ae542ff53a1d1109bd2`; root files: LICENSE, SKILL.md, package.json.
+- `harry0703/MoneyPrinterTurbo` — `950ba89899d3b6ef080c18ad5791e7c9ead0ac66`; root files: Dockerfile, LICENSE, docker-compose.yml, pyproject.toml, requirements.txt.
+- `Comfy-Org/ComfyUI` — `426f5eea52a7ece1dd599fff4cb6cd1f352ddd24`; root files: LICENSE, pyproject.toml, requirements.txt.
+- `Wan-Video/Wan2.2` — `1ea34ff48f87168174e12956e200b1d908b1c5ff`; root files: pyproject.toml, requirements.txt.
+- `Lightricks/LTX-Video` — `4b2d053057623ddd4d0a1d3e9cd28890e9ef487f`; root files: LICENSE, pyproject.toml.
+- `rhasspy/piper` — `73c04d81d5590ecc46e522de3601ce7fb29fc2be`; root files: Dockerfile, LICENSE.md.
+- `FFmpeg/FFmpeg` — `86444dd36834875f274f57705762c5448379d644`; root files: LICENSE.md.
+- `remotion-dev/remotion` — `b06501102c5579c0347fa805cc7c063548ea759c`; root files: LICENSE.md, package.json.
+- `n8n-io/n8n` — `5ca227c513cfb4c81373b71dcf28993d84f056b3`; root files: LICENSE.md, package.json.
+- `ollama/ollama` — `8ec9ecdf692e417798169ff8d5972159078d3754`; root files: Dockerfile, LICENSE.
+
+## Discovery pages
+
+- [youtube-automation](https://github.com/topics/youtube-automation): GitHub topic discovery, not a repository. Search returned 253 matches on the assessment date; examples included darkzOGx/youtube-automation-agent. Counts change.
+- [youtube-agent](https://github.com/topics/youtube-agent): discovery page; search returned 2 matches. Neither was automatically installed.
+- [ai-video-generator](https://github.com/topics/ai-video-generator): discovery page; search returned 336 matches, including MoneyPrinterTurbo. Counts change.
+
+Topic listings are not blanket-reviewed or installed. Evaluate any new repository separately before enabling it.
+
+## Vendored source
+
+- `Jakeschincariol/youtube-agent-skill` at `a2feb2104981a375ffd4f87ee04f4f5344ac43c6`: `yt-script/hookscore.py`, `yt-script/hooks.json`, and `yt-package/title.py`; MIT license included alongside them.
+- `ahmedsakri/youtube-agent-pro` at `45e8e2603d4bf8e17c1147ba870a4ea00eaecbc5`: `yt-idea/ideascore.py`; MIT license included alongside it.
+- These are local, deterministic English-language word heuristics. They do not access YouTube, generate artificial engagement, perform research, predict views, or publish.

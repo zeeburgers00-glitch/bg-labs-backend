@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Skills &amp; Agents · ViMax</title>
+  <link rel="stylesheet" href="/skills/styles.css">
+  <script src="/skills/auth-clean.js"></script>
+  <script src="/skills/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="back" href="/" aria-label="Back to ViMax">← <span>ViMax</span></a>
+      <span class="divider" aria-hidden="true"></span><strong>Skills &amp; Agents</strong>
+      <span class="connection" id="connection">Checking local companion…</span>
+    </div>
+  </header>
+  <main>
+    <section class="hero">
+      <div class="eyebrow"><span class="spark">✳</span> CREATOR TOOLKIT</div>
+      <h1>Make more with ViMax.</h1>
+      <p>Explore reviewed creator skills and produce a simple, narrated video with your own script—without replacing your ViMax workspace.</p>
+      <div class="hero-nav"><a href="#studio">Open local studio <span>↗</span></a><a href="#catalog" class="secondary">Browse the catalog</a></div>
+    </section>
+    <aside class="notice" id="notice" role="status">
+      <strong>Local companion required.</strong> The public Vercel site has no video backend yet. This catalog is available, but generation only works after the local companion is set up. It is not a shared or multi-user service.
+    </aside>
+
+    <section id="account" class="section" hidden>
+      <div class="section-heading"><div><div class="eyebrow">CLOUD ACCOUNT</div><h2>Your private ideas.</h2><p>Sign in to save ideas to Supabase. Saved ideas do not generate or upload videos yet.</p></div><span class="tag">PRIVATE PROJECTS</span></div>
+      <div class="studio-grid">
+        <form id="account-form" class="panel form-panel">
+          <div class="panel-heading"><div><h3>Sign in or create an account</h3><p>Confirm a new account using the email link before signing in.</p></div></div>
+          <label>Email <input name="email" type="email" autocomplete="username" maxlength="254" required></label>
+          <label>Password <input name="password" type="password" autocomplete="current-password" minlength="6" maxlength="128" required></label>
+          <div class="account-actions"><button class="button primary" type="submit" value="login">Sign in</button><button class="button secondary-button" type="submit" value="signup">Create account</button></div>
+          <p class="form-note">Accounts share the connected Supabase project. Its default email sender only delivers to organization-team addresses and is limited to two emails per hour. A custom SMTP service is required for other users to sign up. Never send passwords or keys in chat.</p>
+          <p id="account-message" class="form-note" role="status"></p><p id="account-error" class="error" role="alert"></p>
+        </form>
+        <div class="panel" id="cloud-projects" hidden>
+          <div class="panel-heading"><div><h3>Saved ideas</h3><p id="account-identity"></p></div><button class="button secondary-button signout" id="logout-button" type="button">Sign out</button></div>
+          <form id="cloud-project-form">
+            <label>Idea title <input name="title" maxlength="160" required placeholder="e.g. Healthy meals on a budget"></label>
+            <label>Notes <textarea name="notes" maxlength="4000" rows="3" placeholder="Optional notes"></textarea></label>
+            <button class="button primary" type="submit">Save private idea</button>
+          </form>
+          <p id="cloud-project-error" class="error" role="alert"></p>
+          <ul id="cloud-project-list" class="cloud-project-list"></ul>
+        </div>
+        <div class="panel" id="cloud-info"><h3>What is connected?</h3><p class="form-note">The account and saved ideas use Supabase. Cloud rendering, AI research, scheduling and YouTube OAuth/upload are not connected. Use the local companion below for the tested CPU text-card renderer.</p></div>
+      </div>
+    </section>
+
+    <section id="studio" class="section">
+      <div class="section-heading"><div><div class="eyebrow">01 / LOCAL STUDIO</div><h2>A small video, made for review.</h2><p>Provide the facts and script. Piper narrates locally and FFmpeg assembles original text cards with captions.</p></div><span class="tag">CPU · NO API CALLS</span></div>
+      <div class="studio-grid">
+        <form id="job-form" class="panel form-panel">
+          <div class="panel-heading"><div><h3>Start a project</h3><p>No automatic research, AI imagery or translation in this workflow.</p></div><span class="step-number">01</span></div>
+          <label>Topic <input name="topic" maxlength="160" required placeholder="e.g. A guide to your first garden"></label>
+          <label>Your narration script <textarea name="script" maxlength="1800" rows="5" required placeholder="Write the words you want the voice to read..."></textarea><small>Required. Review accuracy and rights before rendering.</small></label>
+          <label>Research notes <textarea name="research_notes" maxlength="4000" rows="3" placeholder="Add your own notes and sources (optional)"></textarea><small>Saved as provided; not searched or fact-checked.</small></label>
+          <div class="field-grid">
+            <label>Format <select name="format"><option value="shorts">Shorts · 9:16</option><option value="landscape">Landscape · 16:9</option></select></label>
+            <label>Duration <span class="input-suffix"><input name="duration_seconds" type="number" min="5" max="180" value="20" required><span>sec</span></span></label>
+            <label>Voice <select name="voice_id" id="voice-select" required><option value="">No local voice detected</option></select></label>
+            <label>Language <input name="language" id="language" readonly placeholder="From selected voice" required></label>
+            <label>Visual style <select name="visual_style"><option value="midnight">Midnight</option><option value="sunrise">Sunrise</option><option value="paper">Paper</option></select></label>
+            <label>Quality <select name="quality"><option value="draft">Draft · faster</option><option value="standard">Standard · larger</option></select></label>
+          </div>
+          <p class="form-note">Speech longer than the selected duration is never cut off; shorten the script or increase the duration. Extra time becomes silence.</p>
+          <button class="button primary" id="create-button" type="submit" disabled>Generate local preview <span>→</span></button>
+          <p class="error" id="job-error" role="alert"></p>
+        </form>
+        <div class="panel result-panel">
+          <div class="panel-heading"><div><h3>Progress &amp; review</h3><p>Files stay in your local output folder.</p></div><span class="step-number">02</span></div>
+          <div id="job-empty" class="empty"><div class="empty-icon">▷</div><strong>Your preview will appear here</strong><p>Start a local job to see its stages, logs and output.</p></div>
+          <div id="job-result" hidden>
+            <div class="job-status"><span id="job-badge" class="tag"></span><span id="job-attempts"></span></div>
+            <div class="cost-line" id="job-cost"></div>
+            <video id="video-preview" controls playsinline preload="metadata" hidden><track id="caption-track" kind="subtitles" srclang="en" label="Subtitles" default></video>
+            <img id="thumbnail-preview" alt="Generated thumbnail preview" hidden>
+            <div id="output-links" class="output-links"></div>
+            <p class="path" id="output-path"></p>
+            <div class="actions"><button class="button secondary-button" type="button" id="retry-button" hidden>Retry failed job</button><button class="button primary" type="button" id="approve-button" hidden>I reviewed and approve</button></div>
+            <p class="form-note">YouTube upload is not implemented; approval does not publish anything.</p>
+            <ol id="job-events" class="events" aria-live="polite"></ol>
+          </div>
+          <div class="hardware" id="hardware">Checking hardware and installed dependencies…</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tools" class="section">
+      <div class="section-heading"><div><div class="eyebrow">02 / PLANNING TOOLS</div><h2>Pressure-test the idea.</h2><p>Three small, local English-language heuristics. Scores are advisory, not research or a prediction of views.</p></div><span class="tag">READ-ONLY SKILLS</span></div>
+      <div class="analysis-grid">
+        <form id="analysis-form" class="panel form-panel">
+          <label>Video idea <input name="idea" maxlength="400" placeholder="How to start a garden in 5 steps"></label>
+          <label>Opening hook <input name="hook" maxlength="400" placeholder="What would you like to say first?"></label>
+          <label>Title <input name="title" maxlength="400" placeholder="Enter a working title"></label>
+          <label>Thumbnail text <input name="thumbnail" maxlength="400" placeholder="Optional; compared with the title"></label>
+          <button class="button primary" type="submit" id="analysis-button" disabled>Analyze locally <span>→</span></button>
+          <p class="error" id="analysis-error" role="alert"></p>
+        </form>
+        <div class="panel analysis-output"><h3>Results</h3><pre id="analysis-result">Add an idea, hook, or title to see the selected tools' output.</pre></div>
+      </div>
+    </section>
+
+    <section id="catalog" class="section catalog-section">
+      <div class="section-heading"><div><div class="eyebrow">03 / SKILLS &amp; AGENTS</div><h2>Know what’s connected.</h2><p>Repository triage, dependencies and license notes. Assessed does not mean installed or verified.</p></div><span class="tag" id="catalog-count">28 SOURCES</span></div>
+      <div class="catalog-controls"><label class="search"><span aria-hidden="true">⌕</span><input id="catalog-search" type="search" placeholder="Search skills, features, licenses…" aria-label="Search catalog"></label>
+        <select id="catalog-filter" aria-label="Filter by status"><option value="all">All statuses</option><option value="partial">Selected adapters only</option><option value="reviewed">Assessed, not integrated</option><option value="unavailable">Unavailable</option></select></div>
+      <div id="catalog-list" class="catalog-grid" aria-live="polite"></div>
+      <p class="form-note">Catalog assessment: 27 October 2026. Model weights and third-party binaries can have separate terms. See the repository audit in the local setup guide.</p>
+    </section>
+    <footer><span>ViMax · Skills &amp; Agents</span><span>No artificial engagement. Automatic publishing is not connected.</span></footer>
+  </main>
+  <noscript>This page needs JavaScript to load the catalog and local tools.</noscript>
+</body>
+</html>

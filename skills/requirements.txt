@@ -1,0 +1,8 @@
+# Optional local companion. piper-tts 1.8 is GPL-3.0-or-later; see docs/repository-audit.md.
+# imageio-ffmpeg wheels include a prebuilt FFmpeg; its license depends on the wheel's build.
+fastapi==0.115.0
+pydantic==2.14.1
+uvicorn==0.30.6
+Pillow==11.3.0
+imageio-ffmpeg==0.6.0
+piper-tts==1.8.0

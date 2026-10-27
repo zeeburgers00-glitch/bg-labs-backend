@@ -1,115 +1,114 @@
-# BG LABS - Complete AI Platform Backend
+# ViMax Skills & Agents
 
-100% free, runs 24/7 in the cloud. No dependency on user's PC.
+This project is an **additive overlay for ViMax**, pinned to upstream commit `fd4b72e7731be6e5f88486206d25ea59849b0285`. The previous BG Labs files were removed from this working branch at the owner's request; the Git history and other branches are unchanged. The overlay does not replace the upstream ViMax backend.
 
-## Features
+## What works, and what does not
 
-- **TTS**: Edge TTS (Microsoft) - FREE, unlimited, 26+ voices, 14+ languages
-- **Image Gen**: Pollinations.ai - FREE, no API key needed
-- **Voice Cloning**: Profile-based voice customization
-- **Script Writer**: Template-based script generation
-- **Avatar Studio**: SVG avatar generation
-- **Video**: FFmpeg-based text-to-video
-- **Admin Panel**: Stats, user management
-- **Keep-Alive**: Self-ping system for 24/7 uptime
+| Capability | Status |
+|---|---|
+| Searchable catalog | 28 requested repositories assessed; one returned 404. Status, source, license, requirements, features, platform and security notes are shown. Full [triage and license report](docs/repository-audit.md). |
+| Creator skills | Reviewed, pinned subsets from `Jakeschincariol/youtube-agent-skill` (hook + title lint) and `ahmedsakri/youtube-agent-pro` (idea score). They are exposed through the local API and added as read-only ViMax ToolRegistry entries. Scores are English-language heuristics, **not forecasts or research**. |
+| Local video | User-provided script and notes → simple storyboard/text-card visuals → local Piper speech → timed SRT/VTT → FFmpeg H.264/AAC MP4 → thumbnail → preview → explicit local approval. Tested on Linux with a Piper test voice, in both 9:16 and 16:9. |
+| Choices and transparency | Format, installed voice/language, 5–180 second target, visual style and draft/standard quality; queue, stages, logs, failures, bounded retries, local output paths and $0 **API** cost for this local path. Electricity/hardware/hosting are not included. |
+| Research, AI writing, visual models | **Not implemented by the local companion**. Notes and script must be supplied by the user; visuals are generated graphic text cards, not AI imagery. Other listed repos are not integrated merely because they appear in the catalog. |
+| YouTube upload and OAuth | **Not implemented**. Local approval is stored and uploads nothing; the API returns 501. The owner requested an optional fully automatic mode after official Google OAuth authorization, with a way to stop automation. This still needs implementation and a real, authorized end-to-end test. |
+| Public Vercel backend | The included cloud API connects Supabase Auth and private saved ideas, but **not** the online ViMax agent, rendering, scheduling or upload. Those routes fail closed with JSON 503. Upstream ViMax is a single-workspace process without multi-user isolation and is never exposed to the Internet. |
+| Unlimited free hosting | Not promised. Local processing uses your own device and electricity; Vercel and external providers enforce quotas and may charge. |
 
-## Stack
+The `Unexpected token 'T' … is not valid JSON` is addressed by guarded JSON parsing and JSON error responses. Connecting Supabase does **not** mean the video agent is connected. The cloud status explicitly distinguishes these components.
 
-- **Backend**: FastAPI + asyncpg
-- **Database**: Neon PostgreSQL (free tier: 3GB, 24/7)
-- **TTS**: Edge TTS (Microsoft, free unlimited)
-- **Images**: Pollinations.ai (free, no API key)
-- **Video**: FFmpeg (free, open source)
-- **Deploy**: Render.com (free tier)
+The connected Supabase project is shared with another application. ViMax uses a separate `vimax_projects` table with row-level security and per-user policies; it does not modify the other application's tables. A project-specific **publishable** key and Supabase URL were set on the ViMax Vercel project; no Supabase service-role key is used. Publishable keys share the project's `anon` role: the existing `orders` table already has a policy allowing anonymous inserts. The new API does not return the key to browsers, but a publishable key is not a security boundary; review the existing policy or use a dedicated Supabase project before exposing keys or widely sharing the app. The Supabase Auth confirmation redirect allow-list was extended to the public ViMax skills page while leaving the previous site URL unchanged. The account pool and quota are shared. With Supabase's default email sender, confirmation emails are restricted to organization-team addresses and currently only two emails/hour across the project. To let other people sign up, configure [custom SMTP](https://supabase.com/docs/guides/auth/auth-smtp) directly in the Supabase dashboard; do not paste its credentials into chat. Hosting and provider quotas still apply.
 
-## Deployment
+The checked-in Vercel configuration builds from this repository root. The previous interim deployment used upstream's `web` root and custom build command; those settings must be changed before deploying this overlay. Vercel deployment-specific protection does not provide per-user isolation of the ViMax workspace.
 
-### 1. Create Neon Database
-1. Go to [neon.tech](https://neon.tech)
-2. Create free account
-3. Create a new project
-4. Copy the connection string
+## Security and privacy
 
-### 2. Deploy to Render
-1. Push this repo to GitHub
-2. Go to [render.com](https://render.com)
-3. Create new Web Service
-4. Connect your GitHub repo
-5. Set environment variable:
-   - `DATABASE_URL` = your Neon connection string
-6. Deploy!
+- This companion is **single-user, loopback only**. Do not set up port forwarding, bind it to a public interface, or share its URL over the Internet. A random in-memory token gates both internal services; the front proxy also checks host and origin to reduce local cross-site/DNS-rebinding attacks. These are not multi-user authentication.
+- No API keys or OAuth tokens are required for the local slideshow. Do not paste secrets into scripts, notes, prompts, screenshots or logs. Outputs and job metadata are stored under `~/.vimax-skills/jobs` by default; protect that directory, including backups. Set `VIMAX_SKILLS_OUTPUT` to a private location if needed. Unix job directories are created with mode `0700`; configure appropriate Windows ACLs yourself.
+- For upstream ViMax providers, prefer process/OS secret-manager environment variables such as `VIMAX_LLM_API_KEY`, `VIMAX_IMAGE_API_KEY` and `VIMAX_VIDEO_API_KEY`. Upstream's Settings UI writes `configs/agent.local.yaml` **as plaintext** (with restrictive file permissions on Unix), not encrypted storage. Do not commit or share that file. Provider calls can cost money. This overlay does not solve hosted per-user credential storage.
+- Never install arbitrary catalog entries or custom ComfyUI nodes automatically. Prompt text, model files, media, and third-party repos are untrusted. Only the small vendored scripts identified in the audit were reviewed line by line; this is not a full security audit.
+- No feature creates artificial views, likes, subscribers, comments, or other fake engagement.
 
-### 3. Set Up Keep-Alive (Optional)
-The backend has a built-in keep-alive system that pings itself every 10 minutes. For extra reliability:
-1. Go to [cron-job.org](https://cron-job.org)
-2. Create a free account
-3. Add a cron job:
-   - URL: `https://your-app.onrender.com/keep-alive`
-   - Schedule: Every 10 minutes
+## Windows setup (PowerShell)
 
-## API Endpoints
+These instructions are provided for Windows 10/11 x64 and **have not been tested on Windows**. The verified run used Linux x86-64, Node 22 and Python 3.11 for the companion. Upstream ViMax itself requires Python 3.12+ and its much larger dependencies.
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/` | API info |
-| GET | `/health` | Health check |
-| GET | `/keep-alive` | Keep-alive ping |
-| POST | `/api/auth/register` | Register user |
-| POST | `/api/auth/login` | Login |
-| GET | `/api/auth/me` | Get profile |
-| PUT | `/api/auth/me` | Update profile |
-| GET | `/api/voices` | List voices |
-| POST | `/api/studio/generate` | Generate TTS |
-| GET | `/api/studio/audio` | Audio history |
-| POST | `/api/image/generate` | Generate image |
-| GET | `/api/image/history` | Image history |
-| POST | `/api/video/generate` | Generate video |
-| POST | `/api/avatar/generate` | Generate avatar |
-| POST | `/api/voice-clone/create` | Create voice clone |
-| GET | `/api/voice-clone/list` | List voice clones |
-| POST | `/api/voice-clone/generate` | Generate with clone |
-| POST | `/api/script/write` | Write script |
-| GET | `/api/admin/stats` | Admin stats |
-| GET | `/api/admin/users` | Admin users |
-| PUT | `/api/admin/users/{id}` | Update user |
-| GET | `/api/billing/plans` | Billing plans |
-| GET | `/api/referral/code` | Referral code |
+1. Install Git, Node.js 22+, Python 3.12, `uv`, and Windows' `curl.exe`/`tar.exe`. Check `git --version`, `node -v`, `py -3.12 --version`, `uv --version`, `curl.exe --version`, and `tar.exe --version`. See upstream [ViMax instructions](https://github.com/HKUDS/ViMax) and [uv installation](https://docs.astral.sh/uv/getting-started/installation/). Build and model downloads need Internet access.
+2. Clone the pinned **separate** ViMax source and install its dependencies; this can take substantial disk/RAM and may download packages from upstream indexes:
 
-## Environment Variables
+   ```powershell
+   git clone https://github.com/HKUDS/ViMax.git C:\ViMax
+   git -C C:\ViMax checkout --detach fd4b72e7731be6e5f88486206d25ea59849b0285
+   Set-Location C:\ViMax
+   uv sync --frozen --no-dev --python 3.12
+   Set-Location C:\ViMax\web
+   npm ci --ignore-scripts --no-audit --no-fund
+   ```
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `DATABASE_URL` | Yes | Neon PostgreSQL connection string |
-| `SECRET_KEY` | Yes | JWT secret key |
-| `PORT` | No | Server port (default: 7860) |
+3. In a second PowerShell window, open this repository's root (replace the example path with your checkout) and build the **temporary-copy** frontend overlay. It downloads the pinned upstream source but does not modify your ViMax checkout:
 
-## Local Development
+   ```powershell
+   Set-Location C:\path\to\bg-labs-backend
+   npm ci --ignore-scripts --no-audit --no-fund
+   npm run build
+   py -3.12 -m venv skills\.venv
+   .\skills\.venv\Scripts\python.exe -m pip install -r skills\requirements.txt
+   ```
 
-```bash
-# Clone
-git clone <repo-url>
-cd bg-labs-backend
+4. Choose a compatible Piper voice, **review its separate model/data license** and download it yourself. For example, after confirming that the model's terms meet your needs:
 
-# Create virtual env
-python -m venv venv
-venv\Scripts\activate  # Windows
-# source venv/bin/activate  # Mac/Linux
+   ```powershell
+   New-Item -ItemType Directory -Force "$env:USERPROFILE\vimax-voices" | Out-Null
+   .\skills\.venv\Scripts\python.exe -m piper.download_voices --download-dir "$env:USERPROFILE\vimax-voices" en_US-ljspeech-medium
+   $env:VIMAX_PIPER_MODEL = "$env:USERPROFILE\vimax-voices\en_US-ljspeech-medium.onnx"
+   $env:VIMAX_PIPER_LANGUAGE = "en-US"
+   ```
 
-# Install deps
-pip install -r requirements.txt
+   Both the `.onnx` and matching `.onnx.json` must exist. The original `rhasspy/piper` repository is archived; the installed maintained `piper-tts==1.8.0` successor is **GPL-3.0-or-later**, not MIT. Model licenses differ. The [LJ Speech model card](https://huggingface.co/rhasspy/piper-voices/blob/main/en/en_US/ljspeech/medium/MODEL_CARD) says it was trained from scratch on a public-domain dataset; confirm all relevant rights yourself. Do **not** assume Lessac-trained voices are cleared for commercial use: [Lessac's source data license](https://www.cstr.ed.ac.uk/projects/blizzard/2013/lessac_blizzard2013/license.html) is a research license. See [Piper's current project](https://github.com/OHF-Voice/piper1-gpl) and each model's card.
 
-# Set env vars
-cp .env.example .env
-# Edit .env with your DATABASE_URL
+5. Start the local companion in the same window:
 
-# Run
-python main.py
+   ```powershell
+   $env:VIMAX_SOURCE_DIR = "C:\ViMax"
+   $env:VIMAX_AGENT_PYTHON = "C:\ViMax\.venv\Scripts\python.exe"
+   $env:VIMAX_SKILLS_PYTHON = (Resolve-Path .\skills\.venv\Scripts\python.exe).Path
+   npm run start:local
+   ```
+
+   Visit **http://127.0.0.1:4173**, then choose **Skills & Agents**. The two internal ports are 4174 and 4175, all bound to loopback. Override `VIMAX_LOCAL_PORT`, `VIMAX_UPSTREAM_PORT`, `VIMAX_SKILLS_PORT` if needed. Stop with Ctrl+C.
+
+### More voices and languages
+
+Copy `skills/voices.example.json` outside the repository, edit the `model` paths, IDs, labels and language tags, and set `VIMAX_SKILLS_VOICES` to that trusted local file. One model and matching JSON are needed for each voice. The UI only allows installed voices and adopts the voice's language; it **does not translate** the script. Complex-script font shaping varies by OS/Pillow build and has not been verified. Set `VIMAX_SKILLS_FONT` to a suitable Unicode `.ttf` if needed.
+
+## Linux / macOS outline
+
+Use upstream ViMax's documented setup at the pinned commit; run `npm ci --ignore-scripts` in its `web` directory. In this repository root, run `npm run build`, create `python3 -m venv skills/.venv`, and `skills/.venv/bin/pip install -r skills/requirements.txt`. Configure `VIMAX_SOURCE_DIR`, `VIMAX_PIPER_MODEL`, `VIMAX_PIPER_LANGUAGE`, `VIMAX_AGENT_PYTHON` (`<ViMax>/.venv/bin/python`), and `VIMAX_SKILLS_PYTHON` (`<this directory>/skills/.venv/bin/python`); then `npm run start:local`. macOS and non-x86 builds are not verified here.
+
+## Hardware and cost checks
+
+- `node -v`, `py -3.12 --version`, and `uv --version` check required toolchains. In the UI, **Progress & review** reports logical CPUs, whether an NVIDIA GPU is detected, FFmpeg/Piper status, and configured voices. On Windows, `nvidia-smi`, `Get-CimInstance Win32_ComputerSystem | Select-Object TotalPhysicalMemory`, and `Get-PSDrive C` show GPU (if installed), RAM and disk space.
+- Text-card/Piper/FFmpeg processing works on CPU and was tested without a GPU. It is not Wan, LTX, ComfyUI, or an AI video model. Those repositories are assessed only; no cloud fallback for them is connected. They can need large downloads, substantial GPU VRAM and model-specific licenses.
+- An FFmpeg binary with H.264 (`libx264`) and AAC encoders is required. `imageio-ffmpeg==0.6.0` supplies wheels for common platforms; override with a trusted binary using `VIMAX_FFMPEG`. FFmpeg's LGPL/GPL license depends on build flags; the tested Linux wheel reported GPLv3. Check your own binary with `ffmpeg -version` before redistribution.
+- If speech is longer than the selected duration, the job fails with an actionable message rather than truncating speech. A shorter script or longer target is required. Extra duration is silence.
+
+## Tests
+
+From this repository root:
+
+```powershell
+npm test
+.\skills\.venv\Scripts\python.exe -m pip install -r skills\requirements-test.txt
+$env:PYTHONPATH = (Resolve-Path .\skills).Path
+$env:VIMAX_TEST_SOURCE = "C:\ViMax"
+$env:VIMAX_TEST_PIPER_MODEL = $env:VIMAX_PIPER_MODEL
+.\skills\.venv\Scripts\python.exe -m pytest -q skills\tests
 ```
 
-## Frontend
+The media and end-to-end proxy tests **skip** unless both a real voice and the pinned source are supplied. They generate real MP4/audio/thumbnail/SRT outputs in temporary test folders and decode the MP4 with FFmpeg. Registry tests use ViMax's real `ToolRegistry`, but the full ViMax agent process and hosted multi-user deployment were not tested in the Linux sandbox (the upstream runtime requires Python 3.12 and additional providers/dependencies). Tests do not upload or call YouTube.
 
-The `bglabs_complete.html` file is a complete frontend that connects to this backend. Update the `API_BASE` variable to point to your deployed backend URL.
+## Architecture and next steps
 
-## License
-
-MIT
+- `scripts/apply-overlay.mjs` modifies only a temporary build copy; guards fail if pinned upstream structure changes. The local runner creates a temporary token-gated wrapper around ViMax's server and forwards `/api/skills/*` to the local sidecar; existing ViMax API calls still go to ViMax.
+- `skills/vimax_skills/agent_entry.py` extends the existing registry in memory. The original ViMax tools remain available. `skills/vendor/` contains only pinned, attributed source under its licenses.
+- The cloud API uses Supabase Auth, secure HttpOnly cookies, same-origin checks, per-user RLS and an account-level cap for private saved ideas. Public multi-user **rendering** still needs isolated workers and storage, durable jobs, encrypted secrets, rate limits/abuse controls, quota consent, optional automatic publishing via official OAuth, a stop switch, and real end-to-end tests. Vercel's free plan and third-party limits still apply. Do not enable a shared single-workspace bridge as a shortcut.

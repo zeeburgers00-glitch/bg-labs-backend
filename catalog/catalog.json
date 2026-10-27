@@ -1,0 +1,602 @@
+{
+  "assessed": "2026-10-27",
+  "entries": [
+    {
+      "id": "jakeschincariol--youtube-agent-skill",
+      "name": "Jakeschincariol/youtube-agent-skill",
+      "description": "Creator planning skills; hook and title heuristics",
+      "source": "https://github.com/Jakeschincariol/youtube-agent-skill",
+      "revision": "a2feb2104981a375ffd4f87ee04f4f5344ac43c6",
+      "license": "MIT",
+      "status": "partial",
+      "requirements": "Python 3; selected scripts use the standard library",
+      "features": [
+        "Hook scoring",
+        "Title / thumbnail lint"
+      ],
+      "platform": "Python runs on Windows, macOS and Linux",
+      "security": "Treat skill instructions as untrusted; heuristics do not predict results. Reviewed and vendored only hookscore, hooks.json and title.py.",
+      "readme": "README.md",
+      "root_manifests": [
+        "LICENSE"
+      ]
+    },
+    {
+      "id": "jakeschincariol--chatgpt-youtube-agent-skill",
+      "name": "Jakeschincariol/chatgpt-youtube-agent-skill",
+      "description": "ChatGPT edition of YouTube planning skills",
+      "source": "https://github.com/Jakeschincariol/chatgpt-youtube-agent-skill",
+      "revision": "6314d3c17dfa1e596096654204e8a09e28cdfd74",
+      "license": "MIT",
+      "status": "reviewed",
+      "requirements": "Python 3 and compatible host for prompt skills",
+      "features": [
+        "Planning skills"
+      ],
+      "platform": "Windows/macOS/Linux with Python; ChatGPT host may require account",
+      "security": "Untrusted prompt instructions; overlaps first repository; no code installed.",
+      "readme": "README.md",
+      "root_manifests": [
+        "LICENSE"
+      ]
+    },
+    {
+      "id": "sarim78--claude-youtube-agent-skill",
+      "name": "Sarim78/Claude-YouTube-Agent-Skill",
+      "description": "Listed Claude YouTube skill; GitHub returned 404",
+      "source": "https://github.com/Sarim78/Claude-YouTube-Agent-Skill",
+      "revision": null,
+      "license": "Not identified",
+      "status": "unavailable",
+      "requirements": "Unknown; README and manifest unavailable",
+      "features": [
+        "Unverified"
+      ],
+      "platform": "Unknown",
+      "security": "Cannot verify license, dependencies, safety or existence; do not install.",
+      "readme": null,
+      "root_manifests": []
+    },
+    {
+      "id": "darkzogx--youtube-automation-agent",
+      "name": "darkzOGx/youtube-automation-agent",
+      "description": "Self-hosted creator workflow with review and publishing",
+      "source": "https://github.com/darkzOGx/youtube-automation-agent",
+      "revision": "e973d515aef90c467da2289144df737a3bd03859",
+      "license": "MIT",
+      "status": "reviewed",
+      "requirements": "Node >=18.17; Playwright/Chromium, FFmpeg, provider keys, Google OAuth",
+      "features": [
+        "Research",
+        "Script",
+        "Review",
+        "Publishing"
+      ],
+      "platform": "Self-hosted Node platforms; browser binaries and codecs vary",
+      "security": "OAuth and provider secrets, cloud spend, publishing side effects and untrusted content; entire agent not reviewed.",
+      "readme": "README.md",
+      "root_manifests": [
+        "LICENSE",
+        "package.json"
+      ]
+    },
+    {
+      "id": "hamza-maqsood1--youtube-automation-agent",
+      "name": "Hamza-Maqsood1/youtube-automation-agent",
+      "description": "Provider-flexible local creator workflow",
+      "source": "https://github.com/Hamza-Maqsood1/youtube-automation-agent",
+      "revision": "d8e79722ad520f3d9d68ede74d44bb07c948055d",
+      "license": "MIT",
+      "status": "reviewed",
+      "requirements": "Node >=18; Playwright, FFmpeg, Google OAuth, optional providers",
+      "features": [
+        "Research",
+        "Narration",
+        "Video assembly",
+        "Review"
+      ],
+      "platform": "Node platforms; local server; Vercel serverless not suitable as-is",
+      "security": "Local-only boundary is not multi-tenant auth; OAuth, spend and uploads need explicit consent.",
+      "readme": "README.md",
+      "root_manifests": [
+        "LICENSE",
+        "package.json"
+      ]
+    },
+    {
+      "id": "joshcohen-ai--yt-agent",
+      "name": "joshcohen-ai/yt-agent",
+      "description": "Creator agent with analytics and production tools",
+      "source": "https://github.com/joshcohen-ai/yt-agent",
+      "revision": "260d7a94ab2d5bb2a98ce6620bfda7efd56ebd6b",
+      "license": "MIT",
+      "status": "reviewed",
+      "requirements": "Node >=18; Playwright, SQLite, provider keys; optional Python",
+      "features": [
+        "Production planning",
+        "Analytics",
+        "Review"
+      ],
+      "platform": "Node platforms; native modules/Chromium need platform builds",
+      "security": "Private analytics, OAuth tokens, third-party code, spend and publication need scoped access.",
+      "readme": "README.md",
+      "root_manifests": [
+        "LICENSE",
+        "package.json"
+      ]
+    },
+    {
+      "id": "tubealfred--youtube-skills",
+      "name": "tubealfred/youtube-skills",
+      "description": "Transcript, comment and channel research skills",
+      "source": "https://github.com/tubealfred/youtube-skills",
+      "revision": "d4a960bfb0c958890d62957bbb20f7e0fa24cb47",
+      "license": "MIT",
+      "status": "reviewed",
+      "requirements": "Skill-capable client; TubeAlfred MCP/OAuth or API key; service credits",
+      "features": [
+        "Transcript research",
+        "Channel research"
+      ],
+      "platform": "Client and remote MCP supported; service access required",
+      "security": "Remote data leaves host; consent to credit spend and protect API keys.",
+      "readme": "README.md",
+      "root_manifests": [
+        "LICENSE"
+      ]
+    },
+    {
+      "id": "ahmedsakri--youtube-agent-pro",
+      "name": "ahmedsakri/youtube-agent-pro",
+      "description": "YouTube creator skills and local Python tools",
+      "source": "https://github.com/ahmedsakri/youtube-agent-pro",
+      "revision": "45e8e2603d4bf8e17c1147ba870a4ea00eaecbc5",
+      "license": "MIT",
+      "status": "partial",
+      "requirements": "Python >=3.9; selected ideascore.py is standard-library only",
+      "features": [
+        "Idea scoring"
+      ],
+      "platform": "Python platforms including Windows; only selected script verified",
+      "security": "Prompt and analytics content are untrusted; score is a heuristic, not evidence of demand.",
+      "readme": "README.md",
+      "root_manifests": [
+        "LICENSE"
+      ]
+    },
+    {
+      "id": "yadkinlabs--agentic-video",
+      "name": "yadkinlabs/agentic-video",
+      "description": "Next.js dashboard plus Python production worker",
+      "source": "https://github.com/yadkinlabs/agentic-video",
+      "revision": "b9289dd294229262a8a578f609e29b5e07109e76",
+      "license": "MIT",
+      "status": "reviewed",
+      "requirements": "Node >=18; Python >=3.11; PostgreSQL/Prisma, JWT/encryption keys and providers",
+      "features": [
+        "Worker orchestration",
+        "Production dashboard"
+      ],
+      "platform": "Self-hosted worker on supported OS; not drop-in Vercel Function",
+      "security": "Authentication, database/encryption key custody, remote providers and OAuth need review.",
+      "readme": "README.md",
+      "root_manifests": [
+        "LICENSE",
+        "package.json"
+      ]
+    },
+    {
+      "id": "nesdevr--video-factory",
+      "name": "NesDevr/video-factory",
+      "description": "Multi-agent video factory with Remotion rendering",
+      "source": "https://github.com/NesDevr/video-factory",
+      "revision": "221cdcaed42513ea78e7f11da15775b4eb46a95d",
+      "license": "MIT",
+      "status": "reviewed",
+      "requirements": "Python >=3.11; Node >=18, FFmpeg, Pillow, OpenCV, Google services, Remotion",
+      "features": [
+        "Research",
+        "Render",
+        "Cost tracing"
+      ],
+      "platform": "Windows setup documented; native codecs/GPU vary; long-running worker",
+      "security": "Provider credentials, uploaded content, cloud spend and Remotion license; no execution reviewed.",
+      "readme": "README.md",
+      "root_manifests": [
+        "LICENSE",
+        "requirements.txt"
+      ]
+    },
+    {
+      "id": "agentino-os--agentino-pipeline-script-to-video",
+      "name": "agentino-os/agentino-pipeline-script-to-video",
+      "description": "Script-to-video pipeline of separate Agentino skills",
+      "source": "https://github.com/agentino-os/agentino-pipeline-script-to-video",
+      "revision": "24a81e199dadd38cfd753c9f45c882701445061a",
+      "license": "MIT",
+      "status": "reviewed",
+      "requirements": "Agentino skill host, FFmpeg, TTS, OpenAI image provider/key",
+      "features": [
+        "Storyboard",
+        "TTS",
+        "Captioned slideshow"
+      ],
+      "platform": "Cross-platform depends on individual skills and FFmpeg",
+      "security": "Remote provider spend, prompt injection and third-party assets; separate skills need their own review.",
+      "readme": "README.md",
+      "root_manifests": [
+        "LICENSE"
+      ]
+    },
+    {
+      "id": "adro0303--youtube-ai-pipeline",
+      "name": "adro0303/youtube-ai-pipeline",
+      "description": "n8n/ComfyUI/Kokoro video workflow",
+      "source": "https://github.com/adro0303/youtube-ai-pipeline",
+      "revision": "3a6263979f0260d78482bbfc6ed17ff677093991",
+      "license": "Not identified",
+      "status": "reviewed",
+      "requirements": "Docker, n8n, ComfyUI, Kokoro, models, GPU and optional cloud",
+      "features": [
+        "Local visual generation",
+        "TTS",
+        "Orchestration"
+      ],
+      "platform": "Docker/GPU-dependent; Windows via supported Docker; not Vercel Functions",
+      "security": "No repository license identified; untrusted n8n code/nodes, keys, models and GPU service exposure.",
+      "readme": "README.md",
+      "root_manifests": [
+        "docker-compose.yml"
+      ]
+    },
+    {
+      "id": "596600892--video-agent",
+      "name": "596600892/video-agent",
+      "description": "Python script-to-video production framework",
+      "source": "https://github.com/596600892/video-agent",
+      "revision": "5d1a486f8eb08156baf828d62616eb9c8f2ce1ad",
+      "license": "MIT",
+      "status": "reviewed",
+      "requirements": "Python, moviepy, Pillow, numpy and pydantic",
+      "features": [
+        "Scene parsing",
+        "Subtitles",
+        "Video export"
+      ],
+      "platform": "Python native dependencies vary by OS; Windows unverified",
+      "security": "Treat scripts and file inputs as untrusted; validate asset rights and paths.",
+      "readme": "README.md",
+      "root_manifests": [
+        "LICENSE",
+        "requirements.txt",
+        "setup.py"
+      ]
+    },
+    {
+      "id": "thisistanujjoshi--ai-video-factory",
+      "name": "thisistanujjoshi/ai-video-factory",
+      "description": "Provider-abstracted AI factory with approval dashboard",
+      "source": "https://github.com/thisistanujjoshi/ai-video-factory",
+      "revision": "94ef34e10c9ed1960fda3cf1251bd12fa783f6a8",
+      "license": "Not identified",
+      "status": "reviewed",
+      "requirements": "Python/uv, Node, FFmpeg; Docker and optional AI providers",
+      "features": [
+        "Pipeline orchestration",
+        "Approval",
+        "Rendering"
+      ],
+      "platform": "Docker/local; platform details depend on providers",
+      "security": "No repository license identified; default mock providers must not be mistaken for real output; OAuth/spend need review.",
+      "readme": "README.md",
+      "root_manifests": [
+        "docker-compose.yml"
+      ]
+    },
+    {
+      "id": "metiutek--tube-assistant",
+      "name": "metiutek/tube-assistant",
+      "description": "Telegram-controlled creator and video pipeline",
+      "source": "https://github.com/metiutek/tube-assistant",
+      "revision": "dd232683ff6d3233e1abc6eb91bdefba2eda9609",
+      "license": "MIT",
+      "status": "reviewed",
+      "requirements": "Python >=3.11, FFmpeg, Telegram, Edge TTS, provider and stock API keys",
+      "features": [
+        "Voice",
+        "Stock footage",
+        "Telegram control"
+      ],
+      "platform": "README states Windows/macOS/Linux; actual provider access varies",
+      "security": "Autonomous publishing and chat bot control require authorization; keys, asset rights and external services.",
+      "readme": "README.md",
+      "root_manifests": [
+        "LICENSE",
+        "pyproject.toml",
+        "requirements.txt"
+      ]
+    },
+    {
+      "id": "raunakpatil--youtube-agentic-ai-studio",
+      "name": "raunakpatil/youtube-agentic-ai-studio",
+      "description": "Python creator studio using external AI and stock services",
+      "source": "https://github.com/raunakpatil/youtube-agentic-ai-studio",
+      "revision": "c693e7ff9bb128ad63e0f06ab912e60876c15299",
+      "license": "MIT",
+      "status": "reviewed",
+      "requirements": "Python >=3.10, Flask, FFmpeg, edge-tts, MoviePy, Gemini/Pexels, optional OAuth",
+      "features": [
+        "Research",
+        "Script",
+        "Voice",
+        "Review"
+      ],
+      "platform": "Cross-platform Python; dependency and FFmpeg availability vary",
+      "security": "Provider quotas, stock licensing and publishing permissions; never trust automatic fact-check claims without review.",
+      "readme": "README.md",
+      "root_manifests": [
+        "LICENSE",
+        "requirements.txt"
+      ]
+    },
+    {
+      "id": "theunknown550--scriptsmith-engine",
+      "name": "TheUnknown550/ScriptSmith-Engine",
+      "description": "Script-to-video pipeline with AI visuals and sound",
+      "source": "https://github.com/TheUnknown550/ScriptSmith-Engine",
+      "revision": "22c8c5847f20e5e9cea5aa7b190e32e7bf35ef9d",
+      "license": "MIT",
+      "status": "reviewed",
+      "requirements": "Python, google-genai, Runware, faster-whisper, FFmpeg and API keys",
+      "features": [
+        "TTS",
+        "AI scenes",
+        "Sound effects"
+      ],
+      "platform": "Python platforms; native inference dependencies may vary",
+      "security": "Provider costs, downloaded audio rights, keys and generated claims require review.",
+      "readme": "README.md",
+      "root_manifests": [
+        "LICENSE",
+        "requirements.txt"
+      ]
+    },
+    {
+      "id": "strangedeev--youtube-automation",
+      "name": "strangedeev/youtube-automation",
+      "description": "Node automation workflow with narration and publishing",
+      "source": "https://github.com/strangedeev/youtube-automation",
+      "revision": "9b61cca51f1958647a6ef75f3e81fe6360c89a6c",
+      "license": "MIT",
+      "status": "reviewed",
+      "requirements": "Node >=18; FFmpeg, Playwright, whisper-cpp and provider/OAuth keys",
+      "features": [
+        "Script",
+        "Captions",
+        "Publishing"
+      ],
+      "platform": "README uses macOS/Homebrew; other platforms unverified",
+      "security": "Autonomous scheduled publishing and local credential files need isolation and approval.",
+      "readme": "README.md",
+      "root_manifests": [
+        "LICENSE",
+        "package.json"
+      ]
+    },
+    {
+      "id": "adityaarsharma--youtube-marketing-skills",
+      "name": "adityaarsharma/youtube-marketing-skills",
+      "description": "YouTube marketing skills and channel MCP",
+      "source": "https://github.com/adityaarsharma/youtube-marketing-skills",
+      "revision": "e9136cb39379a82801ee5ae542ff53a1d1109bd2",
+      "license": "MIT",
+      "status": "reviewed",
+      "requirements": "Node >=18; Google Cloud OAuth, YouTube Data and Analytics APIs",
+      "features": [
+        "Channel analytics",
+        "SEO",
+        "Shorts planning"
+      ],
+      "platform": "Node platforms; OAuth desktop/client configuration required",
+      "security": "Private analytics and channel writes need least privilege; no artificial engagement.",
+      "readme": "README.md",
+      "root_manifests": [
+        "LICENSE",
+        "SKILL.md",
+        "package.json"
+      ]
+    },
+    {
+      "id": "harry0703--moneyprinterturbo",
+      "name": "harry0703/MoneyPrinterTurbo",
+      "description": "Open-source short-video creator with multiple providers",
+      "source": "https://github.com/harry0703/MoneyPrinterTurbo",
+      "revision": "950ba89899d3b6ef080c18ad5791e7c9ead0ac66",
+      "license": "MIT",
+      "status": "reviewed",
+      "requirements": "Python >=3.11, FFmpeg, MoviePy, Streamlit/FastAPI, providers and keys",
+      "features": [
+        "Short video",
+        "Voice",
+        "Visual providers"
+      ],
+      "platform": "README supports Windows/macOS/Linux; GPU/codec/provider features vary",
+      "security": "API costs, keys, file uploads and auto-publishing need security review; do not run installers blindly.",
+      "readme": "README.md",
+      "root_manifests": [
+        "Dockerfile",
+        "LICENSE",
+        "docker-compose.yml",
+        "pyproject.toml",
+        "requirements.txt"
+      ]
+    },
+    {
+      "id": "comfy-org--comfyui",
+      "name": "Comfy-Org/ComfyUI",
+      "description": "Node-graph diffusion model UI and backend",
+      "source": "https://github.com/Comfy-Org/ComfyUI",
+      "revision": "426f5eea52a7ece1dd599fff4cb6cd1f352ddd24",
+      "license": "GPL-3.0",
+      "status": "reviewed",
+      "requirements": "Python >=3.10; PyTorch, model checkpoints and substantial RAM/VRAM",
+      "features": [
+        "Image workflows",
+        "Local models"
+      ],
+      "platform": "Windows/macOS/Linux; supported hardware depends on model/backend",
+      "security": "GPL-3.0; custom nodes execute code; restrict networks, review model licenses and GPU resources.",
+      "readme": "README.md",
+      "root_manifests": [
+        "LICENSE",
+        "pyproject.toml",
+        "requirements.txt"
+      ]
+    },
+    {
+      "id": "wan-video--wan2.2",
+      "name": "Wan-Video/Wan2.2",
+      "description": "Video diffusion models and inference",
+      "source": "https://github.com/Wan-Video/Wan2.2",
+      "revision": "1ea34ff48f87168174e12956e200b1d908b1c5ff",
+      "license": "Apache-2.0",
+      "status": "reviewed",
+      "requirements": "Python >=3.10, PyTorch, diffusers, model weights, usually NVIDIA GPU/VRAM",
+      "features": [
+        "Video generation",
+        "GPU inference"
+      ],
+      "platform": "Linux/NVIDIA-first; Windows and CPU performance unverified",
+      "security": "Model weights and dependencies have separate licenses; resource exhaustion and unsafe checkpoints.",
+      "readme": "README.md",
+      "root_manifests": [
+        "pyproject.toml",
+        "requirements.txt"
+      ]
+    },
+    {
+      "id": "lightricks--ltx-video",
+      "name": "Lightricks/LTX-Video",
+      "description": "LTX video model inference",
+      "source": "https://github.com/Lightricks/LTX-Video",
+      "revision": "4b2d053057623ddd4d0a1d3e9cd28890e9ef487f",
+      "license": "Apache-2.0",
+      "status": "reviewed",
+      "requirements": "Python >=3.10, PyTorch, diffusers and model checkpoints; GPU recommended",
+      "features": [
+        "Video generation",
+        "Image-to-video"
+      ],
+      "platform": "Hardware/model-specific; verify Windows/MPS and VRAM per checkpoint",
+      "security": "Repository Apache-2.0 does not automatically license all model weights; check model-specific terms.",
+      "readme": "README.md",
+      "root_manifests": [
+        "LICENSE",
+        "pyproject.toml"
+      ]
+    },
+    {
+      "id": "rhasspy--piper",
+      "name": "rhasspy/piper",
+      "description": "Original Piper text-to-speech repository (archived; development moved)",
+      "source": "https://github.com/rhasspy/piper",
+      "revision": "73c04d81d5590ecc46e522de3601ce7fb29fc2be",
+      "license": "MIT",
+      "status": "partial",
+      "requirements": "Local Piper executable/package and a separately licensed ONNX voice + config",
+      "features": [
+        "Offline narration",
+        "Voice models"
+      ],
+      "platform": "Original project archived; maintained piper-tts 1.8 supports major desktop platforms",
+      "security": "Successor is GPL-3.0-or-later, not MIT; model licenses vary. Only local CLI adapter tested; no model bundled.",
+      "readme": "README.md",
+      "root_manifests": [
+        "Dockerfile",
+        "LICENSE.md"
+      ]
+    },
+    {
+      "id": "ffmpeg--ffmpeg",
+      "name": "FFmpeg/FFmpeg",
+      "description": "FFmpeg multimedia conversion, codecs and assembly",
+      "source": "https://github.com/FFmpeg/FFmpeg",
+      "revision": "86444dd36834875f274f57705762c5448379d644",
+      "license": "LGPL-2.1-or-later / GPL (build-dependent)",
+      "status": "partial",
+      "requirements": "FFmpeg binary; codec/filter availability depends on the build",
+      "features": [
+        "MP4 assembly",
+        "Audio",
+        "Formats"
+      ],
+      "platform": "Windows/macOS/Linux builds available; not long-running Vercel Function",
+      "security": "FFmpeg source is LGPL/GPL depending on configuration; supplied imageio static build is GPL. Check redistributed binaries.",
+      "readme": "README.md",
+      "root_manifests": [
+        "LICENSE.md"
+      ]
+    },
+    {
+      "id": "remotion-dev--remotion",
+      "name": "remotion-dev/remotion",
+      "description": "Programmatic React-based video rendering",
+      "source": "https://github.com/remotion-dev/remotion",
+      "revision": "b06501102c5579c0347fa805cc7c063548ea759c",
+      "license": "Remotion custom license",
+      "status": "reviewed",
+      "requirements": "Node, React, browser/Chromium and Remotion packages",
+      "features": [
+        "React video rendering"
+      ],
+      "platform": "Windows/macOS/Linux subject to rendering dependencies",
+      "security": "Custom Remotion license restricts some company/commercial scenarios; verify terms before installation.",
+      "readme": "README.md",
+      "root_manifests": [
+        "LICENSE.md",
+        "package.json"
+      ]
+    },
+    {
+      "id": "n8n-io--n8n",
+      "name": "n8n-io/n8n",
+      "description": "Workflow automation with integrations and AI nodes",
+      "source": "https://github.com/n8n-io/n8n",
+      "revision": "5ca227c513cfb4c81373b71dcf28993d84f056b3",
+      "license": "Sustainable Use / Enterprise (fair-code)",
+      "status": "reviewed",
+      "requirements": "Node >=24 and pnpm per root manifest; or Docker/self-hosted service",
+      "features": [
+        "Workflow orchestration",
+        "Integrations"
+      ],
+      "platform": "Self-hosted/Docker; not a drop-in Vercel Function",
+      "security": "Fair-code Sustainable Use and enterprise licenses; arbitrary nodes can execute code; secure credentials.",
+      "readme": "README.md",
+      "root_manifests": [
+        "LICENSE.md",
+        "package.json"
+      ]
+    },
+    {
+      "id": "ollama--ollama",
+      "name": "ollama/ollama",
+      "description": "Local model serving runtime",
+      "source": "https://github.com/ollama/ollama",
+      "revision": "8ec9ecdf692e417798169ff8d5972159078d3754",
+      "license": "MIT",
+      "status": "reviewed",
+      "requirements": "Ollama app/service and separately downloaded models",
+      "features": [
+        "Local LLM serving"
+      ],
+      "platform": "Windows/macOS/Linux; CPU/GPU support and RAM depend on model",
+      "security": "Model licenses vary; protect local API from remote access; no adapter installed.",
+      "readme": "README.md",
+      "root_manifests": [
+        "Dockerfile",
+        "LICENSE"
+      ]
+    }
+  ]
+}
