@@ -27,7 +27,7 @@ test('real PostgreSQL 17 concurrent queue, provider and private-upload safety', 
       grant usage on schema auth to anon,authenticated;`);
     const users=Array.from({length:12},(_,n)=>`12345678-0000-4000-8000-${String(n+1).padStart(12,'0')}`);
     for(const id of users) await pool.query('insert into auth.users(id) values($1)',[id]);
-    for(const file of ['202610270001_vimax_projects.sql','202610270002_vimax_cloud_ai.sql','202610270003_vimax_ai_finish_token.sql','202610270004_vimax_mission_queue.sql','202610270005_vimax_youtube_uploads.sql','202610270006_vimax_mission_openai.sql']) {
+    for(const file of ['202610270001_vimax_projects.sql','202610270002_vimax_cloud_ai.sql','202610270003_vimax_ai_finish_token.sql','202610270004_vimax_mission_queue.sql','202610270005_vimax_youtube_uploads.sql','202610270006_vimax_mission_openai.sql','202610270007_vimax_gpu_previews.sql']) {
       await pool.query(await readFile(new URL(`../supabase/migrations/${file}`,import.meta.url),'utf8'));
     }
     async function as(id,action) {
@@ -136,6 +136,47 @@ test('real PostgreSQL 17 concurrent queue, provider and private-upload safety', 
       assert.equal(results.filter(x=>x.allowed===true).length,10);
       assert.deepEqual(results.filter(x=>x.allowed===false).map(x=>x.reason),['global_daily_limit']);
       assert.equal((await pool.query('select attempts from public.vimax_youtube_daily_budget')).rows[0].attempts,10);
+    });
+    // Paid GPU preview reservations must serialize across actual connections.
+    await pool.query('insert into public.vimax_gpu_allowed_users(owner_id) select unnest($1::uuid[])',[users.slice(0,11)]);
+    const resetGpu=()=>pool.query('delete from public.vimax_gpu_jobs; delete from public.vimax_gpu_user_daily_budget; delete from public.vimax_gpu_daily_budget;');
+    const gpuPrepare=(owner,key=randomUUID())=>rpc(owner,'vimax_gpu_prepare',key,'A test scene','shorts','a'.repeat(64));
+    await t.test('GPU allowlist, RLS and atomic duplicate reservations',async()=>{
+      await resetGpu();const denied=await gpuPrepare(users[11]);assert.equal(denied.reason,'not_allowed');
+      const key=randomUUID(),results=await Promise.all(Array.from({length:24},()=>gpuPrepare(users[0],key)));
+      assert.equal(results.filter(x=>x.created===true).length,1);
+      assert.equal(new Set(results.map(x=>x.id)).size,1);
+      assert.equal((await pool.query('select attempts from public.vimax_gpu_daily_budget')).rows[0].attempts,1);
+      assert.equal((await as(users[1],c=>c.query('select id from public.vimax_gpu_jobs'))).rowCount,0);
+      await assert.rejects(as(users[0],c=>c.query('select provider_cipher from public.vimax_gpu_jobs')),/permission denied/);
+      const others=await Promise.all(Array.from({length:12},()=>gpuPrepare(users[0])));
+      assert.ok(others.every(x=>x.reason==='active_job'));
+    });
+    await t.test('GPU global three-attempt budget and exclusive leases remain atomic',async()=>{
+      await resetGpu();const reservations=await Promise.all(users.slice(0,10).map(id=>gpuPrepare(id)));
+      assert.equal(reservations.filter(x=>x.allowed===true).length,3);
+      assert.ok(reservations.filter(x=>!x.allowed).every(x=>x.reason==='global_daily_limit'));
+      assert.equal((await pool.query('select attempts from public.vimax_gpu_daily_budget')).rows[0].attempts,3);
+      const row=(await pool.query('select id,owner_id,lease_token from public.vimax_gpu_jobs limit 1')).rows[0];
+      assert.equal(await rpc(row.owner_id,'vimax_gpu_finish_start',row.id,null,'queued','x'.repeat(50)),null);
+      assert.equal((await rpc(row.owner_id,'vimax_gpu_finish_start',row.id,row.lease_token,'queued','x'.repeat(50))).status,'queued');
+      const claims=await Promise.all(Array.from({length:16},()=>rpc(row.owner_id,'vimax_gpu_claim',row.id)));
+      const winners=claims.filter(x=>x.allowed);assert.equal(winners.length,1);
+      assert.ok(claims.filter(x=>!x.allowed).every(x=>x.reason==='busy'));
+      assert.equal(await rpc(row.owner_id,'vimax_gpu_finish',row.id,null,'cancelled',null,null),null);
+      assert.equal(await rpc(row.owner_id,'vimax_gpu_request_cancel',row.id),true);
+      const saved=await rpc(row.owner_id,'vimax_gpu_finish',row.id,winners[0].token,'running',null,null);
+      assert.equal(saved.cancel_requested,true);assert.equal(saved.status,'running');
+    });
+    await t.test('GPU uncertain outcome cannot be retried automatically and forgetting does not reset budget',async()=>{
+      await resetGpu();const key=randomUUID(),r=await gpuPrepare(users[0],key);
+      await pool.query("update public.vimax_gpu_jobs set lease_until=now()-interval '1 second' where id=$1",[r.id]);
+      assert.equal(await rpc(users[0],'vimax_gpu_finish_start',r.id,r.token,'queued','x'.repeat(50)),null);
+      const again=await gpuPrepare(users[0],key);assert.equal(again.created,false);assert.equal(again.status,'uncertain');
+      assert.equal(await rpc(users[0],'vimax_gpu_forget',r.id,false),false);
+      assert.equal(await rpc(users[0],'vimax_gpu_forget',r.id,true),true);
+      assert.equal((await gpuPrepare(users[0])).reason,'user_daily_limit');
+      assert.equal((await pool.query('select attempts from public.vimax_gpu_daily_budget')).rows[0].attempts,1);
     });
   } finally {
     if(pool) await pool.end();

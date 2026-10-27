@@ -2,6 +2,7 @@
 // single-workspace local server or server-side provider keys to the Internet.
 import {ProviderError, providerStatus, pexelsStatus, validateSelection, chatCompletion, providerTestTokens, searchPexels, githubRepositoryInput, getGithubRepository} from './providers.mjs';
 import {YouTubeError, createYouTube, clearYouTubeCookies} from './youtube.mjs';
+import {GpuError, createGpu} from './gpu.mjs';
 
 const ACCESS_COOKIE = '__Host-vimax_access';
 const REFRESH_COOKIE = '__Host-vimax_refresh';
@@ -269,6 +270,7 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch} =
     }
   }
   const youtube = createYouTube({env, fetchImpl, supa, body, json});
+  const gpu = createGpu({env, fetchImpl, supa, body, json});
   async function handler(request) {
     let sessionUpdates = [];
     try {
@@ -287,10 +289,14 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch} =
         const session = await authenticated();
         return await youtube.handle({request,path,method,session});
       }
+      if (path.startsWith('/api/cloud/gpu/')) {
+        const session = await authenticated();
+        return await gpu.handle({request,path,method,session});
+      }
 
       if (method === 'GET' && path === '/api/health') {
         await databaseReady();
-        return json({ok:true, database:'connected', text_chat:providerStatus(env).some(p => p.state === 'configured_unverified') ? 'configured_unverified' : 'unconfigured', video_agent:'unavailable', youtube_upload:youtube.configured(request) ? 'configured_unverified' : 'unavailable'});
+        return json({ok:true, database:'connected', text_chat:providerStatus(env).some(p => p.state === 'configured_unverified') ? 'configured_unverified' : 'unconfigured', video_agent:'unavailable', gpu_preview:gpu.configured() ? 'configured_unverified' : 'unconfigured', youtube_upload:youtube.configured(request) ? 'configured_unverified' : 'unavailable'});
       }
       if (method === 'GET' && path === '/api/sessions') {
         await databaseReady();
@@ -302,7 +308,7 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch} =
       }
       if (method === 'GET' && path === '/api/skills/system') {
         await databaseReady();
-        return json({local_only:false, database_connected:true, text_chat:providerStatus(env).some(p => p.state === 'configured_unverified') ? 'configured_unverified' : 'unconfigured', ready_for_video:false, piper_installed:false, ffmpeg_installed:false, scene_detection_installed:false,
+        return json({local_only:false, database_connected:true, text_chat:providerStatus(env).some(p => p.state === 'configured_unverified') ? 'configured_unverified' : 'unconfigured', gpu_preview:gpu.configured() ? 'configured_unverified' : 'unconfigured', ready_for_video:false, piper_installed:false, ffmpeg_installed:false, scene_detection_installed:false,
           voices:[], hardware:{logical_cpus:null, memory_gib:null, home_disk_free_gib:null, nvidia_gpu:null}, warnings:[AGENT_UNAVAILABLE]});
       }
       if (method === 'GET' && path === '/api/cloud/session') {
@@ -554,7 +560,7 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch} =
       if (path.startsWith('/api/')) throw new HttpError(503, AGENT_UNAVAILABLE);
       throw new HttpError(404, 'Not found.');
     } catch (error) {
-      const status = error instanceof HttpError || error instanceof ProviderError || error instanceof YouTubeError ? error.status : 500;
+      const status = error instanceof HttpError || error instanceof ProviderError || error instanceof YouTubeError || error instanceof GpuError ? error.status : 500;
       return json({error:status === 500 ? 'The request could not be completed.' : error.message}, status, sessionUpdates);
     }
   }

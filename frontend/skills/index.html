@@ -12,6 +12,7 @@
   <script src="/skills/cloud.js" defer></script>
   <script src="/skills/mission.js" defer></script>
   <script src="/skills/youtube.js" defer></script>
+  <script src="/skills/gpu.js" defer></script>
   <script src="/skills/app.js" defer></script>
 </head>
 <body>
@@ -27,10 +28,10 @@
       <div class="eyebrow"><span class="spark">✳</span> CREATOR TOOLKIT</div>
       <h1>Make more with ViMax.</h1>
       <p>Explore reviewed creator skills and produce a simple, narrated video with your own script—without replacing your ViMax workspace.</p>
-      <div class="hero-nav"><a id="cloud-ai-link" href="#account">AI chat <span>↗</span></a><a id="youtube-link" href="#account" class="secondary">YouTube upload</a><a id="mission-link" href="#account" class="secondary">Mission control</a><a href="#studio" class="secondary">Open local studio</a><a href="#catalog" class="secondary">Browse the catalog</a></div>
+      <div class="hero-nav"><a id="cloud-ai-link" href="#account">AI chat <span>↗</span></a><a id="youtube-link" href="#account" class="secondary">YouTube upload</a><a id="gpu-link" href="#account" class="secondary">GPU video preview</a><a id="mission-link" href="#account" class="secondary">Mission control</a><a href="#studio" class="secondary">Open local studio</a><a href="#catalog" class="secondary">Browse the catalog</a></div>
     </section>
     <aside class="notice" id="notice" role="status">
-      <strong>Local companion required.</strong> The public Vercel site has no video backend yet. This catalog is available, but generation only works after the local companion is set up. It is not a shared or multi-user service.
+      <strong>Full video agent not connected.</strong> The local companion can render simple text-card videos. A separate paid GPU preview is optional and requires private provider setup; it is not connected by default. The local companion is not a shared or multi-user service.
     </aside>
 
     <section id="account" class="section" hidden>
@@ -55,7 +56,7 @@
           <p id="cloud-project-error" class="error" role="alert"></p>
           <ul id="cloud-project-list" class="cloud-project-list"></ul>
         </div>
-        <div class="panel" id="cloud-info"><h3>What is connected?</h3><p class="form-note">The account and saved ideas use Supabase. Text planning can be enabled with a server-side provider key. Cloud rendering and verified web research are not connected. Private YouTube upload requires deployment configuration and your Google authorization. Scheduled text planning needs a separately hosted worker. Use the local companion below for the tested CPU text-card renderer.</p></div>
+        <div class="panel" id="cloud-info"><h3>What is connected?</h3><p class="form-note">The account and saved ideas use Supabase. Text planning can be enabled with a server-side provider key. A short, paid GPU preview requires separate provider configuration; the full video agent and verified web research are not connected. Private YouTube upload requires deployment configuration and your Google authorization. Scheduled text planning needs a separately hosted worker. Use the local companion below for the tested CPU text-card renderer.</p></div>
       </div>
     </section>
 
@@ -161,6 +162,27 @@
       </div>
       <div id="mission-detail" class="panel mission-detail" hidden><div class="panel-heading"><div><h3 id="mission-detail-title">Job details</h3><p id="mission-detail-status"></p></div><button id="mission-detail-close" class="small-button" type="button">Close</button></div><div id="mission-detail-actions" class="mission-controls"></div><div id="mission-steps"></div><h4>Recorded events</h4><ul id="mission-events" class="events"></ul></div>
       <details class="mission-help"><summary>Worker setup and limits</summary><p>The worker runs separately on a trusted always-on machine, signs in as this account and uses server-side provider keys. Start it with <code>npm run worker:planning</code> after configuring the environment documented in the repository. Nothing runs continuously on Vercel. Stored jobs may remain queued when no worker is online.</p><p>The queue allows up to 1,000 active jobs per account, subject to shared storage caps; this is not a tested throughput guarantee or 1,000 processes. Default provider budgets are 10 attempts per user and 50 globally per UTC day, with one provider call at a time per user. Pause stops new stages and requests cancellation of running jobs; an already-started call can finish or be billed.</p></details>
+    </section>
+
+    <section id="gpu" class="section" hidden>
+      <div class="section-heading"><div><div class="eyebrow">OPTIONAL / PAID GPU SERVICE</div><h2>Generate a short preview.</h2><p>Turn a prompt into a five-second video using a separately configured Runpod P-Video service. Vercel remains the app host; the GPU runs at the provider.</p></div><span class="tag">CONFIGURATION REQUIRED</span></div>
+      <div class="studio-grid">
+        <form id="gpu-form" class="panel form-panel">
+          <div class="panel-heading"><div><h3>Text to video</h3><p id="gpu-connection" role="status">Checking GPU configuration…</p></div></div>
+          <label>Video prompt <textarea id="gpu-prompt" maxlength="600" rows="4" required placeholder="Describe the scene and motion…"></textarea></label>
+          <label>Format <select id="gpu-aspect"><option value="landscape">Landscape · 16:9</option><option value="shorts">Shorts · 9:16</option></select></label>
+          <label class="checkbox-label"><input type="checkbox" id="gpu-confirm"> I understand this sends my prompt to Runpod and may charge the provider account.</label>
+          <button class="button primary" id="gpu-submit" type="submit" disabled>Generate paid preview</button>
+          <p class="form-note">Five seconds, 720p, standard quality, no audio. Runpod listed approximately $0.10 per clip on October 27, 2026; prices and billing can change. Limit: one attempt per account and three shared attempts per UTC day. These limits are not dollar caps. Set a separate provider spending limit. A timeout may still incur a charge; submissions are never retried automatically.</p>
+          <p class="form-note">Runpod receives your prompt and hosts the result. Its link is accessible to anyone who has it and is documented to expire after seven days. The app does not automatically save the video or publish it. Check the result promptly: the provider's job status may expire after 30 minutes.</p>
+          <button type="button" id="gpu-clear-pending" class="small-button" hidden>Clear pending submission</button>
+          <p id="gpu-notice" class="form-note" role="status"></p><p id="gpu-error" class="error" role="alert"></p>
+        </form>
+        <div class="panel">
+          <div class="panel-heading"><div><h3>Your GPU jobs</h3><p>Check status manually; stopping is best-effort and does not guarantee zero charges.</p></div><button id="gpu-refresh" type="button" class="small-button">Refresh</button></div>
+          <div id="gpu-history"><p class="form-note">No GPU jobs recorded.</p></div>
+        </div>
+      </div>
     </section>
 
     <section id="youtube" class="section" hidden>

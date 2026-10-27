@@ -76,8 +76,8 @@ async function loadSystem() {
     const system = await json('/api/skills/system'); state.system = system;
     $('connection').classList.add('ready');
     if (!system.local_only) {
-      $('connection').textContent = 'Database connected · video worker offline';
-      $('notice').textContent = `Supabase accounts and private ideas are connected. Cloud text planning is ${system.text_chat === 'configured_unverified' ? 'configured but not yet verified' : 'not configured'}. Online video generation, web research and automatic YouTube publishing are not connected. Private manual upload requires Google configuration and authorization. The renderer below runs only on a locally configured computer.`;
+      $('connection').textContent = 'Database connected · full video agent offline';
+      $('notice').textContent = `Supabase accounts and private ideas are connected. Cloud text planning is ${system.text_chat === 'configured_unverified' ? 'configured but not yet verified' : 'not configured'}. The optional paid GPU preview is ${system.gpu_preview === 'configured_unverified' ? 'configured but not yet verified' : 'not configured'}. The full video agent, web research and automatic YouTube publishing are not connected. Private manual upload requires Google configuration and authorization. The renderer below runs only on a locally configured computer.`;
       $('account').hidden = false;
       $('hardware').textContent = system.warnings.join(' ');
       setupVoices(system); renderCatalog();
@@ -85,7 +85,7 @@ async function loadSystem() {
       return;
     }
     $('connection').textContent = 'Local companion connected';
-    $('cloud-ai-link').hidden = true; $('mission-link').hidden = true;
+    $('cloud-ai-link').hidden = true; $('mission-link').hidden = true; $('gpu-link').hidden = true;
     $('notice').classList.add('ready');
     $('notice').textContent = 'Single-user local mode. Your script and notes remain on this computer. This path uses text cards, not AI-generated visuals; no online research, translation, or YouTube upload is included.';
     setupVoices(system); $('create-button').disabled = !system.ready_for_video; $('analysis-button').disabled = false;
@@ -226,8 +226,9 @@ async function loadAccount() {
   const cloud = window.vimaxCloud.onSession(loggedIn);
   const mission = window.vimaxMission.onSession(loggedIn);
   const youtube = window.vimaxYouTube.onSession(data.user);
+  const gpu = window.vimaxGpu.onSession(data.user);
   if (loggedIn) { $('account-identity').textContent = `${data.user.email} · Account ID: ${data.user.id}`; await loadProjects(); }
-  await Promise.all([cloud, mission, youtube]);
+  await Promise.all([cloud, mission, youtube, gpu]);
   try {
     const confirmed = sessionStorage.getItem('vimax-email-confirmed');
     if (confirmed) { $('account-message').textContent = confirmed === 'yes' ? 'Email confirmed. Please sign in.' : 'Email confirmation failed or expired; please try again.'; sessionStorage.removeItem('vimax-email-confirmed'); }

@@ -57,7 +57,7 @@ async function login(bridge, user) {
 test('health truthfully distinguishes connected database from missing agent and upload', async () => {
   const fake = fakeSupabase(); const bridge = createBridge({env,fetchImpl:fake.fetch});
   const health = await bridge.fetch(request('/api/health'));
-  assert.deepEqual(await health.json(), {ok:true,database:'connected',text_chat:'unconfigured',video_agent:'unavailable',youtube_upload:'unavailable'});
+  assert.deepEqual(await health.json(), {ok:true,database:'connected',text_chat:'unconfigured',video_agent:'unavailable',gpu_preview:'unconfigured',youtube_upload:'unavailable'});
   const sessions = await (await bridge.fetch(request('/api/bridge?__vimax_path=sessions'))).json();
   assert.deepEqual(sessions.sessions, []); assert.match(sessions.warning, /not connected/);
   const system = await (await bridge.fetch(request('/api/skills/system'))).json();
