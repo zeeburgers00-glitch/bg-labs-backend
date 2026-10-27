@@ -2,6 +2,7 @@
 // single-workspace local server or server-side provider keys to the Internet.
 import {ProviderError, providerStatus, pexelsStatus, validateSelection, chatCompletion, providerTestTokens, searchPexels, githubRepositoryInput, getGithubRepository} from './providers.mjs';
 import {YouTubeError, createYouTube, clearYouTubeCookies} from './youtube.mjs';
+import {SocialError, createSocial, clearSocialCookies} from './social.mjs';
 import {GpuError, createGpu} from './gpu.mjs';
 
 const ACCESS_COOKIE = '__Host-vimax_access';
@@ -31,7 +32,7 @@ function sessionCookies(session) {
   const age = Math.max(1, Math.min(Number(session.expires_in) || 3600, 3600));
   return [cookie(ACCESS_COOKIE, session.access_token, age), cookie(REFRESH_COOKIE, session.refresh_token, 30 * 24 * 3600)];
 }
-function clearCookies() { return [cookie(ACCESS_COOKIE, '', 0), cookie(REFRESH_COOKIE, '', 0), ...clearYouTubeCookies()]; }
+function clearCookies() { return [cookie(ACCESS_COOKIE, '', 0), cookie(REFRESH_COOKIE, '', 0), ...clearYouTubeCookies(), ...clearSocialCookies()]; }
 function readCookies(request) {
   const result = Object.create(null);
   for (const part of (request.headers.get('cookie') || '').split(';')) {
@@ -270,6 +271,7 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch} =
     }
   }
   const youtube = createYouTube({env, fetchImpl, supa, body, json});
+  const social = createSocial({env, fetchImpl, supa, body, json});
   const gpu = createGpu({env, fetchImpl, supa, body, json});
   async function handler(request) {
     let sessionUpdates = [];
@@ -288,6 +290,10 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch} =
       if (path.startsWith('/api/cloud/youtube/')) {
         const session = await authenticated();
         return await youtube.handle({request,path,method,session});
+      }
+      if (path.startsWith('/api/cloud/social/')) {
+        const session = await authenticated();
+        return await social.handle({request,path,method,session});
       }
       if (path.startsWith('/api/cloud/gpu/')) {
         const session = await authenticated();
@@ -560,7 +566,7 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch} =
       if (path.startsWith('/api/')) throw new HttpError(503, AGENT_UNAVAILABLE);
       throw new HttpError(404, 'Not found.');
     } catch (error) {
-      const status = error instanceof HttpError || error instanceof ProviderError || error instanceof YouTubeError || error instanceof GpuError ? error.status : 500;
+      const status = error instanceof HttpError || error instanceof ProviderError || error instanceof YouTubeError || error instanceof SocialError || error instanceof GpuError ? error.status : 500;
       return json({error:status === 500 ? 'The request could not be completed.' : error.message}, status, sessionUpdates);
     }
   }

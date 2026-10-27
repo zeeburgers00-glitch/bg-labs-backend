@@ -12,6 +12,7 @@
   <script src="/skills/cloud.js" defer></script>
   <script src="/skills/mission.js" defer></script>
   <script src="/skills/youtube.js" defer></script>
+  <script src="/skills/social.js" defer></script>
   <script src="/skills/gpu.js" defer></script>
   <script src="/skills/app.js" defer></script>
 </head>
@@ -28,7 +29,7 @@
       <div class="eyebrow"><span class="spark">✳</span> CREATOR TOOLKIT</div>
       <h1>Make more with ViMax.</h1>
       <p>Explore reviewed creator skills and produce a simple, narrated video with your own script—without replacing your ViMax workspace.</p>
-      <div class="hero-nav"><a id="cloud-ai-link" href="#account">AI chat <span>↗</span></a><a id="youtube-link" href="#account" class="secondary">YouTube upload</a><a id="gpu-link" href="#account" class="secondary">GPU video preview</a><a id="mission-link" href="#account" class="secondary">Mission control</a><a href="#studio" class="secondary">Open local studio</a><a href="#catalog" class="secondary">Browse the catalog</a></div>
+      <div class="hero-nav"><a id="cloud-ai-link" href="#account">AI chat <span>↗</span></a><a id="youtube-link" href="#account" class="secondary">YouTube upload</a><a id="social-link" href="#account" class="secondary">TikTok &amp; Facebook</a><a id="gpu-link" href="#account" class="secondary">GPU video preview</a><a id="mission-link" href="#account" class="secondary">Mission control</a><a href="#studio" class="secondary">Open local studio</a><a href="#catalog" class="secondary">Browse the catalog</a></div>
     </section>
     <aside class="notice" id="notice" role="status">
       <strong>Full video agent not connected.</strong> The local companion can render simple text-card videos. A separate paid GPU preview is optional and requires private provider setup; it is not connected by default. The local companion is not a shared or multi-user service.
@@ -186,13 +187,15 @@
     </section>
 
     <section id="youtube" class="section" hidden>
-      <div class="section-heading"><div><div class="eyebrow">YOUTUBE / PRIVATE UPLOAD</div><h2>Send a video for review.</h2><p>Connect one Google-selected channel and upload your own MP4 privately. This does not generate videos, schedule them or publish publicly.</p></div><span class="tag">PRIVATE · MANUAL</span></div>
+      <div class="section-heading"><div><div class="eyebrow">YOUTUBE / PRIVATE UPLOAD</div><h2>Send a video for review.</h2><p>Connect your YouTube channels with Google and upload your own MP4 privately. This does not generate videos, schedule them or publish publicly.</p></div><span class="tag">PRIVATE · MANUAL</span></div>
       <div class="studio-grid mission-grid">
         <div class="panel">
-          <div class="panel-heading"><div><h3>Channel authorization</h3><p>Google permission is short-lived; reconnect to switch channels or resume after expiry.</p></div><span class="step-number">01</span></div>
+          <div class="panel-heading"><div><h3>Channel authorization</h3><p>Google asks for permission; your Google password is never saved in ViMax.</p></div><span class="step-number">01</span></div>
           <p id="yt-connection" class="form-note" role="status">Checking YouTube configuration…</p>
-          <div class="mission-controls"><button type="button" id="yt-connect" class="small-button" disabled>Connect YouTube</button><button type="button" id="yt-disconnect" class="small-button" hidden>Disconnect &amp; revoke</button><button type="button" id="yt-refresh" class="small-button">Refresh</button></div>
-          <p class="form-note">Only the channel selected on Google’s consent screen is used. Permission expires after about one hour. Connecting another channel replaces this browser’s current connection; simultaneous unattended channels are not supported.</p>
+          <div class="mission-controls"><button type="button" id="yt-connect" class="small-button" disabled>Continue with Google</button><button type="button" id="yt-refresh" class="small-button">Refresh</button></div>
+          <label>Saved YouTube channels <select id="yt-saved-channels" disabled><option value="">No saved channels</option></select></label>
+          <div class="mission-controls"><button type="button" id="yt-select-channel" class="small-button" disabled>Use selected channel</button><button type="button" id="yt-disconnect" class="small-button" hidden>Disconnect selected</button></div>
+          <p class="form-note">With your consent, an encrypted authorization is saved for your ViMax account and the last-used channel is restored when possible. Google can expire or revoke it; you may need to connect again. Only the selected channel is used for uploads.</p>
           <p class="form-note">Upload attempts use Google API quota and may incur hosting costs. ViMax limits new upload sessions to 3 per account and 10 shared per UTC day. A stopped or timed-out upload might still exist privately in YouTube Studio.</p>
           <p id="yt-error" class="error" role="alert"></p><p id="yt-notice" class="form-note" role="status"></p>
         </div>
@@ -212,6 +215,32 @@
           <div class="mission-subsection"><div class="panel-heading"><div><h3>Upload history</h3><p>Resume requires the exact same file and channel.</p></div><button type="button" id="yt-history-refresh" class="small-button">Refresh</button></div><div id="yt-history" class="mission-list"></div></div>
         </div>
       </div>
+    </section>
+
+    <section id="social-connections" class="section" hidden>
+      <div class="section-heading"><div><div class="eyebrow">SOCIAL / CONNECTIONS</div><h2>Connect your other accounts.</h2><p>With your permission, save and restore a TikTok profile or Facebook Page. These connections do not post videos or create a video agent.</p></div><span class="tag">CONSENT REQUIRED</span></div>
+      <div class="studio-grid mission-grid">
+        <div class="panel">
+          <div class="panel-heading"><div><h3>TikTok</h3><p>Uses TikTok Login Kit and basic profile access.</p></div><span class="step-number">01</span></div>
+          <p id="social-tiktok-status" class="form-note" role="status">Checking setup…</p>
+          <button type="button" id="social-tiktok-connect" class="small-button" disabled>Continue with TikTok</button>
+          <label>Saved TikTok profiles <select id="social-tiktok-list" disabled><option value="">No saved profiles</option></select></label>
+          <div class="mission-controls"><button type="button" id="social-tiktok-select" class="small-button" disabled>Restore selected</button><button type="button" id="social-tiktok-remove" class="small-button" hidden>Disconnect selected</button></div>
+          <p class="form-note">Tokens are encrypted on the server. TikTok may expire or revoke access; your password is never saved.</p>
+          <p id="social-tiktok-error" class="error" role="alert"></p><p id="social-tiktok-notice" class="form-note" role="status"></p>
+        </div>
+        <div class="panel">
+          <div class="panel-heading"><div><h3>Facebook Pages</h3><p>Uses Facebook Login and lists Pages you authorize.</p></div><span class="step-number">02</span></div>
+          <p id="social-facebook-status" class="form-note" role="status">Checking setup…</p>
+          <button type="button" id="social-facebook-connect" class="small-button" disabled>Continue with Facebook</button>
+          <label>Saved Facebook Pages <select id="social-facebook-list" disabled><option value="">No saved Pages</option></select></label>
+          <div class="mission-controls"><button type="button" id="social-facebook-select" class="small-button" disabled>Restore selected</button><button type="button" id="social-facebook-remove" class="small-button" hidden>Disconnect selected</button></div>
+          <p class="form-note">Authorized Pages are saved separately. Facebook access can expire or be revoked. Removing a Page here does not revoke the Facebook app grant; manage that in Facebook settings.</p>
+          <p id="social-facebook-error" class="error" role="alert"></p><p id="social-facebook-notice" class="form-note" role="status"></p>
+        </div>
+      </div>
+      <button type="button" id="social-refresh" class="small-button">Refresh connection status</button>
+      <p class="form-note">TikTok and Facebook require separate developer apps, exact callback URLs and approved permissions. A saved connection does not imply publishing permission or a successful live provider test.</p>
     </section>
 
     <section id="studio" class="section">

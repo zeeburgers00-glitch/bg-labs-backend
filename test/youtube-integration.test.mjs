@@ -17,6 +17,10 @@ const routes={
   vimax_youtube_finish_start:['p_id','p_token','p_status','p_session_cipher'],
   vimax_youtube_claim:['p_id'],vimax_youtube_finish_chunk:['p_id','p_token','p_status','p_offset_bytes','p_video_id'],
   vimax_youtube_cancel:['p_id'],vimax_youtube_lease_active:['p_id','p_token'],vimax_youtube_forget:['p_id'],
+  vimax_youtube_connection_save:['p_channel_id','p_channel_title','p_refresh_cipher'],
+  vimax_youtube_connection_claim:['p_id'],
+  vimax_youtube_connection_finish:['p_id','p_lease','p_status','p_refresh_cipher'],
+  vimax_youtube_connection_valid:['p_id','p_channel_id'],vimax_youtube_connection_remove:['p_id'],
 };
 function request(path,{method='GET',cookie=`__Host-vimax_access=owner-token`,json,bytes,headers={}}={}) {
   return new Request(`https://vimax.example${path}`,{method,headers:{origin:'https://vimax.example',cookie,
@@ -34,9 +38,12 @@ async function fixture() {
     grant usage on schema auth to anon,authenticated;`);
   for (const id of [owner,other]) await db.query('insert into auth.users(id) values($1)',[id]);
   await db.exec(await readFile(new URL('../supabase/migrations/202610270005_vimax_youtube_uploads.sql',import.meta.url),'utf8'));
+  await db.exec(await readFile(new URL('../supabase/migrations/202610270008_vimax_youtube_connections.sql',import.meta.url),'utf8'));
   await db.query('insert into public.vimax_youtube_allowed_users(owner_id) values ($1)',[owner]);
   let lock=Promise.resolve(), remoteOffset=0, uploaded=false, sessions=0, chunks=0, statusChecks=0, privateFlag=false, failChunk=false, failVerify=false;
-  let oauthChallenge='', oauthState='', startGate=null, chunkGate=null;
+  let oauthChallenge='', oauthState='', startGate=null, chunkGate=null, refreshGate=null;
+  let providerChannel={id:channel,title:'Real authorized channel'}, serial=0, refreshRequests=0, revokes=0, refreshMode='ok', omitRefresh=false;
+  const accessChannels=new Map(), refreshChannels=new Map();
   function gate() {let entered,release;const reached=new Promise(resolve=>{entered=resolve;}), wait=new Promise(resolve=>{release=resolve;});return {reached,entered,wait,release};}
   async function as(id,action) {
     const previous=lock; let release; lock=new Promise(resolve=>{release=resolve;}); await previous;
@@ -59,22 +66,36 @@ async function fixture() {
         } catch(e) {return Response.json({error:e.message},{status:400});}
       });
       if(url.pathname==='/rest/v1/vimax_youtube_uploads') return as(id,async()=>Response.json((await db.query('select id,client_key,channel_id,title,size_bytes,file_sha256,status,offset_bytes,video_id,cancel_requested,created_at,updated_at from public.vimax_youtube_uploads order by created_at desc limit 50')).rows));
+      if(url.pathname==='/rest/v1/vimax_youtube_connections') return as(id,async()=>Response.json((await db.query('select id,channel_id,channel_title,status,is_default,updated_at from public.vimax_youtube_connections order by updated_at desc limit 10')).rows));
       return Response.json({error:'not mocked'}, {status:404});
     }
     if(url.hostname==='oauth2.googleapis.com'&&url.pathname==='/token') {
       const form=new URLSearchParams(init.body);
+      if(form.get('grant_type')==='refresh_token') {
+        refreshRequests++;
+        if(refreshGate){const g=refreshGate;refreshGate=null;g.entered();await g.wait;}
+        if(refreshMode==='network') throw new Error('ambiguous refresh');
+        if(refreshMode==='invalid') return Response.json({error:'invalid_grant'},{status:400});
+        const saved=refreshChannels.get(form.get('refresh_token'));
+        if(!saved) return Response.json({error:'invalid_grant'},{status:400});
+        const access=`ya29.fakeGoogleAccessToken_${++serial}`, refresh=`1//fakeRefreshToken_${serial}`;
+        accessChannels.set(access,saved);refreshChannels.delete(form.get('refresh_token'));refreshChannels.set(refresh,saved);
+        return Response.json({access_token:access,refresh_token:refresh,token_type:'Bearer',expires_in:3600});
+      }
       assert.equal(form.get('code'),'4/test-code-123');
       assert.equal(createHash('sha256').update(form.get('code_verifier')).digest('base64url'),oauthChallenge);
-      return Response.json({access_token:'ya29.fakeGoogleAccessToken',token_type:'Bearer',expires_in:3600,
+      const access=`ya29.fakeGoogleAccessToken_${++serial}`, refresh=`1//fakeRefreshToken_${serial}`;
+      accessChannels.set(access,{...providerChannel});refreshChannels.set(refresh,{...providerChannel});
+      return Response.json({access_token:access,...(!omitRefresh?{refresh_token:refresh}:{}),token_type:'Bearer',expires_in:3600,
         scope:'https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/youtube.upload'});
     }
-    if(url.hostname==='oauth2.googleapis.com'&&url.pathname==='/revoke') return new Response(null,{status:200});
+    if(url.hostname==='oauth2.googleapis.com'&&url.pathname==='/revoke') {revokes++;return new Response(null,{status:200});}
     assert.equal(url.hostname,'www.googleapis.com');
-    assert.equal(h.get('authorization'),'Bearer ya29.fakeGoogleAccessToken');
-    if(url.pathname==='/youtube/v3/channels') return Response.json({items:[{id:channel,snippet:{title:'Real authorized channel'}}]});
+    const current=accessChannels.get((h.get('authorization')||'').replace('Bearer ',''));assert.ok(current);
+    if(url.pathname==='/youtube/v3/channels') return Response.json({items:[{id:current.id,snippet:{title:current.title}}]});
     if(url.pathname==='/youtube/v3/videos') {
       if(failVerify) return Response.json({error:'unavailable'},{status:503});
-      return Response.json({items:[{id:video,snippet:{channelId:channel},status:{privacyStatus:'private'}}]});
+      return Response.json({items:[{id:video,snippet:{channelId:current.id},status:{privacyStatus:'private'}}]});
     }
     if(url.pathname==='/upload/youtube/v3/videos'&&method==='POST') {
       sessions++; const metadata=JSON.parse(init.body); privateFlag=metadata.status.privacyStatus==='private';
@@ -97,15 +118,17 @@ async function fixture() {
     }
     throw new Error('unexpected URL');
   }
-  return {db,as,fetch:fake,get stats(){return {remoteOffset,sessions,chunks,statusChecks,privateFlag}},
+  return {db,as,fetch:fake,get stats(){return {remoteOffset,sessions,chunks,statusChecks,privateFlag,refreshRequests,revokes}},
     setOAuth(url){oauthChallenge=url.searchParams.get('code_challenge');oauthState=url.searchParams.get('state');},get oauthState(){return oauthState},
+    setChannel(id,title){providerChannel={id,title}},setRefreshMode(v){refreshMode=v},omitRefresh(v){omitRefresh=v},
     failNextChunk(){failChunk=true},failVerification(v){failVerify=v},
-    holdStart(){return startGate=gate()},holdChunk(){return chunkGate=gate()}};
+    holdStart(){return startGate=gate()},holdChunk(){return chunkGate=gate()},holdRefresh(){return refreshGate=gate()}};
 }
 async function connect(fx,bridge,who='owner-token') {
   const r=await bridge.fetch(request('/api/cloud/youtube/oauth/start',{method:'POST',cookie:`__Host-vimax_access=${who}`,json:{}}));
   assert.equal(r.status,200); const url=new URL((await r.json()).authorization_url); fx.setOAuth(url);
-  assert.equal(url.origin,'https://accounts.google.com'); assert.equal(url.searchParams.get('access_type'),'online');
+  assert.equal(url.origin,'https://accounts.google.com'); assert.equal(url.searchParams.get('access_type'),'offline');
+  assert.match(url.searchParams.get('prompt'),/consent/);
   const pending=cookieFrom(r,'__Host-vimax_yt_pending'); assert.ok(pending.includes('HttpOnly')===false);
   const callback=await bridge.fetch(request(`/api/cloud/youtube/callback?state=${encodeURIComponent(fx.oauthState)}&code=4%2Ftest-code-123`,
     {cookie:`__Host-vimax_access=${who}; ${pending}`}));
@@ -206,5 +229,95 @@ test('unauthorized direct reservations do not spend the shared budget or create 
     assert.equal(denied.allowed,false);assert.equal(denied.reason,'not_allowed');
     assert.equal((await fx.db.query('select count(*)::int n from public.vimax_youtube_daily_budget')).rows[0].n,0);
     await assert.rejects(fx.as(owner,()=>fx.db.query('select * from public.vimax_youtube_allowed_users')),/permission denied/);
+  } finally {await fx.db.close();}
+});
+
+test('encrypted offline grants restore, rotate, switch channels and disconnect across sessions',async()=>{
+  const fx=await fixture(); try {
+    const bothKeys={...keys,VIMAX_YOUTUBE_ALLOWED_USER_IDS:`${owner},${other}`};
+    await fx.db.query('insert into public.vimax_youtube_allowed_users(owner_id) values ($1)',[other]);
+    const bridge=createBridge({env:bothKeys,fetchImpl:fx.fetch}), cookieA=await connect(fx,bridge);
+    let status=await (await bridge.fetch(request('/api/cloud/youtube/status',{cookie:cookieA}))).json();
+    assert.equal(status.saved_channels.length,1);const first=status.saved_channels[0].id;
+    assert.equal(status.connection_id,first);assert.equal(status.saved_channels[0].is_default,true);
+    const row=(await fx.db.query('select refresh_cipher from public.vimax_youtube_connections where id=$1',[first])).rows[0];
+    assert.match(row.refresh_cipher,/^v1\./);assert.doesNotMatch(row.refresh_cipher,/fakeRefreshToken/);
+    await assert.rejects(fx.as(owner,()=>fx.db.query('select refresh_cipher from public.vimax_youtube_connections')),/permission denied/);
+    assert.equal((await fx.as(other,()=>fx.db.query('select id from public.vimax_youtube_connections'))).rowCount,0);
+    let r=await bridge.fetch(request('/api/cloud/youtube/select',{method:'POST',cookie:'__Host-vimax_access=other-token',json:{id:first}}));
+    assert.equal(r.status,404);
+    r=await bridge.fetch(request('/api/cloud/youtube/disconnect',{method:'POST',cookie:'__Host-vimax_access=other-token',json:{id:first}}));assert.equal(r.status,404);
+    const forged=await fx.as(other,async()=>(await fx.db.query('select public.vimax_youtube_connection_save($1,$2,$3) result',[channel,'Copied grant',row.refresh_cipher])).rows[0].result);
+    const beforeForged=fx.stats.refreshRequests;
+    r=await bridge.fetch(request('/api/cloud/youtube/select',{method:'POST',cookie:'__Host-vimax_access=other-token',json:{id:forged.id}}));
+    assert.equal(r.status,409);assert.equal(fx.stats.refreshRequests,beforeForged,'another owner cannot decrypt a copied ciphertext');
+    status=await (await bridge.fetch(request('/api/cloud/youtube/status'))).json();
+    assert.equal(status.connected,false);assert.equal(status.saved_channels[0].id,first);
+    r=await bridge.fetch(request('/api/cloud/youtube/select',{method:'POST',json:{id:first}}));assert.equal(r.status,200);
+    const resumed=`__Host-vimax_access=owner-token; ${cookieFrom(r,'__Host-vimax_yt_access')}`;
+    assert.equal((await r.json()).channel.id,channel);assert.equal(fx.stats.refreshRequests,1);
+    const rotated=(await fx.db.query('select refresh_cipher from public.vimax_youtube_connections where id=$1',[first])).rows[0].refresh_cipher;
+    assert.notEqual(rotated,row.refresh_cipher);assert.doesNotMatch(rotated,/fakeRefreshToken/);
+    // The second refresh can only work if the rotated credential was saved.
+    r=await bridge.fetch(request('/api/cloud/youtube/select',{method:'POST',json:{id:first}}));assert.equal(r.status,200);
+    assert.equal(fx.stats.refreshRequests,2);
+    const secondChannel='UCabcdefghijklmnopqrstuv';fx.setChannel(secondChannel,'Second channel');
+    const cookieB=await connect(fx,bridge);
+    status=await (await bridge.fetch(request('/api/cloud/youtube/status',{cookie:cookieB}))).json();
+    assert.equal(status.saved_channels.length,2);assert.equal(status.channel.id,secondChannel);
+    const second=status.connection_id;assert.notEqual(first,second);
+    r=await bridge.fetch(request('/api/cloud/youtube/select',{method:'POST',cookie:cookieB,json:{id:first}}));assert.equal(r.status,200);
+    status=await (await bridge.fetch(request('/api/cloud/youtube/status'))).json();
+    assert.equal(status.saved_channels.find(x=>x.id===first).is_default,true);
+    assert.equal(status.saved_channels.find(x=>x.id===second).is_default,false);
+    // Remove with no channel access cookie; old cookies in any browser stop working.
+    r=await bridge.fetch(request('/api/cloud/youtube/disconnect',{method:'POST',json:{id:first}}));assert.equal(r.status,200);
+    const disconnected=await r.json();assert.equal(disconnected.revoked,true);assert.equal(fx.stats.revokes,1);
+    status=await (await bridge.fetch(request('/api/cloud/youtube/status',{cookie:resumed}))).json();
+    assert.equal(status.connected,false);assert.equal(status.saved_channels.length,1);
+    r=await bridge.fetch(request('/api/cloud/youtube/uploads/start',{method:'POST',cookie:resumed,json:payload(Buffer.alloc(5))}));assert.equal(r.status,401);
+  } finally {await fx.db.close();}
+});
+
+test('only one refresh may run; ambiguous, expired and revoked grants cannot be blindly replayed',async()=>{
+  const fx=await fixture(); try {
+    const bridge=createBridge({env:keys,fetchImpl:fx.fetch});await connect(fx,bridge);
+    let status=await (await bridge.fetch(request('/api/cloud/youtube/status'))).json(), id=status.saved_channels[0].id;
+    const gate=fx.holdRefresh(), first=bridge.fetch(request('/api/cloud/youtube/select',{method:'POST',json:{id}}));
+    await gate.reached;
+    let r=await bridge.fetch(request('/api/cloud/youtube/select',{method:'POST',json:{id}}));assert.equal(r.status,409);
+    r=await bridge.fetch(request('/api/cloud/youtube/disconnect',{method:'POST',json:{id}}));assert.equal(r.status,409);
+    assert.equal(fx.stats.refreshRequests,1);gate.release();assert.equal((await first).status,200);
+    fx.setRefreshMode('network');r=await bridge.fetch(request('/api/cloud/youtube/select',{method:'POST',json:{id}}));assert.equal(r.status,503);
+    let row=(await fx.db.query('select status from public.vimax_youtube_connections where id=$1',[id])).rows[0];assert.equal(row.status,'uncertain');
+    const attempts=fx.stats.refreshRequests;
+    r=await bridge.fetch(request('/api/cloud/youtube/select',{method:'POST',json:{id}}));assert.equal(r.status,409);assert.equal(fx.stats.refreshRequests,attempts);
+    r=await bridge.fetch(request('/api/cloud/youtube/disconnect',{method:'POST',json:{id}}));assert.equal(r.status,200);assert.equal((await r.json()).revoked,false);
+    // Reauthorize, then simulate a process dying after acquiring its refresh lease.
+    fx.setRefreshMode('ok');await connect(fx,bridge);
+    status=await (await bridge.fetch(request('/api/cloud/youtube/status'))).json();id=status.saved_channels[0].id;
+    await fx.db.query("update public.vimax_youtube_connections set lease_token=$2,lease_until=now()-interval '1 second' where id=$1",[id,randomUUID()]);
+    const before=fx.stats.refreshRequests;
+    r=await bridge.fetch(request('/api/cloud/youtube/select',{method:'POST',json:{id}}));assert.equal(r.status,409);assert.equal(fx.stats.refreshRequests,before);
+    row=(await fx.db.query('select status from public.vimax_youtube_connections where id=$1',[id])).rows[0];assert.equal(row.status,'uncertain');
+    await connect(fx,bridge);fx.setRefreshMode('invalid');
+    r=await bridge.fetch(request('/api/cloud/youtube/select',{method:'POST',json:{id}}));assert.equal(r.status,409);
+    row=(await fx.db.query('select status from public.vimax_youtube_connections where id=$1',[id])).rows[0];assert.equal(row.status,'needs_reauth');
+    const after=fx.stats.refreshRequests;
+    r=await bridge.fetch(request('/api/cloud/youtube/select',{method:'POST',json:{id}}));assert.equal(r.status,409);assert.equal(fx.stats.refreshRequests,after);
+  } finally {await fx.db.close();}
+});
+
+test('Google consent without an offline credential is not presented as a saved connection',async()=>{
+  const fx=await fixture();try {
+    const bridge=createBridge({env:keys,fetchImpl:fx.fetch});fx.omitRefresh(true);
+    const start=await bridge.fetch(request('/api/cloud/youtube/oauth/start',{method:'POST',json:{}}));
+    const url=new URL((await start.json()).authorization_url);fx.setOAuth(url);
+    const pending=cookieFrom(start,'__Host-vimax_yt_pending');
+    const callback=await bridge.fetch(request(`/api/cloud/youtube/callback?state=${encodeURIComponent(fx.oauthState)}&code=4%2Ftest-code-123`,
+      {cookie:`__Host-vimax_access=owner-token; ${pending}`}));
+    assert.equal(callback.status,409);assert.match((await callback.json()).error,/offline authorization/i);
+    assert.equal((await fx.db.query('select count(*)::int n from public.vimax_youtube_connections')).rows[0].n,0);
+    assert.equal(cookieFrom(callback,'__Host-vimax_yt_access'),'');
   } finally {await fx.db.close();}
 });

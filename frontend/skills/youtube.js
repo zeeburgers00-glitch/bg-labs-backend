@@ -1,7 +1,8 @@
 'use strict';
 (() => {
   const $=id=>document.getElementById(id), chunkSize=1024*1024;
-  const state={loggedIn:false,owner:null,version:0,refreshVersion:0,connected:false,channel:null,busy:false,abort:null,historyReady:false};
+  const state={loggedIn:false,owner:null,version:0,refreshVersion:0,connected:false,channel:null,busy:false,abort:null,
+    resumeAbort:null,autoAttempted:false,savedChannels:[],historyReady:false};
   const active=version=>state.loggedIn && state.version===version;
   const el=(tag,text,cls='')=>{const x=document.createElement(tag);if(text!=null)x.textContent=text;if(cls)x.className=cls;return x;};
   async function api(path,options={}) {
@@ -23,7 +24,10 @@
     state.busy=value;
     $('yt-upload').disabled=value||!state.connected;
     $('yt-connect').disabled=value||$('yt-connect').dataset.allowed!=='yes';
-    $('yt-disconnect').disabled=value;
+    const selected=state.savedChannels.find(x=>x.id===$('yt-saved-channels').value);
+    $('yt-saved-channels').disabled=value||!state.savedChannels.length;
+    $('yt-select-channel').disabled=value||$('yt-connect').dataset.allowed!=='yes'||!selected||selected.status!=='active';
+    $('yt-disconnect').disabled=value||!selected;
     $('yt-clear-pending').hidden=!hasPending();
     $('yt-clear-pending').disabled=value||!state.historyReady;
     document.querySelectorAll('#yt-history button[data-pause-during-busy="yes"]').forEach(b=>{b.disabled=value;});
@@ -32,22 +36,49 @@
     if(!state.loggedIn)return; const v=state.version,seq=++state.refreshVersion;
     const [statusResult,historyResult]=await Promise.allSettled([api('/api/cloud/youtube/status'),api('/api/cloud/youtube/uploads')]);
     if(!active(v)||seq!==state.refreshVersion)return;
-    const errors=[];
+    const errors=[];let autoId=null;
     if(statusResult.status==='fulfilled') {
-      const status=statusResult.value;
+      const status=statusResult.value, select=$('yt-saved-channels'), previous=select.value;
       state.connected=status.connected===true;state.channel=status.channel;
+      state.savedChannels=Array.isArray(status.saved_channels)?status.saved_channels:[];
+      select.replaceChildren();
+      if(!state.savedChannels.length){const opt=el('option','No saved channels');opt.value='';select.append(opt);}
+      for(const saved of state.savedChannels){
+        const suffix=saved.status==='active'?'':saved.status==='uncertain'?' — reconnect required':' — authorization expired';
+        const opt=el('option',`${saved.channel_title} (${saved.channel_id})${suffix}`);opt.value=saved.id;select.append(opt);
+      }
+      const chosen=state.savedChannels.find(x=>x.id===previous)||state.savedChannels.find(x=>x.id===status.connection_id)
+        ||state.savedChannels.find(x=>x.is_default)||state.savedChannels[0];
+      if(chosen)select.value=chosen.id;
       $('yt-connect').dataset.allowed=status.allowed?'yes':'no';
-      $('yt-connect').textContent=state.connected?'Switch / reconnect channel':'Connect YouTube';
-      $('yt-disconnect').hidden=!state.connected;
-      $('yt-connection').textContent=!status.configured ? 'Google OAuth is not configured in Vercel yet.' : !status.allowed ? 'YouTube access is not enabled for this account.' : state.connected ? `Authorized: ${status.channel.title} (${status.channel.id}). Permission expires ${new Date(status.expires_at).toLocaleTimeString()}.` : 'Ready to connect: choose your channel on Google’s consent screen.';
+      $('yt-connect').textContent=state.savedChannels.length?'Add / reconnect with Google':'Continue with Google';
+      $('yt-disconnect').hidden=!state.savedChannels.length;
+      const defaultChannel=state.savedChannels.find(x=>x.is_default);
+      $('yt-connection').textContent=!status.configured ? 'Google OAuth is not configured in Vercel yet.' : !status.allowed ? 'YouTube access is not enabled for this account.' : state.connected
+        ? `Selected: ${status.channel.title} (${status.channel.id}). The saved authorization was verified when connected or restored.`
+        : defaultChannel && defaultChannel.status!=='active' ? 'The saved authorization needs Google consent again.'
+        : state.savedChannels.length ? 'Choose a saved channel or reconnect with Google.' : 'Ready to connect: choose your channel on Google’s consent screen.';
+      if(state.connected)state.autoAttempted=false;
+      else if(status.allowed && defaultChannel?.status==='active' && !state.autoAttempted && !state.busy){state.autoAttempted=true;autoId=defaultChannel.id;}
     } else {
-      state.connected=false;$('yt-connect').dataset.allowed='no';
+      state.connected=false;$('yt-connect').dataset.allowed='no';state.savedChannels=[];
+      $('yt-saved-channels').replaceChildren();$('yt-disconnect').hidden=true;
       $('yt-connection').textContent='Could not check YouTube authorization.';errors.push(statusResult.reason.message);
     }
     if(historyResult.status==='fulfilled') {state.historyReady=true;renderHistory(historyResult.value.uploads||[]);}
     else {state.historyReady=false;errors.push(historyResult.reason.message);}
     if(errors.length)$('yt-error').textContent=errors.join(' ');
     busy(state.busy);
+    if(autoId && active(v)) {
+      const controller=new AbortController();state.resumeAbort=controller;busy(true);
+      $('yt-connection').textContent='Restoring the saved channel…';
+      try {
+        await api('/api/cloud/youtube/select',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:autoId}),signal:controller.signal});
+        if(active(v)){busy(false);await refresh();}
+      } catch(error) {
+        if(active(v) && error.name!=='AbortError'){$('yt-error').textContent=error.message;busy(false);await refresh();}
+      } finally {if(state.resumeAbort===controller)state.resumeAbort=null;if(active(v))busy(false);}
+    }
   }
   async function digest(file) {
     if(!globalThis.crypto?.subtle || !crypto.randomUUID)throw new Error('This browser cannot securely fingerprint the video. Use a current browser over HTTPS.');
@@ -116,10 +147,23 @@
       if(active(v))window.location.assign(url.href);
     }catch(error){if(active(v)){$('yt-error').textContent=error.message;busy(false);}}
   });
-  $('yt-disconnect').addEventListener('click',async()=>{
-    if(!confirm('Disconnect this browser and ask Google to revoke the grant? Existing videos are not deleted.'))return;
-    const v=state.version;try{const result=await post('/api/cloud/youtube/disconnect');if(active(v)){$('yt-notice').textContent=result.revoked?'Disconnected and Google acknowledged revocation.':'Disconnected locally; Google revocation was not confirmed. Review access in your Google account.';await refresh();}}
+  $('yt-saved-channels').addEventListener('change',()=>busy(state.busy));
+  $('yt-select-channel').addEventListener('click',async()=>{
+    const v=state.version,id=$('yt-saved-channels').value;if(state.busy||!id)return;
+    state.autoAttempted=true;$('yt-error').textContent='';
+    try{busy(true);await post('/api/cloud/youtube/select',{id});if(active(v))$('yt-notice').textContent='Selected channel restored.';}
     catch(error){if(active(v))$('yt-error').textContent=error.message;}
+    finally{if(active(v)){busy(false);await refresh();}}
+  });
+  $('yt-disconnect').addEventListener('click',async()=>{
+    const id=$('yt-saved-channels').value;if(state.busy||!id)return;
+    if(!confirm('Remove this saved channel and ask Google to revoke its grant? Other channels using the same Google grant may also need to reconnect. Existing videos are not deleted.'))return;
+    const v=state.version;state.autoAttempted=true;$('yt-error').textContent='';
+    try{busy(true);const result=await post('/api/cloud/youtube/disconnect',{id});if(active(v))$('yt-notice').textContent=result.revoked
+      ?'Saved channel removed and Google acknowledged revocation. Other channels using the same grant may need to reconnect.'
+      :'Saved channel removed locally; Google revocation was not confirmed. Review access in your Google account.';}
+    catch(error){if(active(v))$('yt-error').textContent=error.message;}
+    finally{if(active(v)){busy(false);await refresh();}}
   });
   $('yt-refresh').addEventListener('click',refresh);$('yt-history-refresh').addEventListener('click',refresh);
   $('yt-clear-pending').addEventListener('click',()=>{
@@ -146,8 +190,9 @@
   });
   window.vimaxYouTube={onSession:async user=>{
     const loggedIn=Boolean(user && typeof user.id==='string');
-    state.version++;state.refreshVersion++;state.loggedIn=loggedIn;state.owner=loggedIn?user.id:null;state.connected=false;state.channel=null;state.historyReady=false;state.abort?.abort();state.abort=null;state.busy=false;
-    $('yt-form').reset();$('yt-connect').dataset.allowed='no';$('yt-disconnect').hidden=true;
+    state.version++;state.refreshVersion++;state.loggedIn=loggedIn;state.owner=loggedIn?user.id:null;state.connected=false;state.channel=null;state.historyReady=false;
+    state.abort?.abort();state.abort=null;state.resumeAbort?.abort();state.resumeAbort=null;state.autoAttempted=false;state.savedChannels=[];state.busy=false;
+    $('yt-form').reset();$('yt-saved-channels').replaceChildren();$('yt-connect').dataset.allowed='no';$('yt-disconnect').hidden=true;
     $('youtube').hidden=!loggedIn;$('youtube-link').setAttribute('href',loggedIn?'#youtube':'#account');$('yt-error').textContent='';$('yt-notice').textContent='';$('yt-history').replaceChildren();
     $('yt-progress').textContent='No upload in progress.';busy(false);
     if(loggedIn)await refresh();

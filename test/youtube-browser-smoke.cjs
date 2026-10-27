@@ -19,7 +19,16 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   let acceptDialog=false;page.on('dialog',dialog=>acceptDialog?dialog.accept():dialog.dismiss());
   const alice='aaaaaaaa-0000-4000-8000-000000000001',bob='bbbbbbbb-0000-4000-8000-000000000002';
   const uploadId='12345678-0000-4000-8000-000000000002',secondId='12345678-0000-4000-8000-000000000003',channel='UC1234567890123456789012';
-  let current=alice,signedIn=true,firstStart=true,failStatus=false,releaseChunk,releaseSecond;
+  let current=alice,signedIn=true,firstStart=true,failStatus=false,releaseChunk,releaseSecond,connectionMode=false,selectedConnection=null;
+  const connectionA='12345678-0000-4000-8000-000000000010',connectionB='12345678-0000-4000-8000-000000000011';
+  const saved=[{id:connectionA,channel_id:channel,channel_title:'<img src=x onerror=alert(1)>',status:'active',is_default:true},
+    {id:connectionB,channel_id:'UCabcdefghijklmnopqrstuv',channel_title:'Another channel',status:'active',is_default:false}];
+  const selections=[],disconnects=[];
+  let socialMode=false;
+  const socialTik='12345678-0000-4000-8000-000000000021',socialFb='12345678-0000-4000-8000-000000000022';
+  const socialConnections=[{id:socialTik,provider:'tiktok',external_id:'tik_user',display_name:'<img src=x onerror=alert(1)>',status:'active',is_default:true},
+    {id:socialFb,provider:'facebook',external_id:'123456789',display_name:'Example Page',status:'active',is_default:true}];
+  const socialSelections=[],socialRemovals=[];
   let reachedChunk,reachedSecond;const chunkReached=new Promise(r=>{reachedChunk=r;}),secondReached=new Promise(r=>{reachedSecond=r;});
   const jobs=[],keys=[],posts=[],chatBodies=[],resendBodies=[];
   await page.route('**/api/**',async route=>{
@@ -35,10 +44,26 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
    else if(p==='/api/cloud/usage')data={calls:[]};
    else if(p==='/api/cloud/github/repository')data={repository:{name:'octocat/Hello-World',url:'https://github.com/octocat/Hello-World',description:'<img src=x onerror=alert(1)>',stars:12,forks:3,license:'MIT',archived:false},remaining_user:9,audit_saved:true};
    else if(p==='/api/cloud/mission')data={channels:[],competitors:[],jobs:[],workers:[],paused:false};
+   else if(p==='/api/cloud/social/status')data={providers:{tiktok:{configured:socialMode,allowed:socialMode},facebook:{configured:socialMode,allowed:socialMode}},
+    connections:socialMode&&current===alice?socialConnections:[]};
+   else if(p==='/api/cloud/social/tiktok/select'||p==='/api/cloud/social/facebook/select'){
+    socialSelections.push({owner:current,id:body.id});data={connection:socialConnections.find(x=>x.id===body.id)};}
+   else if(p==='/api/cloud/social/facebook/disconnect'){
+    socialRemovals.push({owner:current,id:body.id});const index=socialConnections.findIndex(x=>x.id===body.id);
+    if(index>=0)socialConnections.splice(index,1);data={disconnected:true,revoked:false};}
    else if(p==='/api/cloud/youtube/status'){
     if(failStatus){failStatus=false;return route.fulfill({status:503,json:{error:'simulated status outage'}});}
-    data={configured:true,allowed:true,connected:true,channel:{id:channel,title:'Test channel'},expires_at:new Date(Date.now()+3600000).toISOString()};
+    if(connectionMode){const channels=current===alice?saved:[],active=channels.find(x=>x.id===selectedConnection);
+      data={configured:true,allowed:true,connected:Boolean(active),channel:active?{id:active.channel_id,title:active.channel_title}:null,
+        connection_id:active?.id||null,saved_channels:channels,expires_at:new Date(Date.now()+3600000).toISOString()};}
+    else data={configured:true,allowed:true,connected:true,channel:{id:channel,title:'Test channel'},expires_at:new Date(Date.now()+3600000).toISOString()};
    }
+   else if(p==='/api/cloud/youtube/select' && connectionMode){selections.push({owner:current,id:body.id});
+    if(current!==alice||!saved.some(x=>x.id===body.id))return route.fulfill({status:404,json:{error:'not found'}});
+    selectedConnection=body.id;for(const x of saved)x.is_default=x.id===body.id;data={connected:true};}
+   else if(p==='/api/cloud/youtube/disconnect' && connectionMode){disconnects.push({owner:current,id:body.id});
+    const index=saved.findIndex(x=>x.id===body.id);if(current!==alice||index<0)return route.fulfill({status:404,json:{error:'not found'}});
+    saved.splice(index,1);if(selectedConnection===body.id)selectedConnection=null;data={disconnected:true,revoked:false};}
    else if(p==='/api/cloud/youtube/uploads')data={uploads:jobs.filter(j=>j.owner===current)};
    else if(p==='/api/cloud/youtube/uploads/start'){
     keys.push(body.client_key);
@@ -109,6 +134,32 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   releaseSecond();await page.waitForTimeout(150);
   assert.equal(await page.locator('#yt-file').inputValue(),'');assert.equal(await page.locator('#yt-history .mission-row').count(),0);
   assert.match(await page.locator('#yt-progress').innerText(),/No upload in progress/);
+  // Simulate a returning owner with no access cookie: the saved default is
+  // restored once, channel names are rendered as text, and switching/removing
+  // sends the selected record ID rather than a provider token.
+  connectionMode=true;current=alice;selectedConnection=null;
+  await page.evaluate(id=>window.vimaxYouTube.onSession({id}),alice);
+  await page.waitForFunction(()=>document.getElementById('yt-connection').textContent.startsWith('Selected:'));
+  assert.deepEqual(selections,[{owner:alice,id:connectionA}]);
+  assert.equal(await page.locator('#youtube img').count(),0);assert.match(await page.locator('#yt-saved-channels').innerText(),/<img src=x/);
+  await page.locator('#yt-saved-channels').selectOption(connectionB);await page.locator('#yt-select-channel').click();
+  await page.waitForFunction(()=>document.getElementById('yt-connection').textContent.includes('Another channel'));
+  assert.equal(selections.at(-1).id,connectionB);
+  await page.locator('#yt-disconnect').click();await page.waitForFunction(()=>document.getElementById('yt-notice').textContent.includes('revocation was not confirmed'));
+  assert.deepEqual(disconnects,[{owner:alice,id:connectionB}]);assert.equal(saved.length,1);
+  socialMode=true;await page.evaluate(id=>window.vimaxSocial.onSession({id}),alice);
+  await page.waitForFunction(()=>document.getElementById('social-tiktok-status').textContent.startsWith('Verified this session'));
+  await page.waitForFunction(()=>document.getElementById('social-facebook-status').textContent.startsWith('Verified this session'));
+  assert.equal(socialSelections.length,2);assert.equal(await page.locator('#social-connections img').count(),0);
+  assert.match(await page.locator('#social-tiktok-list').innerText(),/<img src=x/);
+  await page.locator('#social-facebook-remove').click();
+  await page.waitForFunction(()=>document.getElementById('social-facebook-notice').textContent.includes('revocation was not confirmed'));
+  assert.deepEqual(socialRemovals,[{owner:alice,id:socialFb}]);
+  current=bob;selectedConnection=null;await page.evaluate(id=>window.vimaxSocial.onSession({id}),bob);
+  assert.equal(await page.locator('#social-tiktok-list').inputValue(),'');
+  await page.evaluate(id=>window.vimaxYouTube.onSession({id}),bob);
+  assert.equal(await page.locator('#yt-saved-channels option').count(),1);
+  assert.equal(await page.locator('#yt-saved-channels').inputValue(),'');
   await page.setViewportSize({width:390,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'mobile overflow');
   await page.locator('#logout-button').click();await page.waitForSelector('#youtube[hidden]',{state:'attached'});assert.equal(await page.locator('#yt-history .mission-row').count(),0);
   await page.locator('#account-form [name=email]').fill('person@example.test');

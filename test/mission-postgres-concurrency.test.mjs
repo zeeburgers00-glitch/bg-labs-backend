@@ -27,7 +27,7 @@ test('real PostgreSQL 17 concurrent queue, provider and private-upload safety', 
       grant usage on schema auth to anon,authenticated;`);
     const users=Array.from({length:12},(_,n)=>`12345678-0000-4000-8000-${String(n+1).padStart(12,'0')}`);
     for(const id of users) await pool.query('insert into auth.users(id) values($1)',[id]);
-    for(const file of ['202610270001_vimax_projects.sql','202610270002_vimax_cloud_ai.sql','202610270003_vimax_ai_finish_token.sql','202610270004_vimax_mission_queue.sql','202610270005_vimax_youtube_uploads.sql','202610270006_vimax_mission_openai.sql','202610270007_vimax_gpu_previews.sql']) {
+    for(const file of ['202610270001_vimax_projects.sql','202610270002_vimax_cloud_ai.sql','202610270003_vimax_ai_finish_token.sql','202610270004_vimax_mission_queue.sql','202610270005_vimax_youtube_uploads.sql','202610270006_vimax_mission_openai.sql','202610270007_vimax_gpu_previews.sql','202610270008_vimax_youtube_connections.sql','202610270009_vimax_social_connections.sql']) {
       await pool.query(await readFile(new URL(`../supabase/migrations/${file}`,import.meta.url),'utf8'));
     }
     async function as(id,action) {
@@ -85,6 +85,52 @@ test('real PostgreSQL 17 concurrent queue, provider and private-upload safety', 
     // Each subtest operates only in this isolated temporary database. Real
     // connections exercise upload locks, idempotency, budgets and cancellation.
     await pool.query('insert into public.vimax_youtube_allowed_users(owner_id) select unnest($1::uuid[])',[users.slice(0,11)]);
+    await t.test('saved-channel limits, owner isolation and one refresh lease hold across concurrent connections',async()=>{
+      const cipher='v1.'+'a'.repeat(60), channelId=n=>`UC${String(n).padStart(22,'0')}`;
+      const saves=await Promise.all(Array.from({length:16},(_,n)=>rpc(users[0],'vimax_youtube_connection_save',channelId(n),'A channel',cipher)));
+      assert.equal(saves.filter(x=>x.allowed).length,10);assert.equal(saves.filter(x=>x.reason==='limit').length,6);
+      assert.equal((await pool.query('select count(*)::int n from public.vimax_youtube_connections where owner_id=$1 and is_default',[users[0]])).rows[0].n,1);
+      const id=saves.find(x=>x.allowed).id;
+      assert.equal((await as(users[1],c=>c.query('select id from public.vimax_youtube_connections'))).rowCount,0);
+      await assert.rejects(as(users[0],c=>c.query('select refresh_cipher from public.vimax_youtube_connections')),/permission denied/);
+      assert.equal((await rpc(users[1],'vimax_youtube_connection_claim',id)).reason,'not_found');
+      assert.equal((await rpc(users[11],'vimax_youtube_connection_claim',id)).reason,'not_allowed');
+      const claims=await Promise.all(Array.from({length:24},()=>rpc(users[0],'vimax_youtube_connection_claim',id)));
+      const winners=claims.filter(x=>x.allowed);assert.equal(winners.length,1);
+      assert.ok(claims.filter(x=>!x.allowed).every(x=>x.reason==='busy'));
+      assert.equal((await rpc(users[0],'vimax_youtube_connection_remove',id)).reason,'busy');
+      assert.equal(await rpc(users[0],'vimax_youtube_connection_finish',id,randomUUID(),'active',cipher),false);
+      assert.equal(await rpc(users[0],'vimax_youtube_connection_finish',id,winners[0].lease,'active',cipher),true);
+      assert.equal(await rpc(users[0],'vimax_youtube_connection_finish',id,winners[0].lease,'active',cipher),false);
+      assert.equal((await pool.query('select count(*)::int n from public.vimax_youtube_connections where owner_id=$1 and is_default',[users[0]])).rows[0].n,1);
+      const stale=await rpc(users[0],'vimax_youtube_connection_claim',id);assert.equal(stale.allowed,true);
+      await pool.query("update public.vimax_youtube_connections set lease_until=now()-interval '1 second' where id=$1",[id]);
+      assert.equal((await rpc(users[0],'vimax_youtube_connection_claim',id)).reason,'uncertain');
+      assert.equal(await rpc(users[0],'vimax_youtube_connection_finish',id,stale.lease,'active',cipher),false);
+      assert.equal(await rpc(users[0],'vimax_youtube_connection_valid',id,channelId(0)),false);
+    });
+    await t.test('social grants save atomically and serialize refresh leases by owner and provider',async()=>{
+      await pool.query("insert into public.vimax_social_allowed_users(owner_id,provider) values($1,'tiktok'),($1,'facebook'),($2,'tiktok')",[users[0],users[1]]);
+      const cipher='v1.'+'b'.repeat(60), item=(id)=>({external_id:id,display_name:'Test account',credential_cipher:cipher});
+      const save=(provider,items)=>rpc(users[0],'vimax_social_connection_save',provider,JSON.stringify(items));
+      const saved=await Promise.all(Array.from({length:12},()=>save('tiktok',[item('tik_user')])));
+      assert.ok(saved.every(x=>x.allowed));assert.equal(new Set(saved.map(x=>x.connections[0].id)).size,1);
+      const id=saved[0].connections[0].id;
+      assert.equal((await as(users[1],c=>c.query('select id from public.vimax_social_connections'))).rowCount,0);
+      await assert.rejects(as(users[0],c=>c.query('select credential_cipher from public.vimax_social_connections')),/permission denied/);
+      assert.equal((await rpc(users[1],'vimax_social_connection_claim','tiktok',id)).reason,'not_found');
+      const claims=await Promise.all(Array.from({length:20},()=>rpc(users[0],'vimax_social_connection_claim','tiktok',id)));
+      const winners=claims.filter(x=>x.allowed);assert.equal(winners.length,1);assert.ok(claims.filter(x=>!x.allowed).every(x=>x.reason==='busy'));
+      assert.equal((await rpc(users[0],'vimax_social_connection_remove','tiktok',id)).reason,'busy');
+      assert.equal((await save('tiktok',[item('tik_user')])).reason,'busy');
+      assert.equal(await rpc(users[0],'vimax_social_connection_finish','tiktok',id,randomUUID(),'active',cipher,true),false);
+      assert.equal(await rpc(users[0],'vimax_social_connection_finish','tiktok',id,winners[0].lease,'active',cipher,true),true);
+      const pages=Array.from({length:10},(_,i)=>item(String(100000+i)));
+      assert.equal((await save('facebook',pages)).allowed,true);
+      assert.equal((await save('facebook',[item('999999')])).reason,'limit');
+      assert.equal((await pool.query("select count(*)::int n from public.vimax_social_connections where owner_id=$1 and provider='facebook'",[users[0]])).rows[0].n,10);
+      assert.equal((await pool.query("select count(*)::int n from public.vimax_social_connections where owner_id=$1 and provider='facebook' and is_default",[users[0]])).rows[0].n,1);
+    });
     const resetUploads=()=>pool.query('delete from public.vimax_youtube_uploads; delete from public.vimax_youtube_user_daily_budget; delete from public.vimax_youtube_daily_budget;');
     const prepare=(owner,key=randomUUID())=>rpc(owner,'vimax_youtube_prepare',key,'UC1234567890123456789012','Private test video',1234,'a'.repeat(64),'b'.repeat(64));
     await t.test('direct RPC cannot bypass account allowlist or touch another owner',async()=>{

@@ -226,9 +226,10 @@ async function loadAccount() {
   const cloud = window.vimaxCloud.onSession(loggedIn);
   const mission = window.vimaxMission.onSession(loggedIn);
   const youtube = window.vimaxYouTube.onSession(data.user);
+  const social = window.vimaxSocial.onSession(data.user);
   const gpu = window.vimaxGpu.onSession(data.user);
   if (loggedIn) { $('account-identity').textContent = `${data.user.email} · Account ID: ${data.user.id}`; await loadProjects(); }
-  await Promise.all([cloud, mission, youtube, gpu]);
+  await Promise.all([cloud, mission, youtube, social, gpu]);
   try {
     const confirmed = sessionStorage.getItem('vimax-email-confirmed');
     if (confirmed) { $('account-message').textContent = confirmed === 'yes' ? 'Email confirmed. Please sign in.' : 'Email confirmation failed or expired; please try again.'; sessionStorage.removeItem('vimax-email-confirmed'); }
