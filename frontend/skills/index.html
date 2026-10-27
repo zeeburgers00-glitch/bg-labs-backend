@@ -69,13 +69,14 @@
               <label>Provider <select id="ai-provider" required></select></label>
               <label>Model <select id="ai-model" required></select></label>
               <label>Planning mode <select id="ai-mode"><option value="chat">Chat</option><option value="ideas">Brainstorm ideas</option><option value="script">Draft a script</option><option value="review">Review supplied text</option></select></label>
+              <label>Response length <select id="ai-length"><option value="standard">Standard · up to 600 tokens</option><option value="detailed">Detailed · up to 1,600 tokens</option></select></label>
               <label>Optional fallback <select id="ai-fallback"><option value="">No fallback</option></select></label>
             </div>
             <label>Your message <textarea id="chat-prompt" maxlength="1600" rows="4" required placeholder="Ask a question or describe what you want to create…"></textarea></label>
             <div class="chat-actions"><button class="button primary" id="chat-send" type="submit" disabled>Send message <span>→</span></button><button class="button secondary-button" id="ai-test" type="button" disabled>Test provider</button></div>
           </form>
           <p id="chat-status" class="form-note" role="status">Sign in and configure a provider to use text planning.</p><p id="chat-error" class="error" role="alert"></p>
-          <p class="form-note">Your prompt and up to three previous turns are sent to the selected provider. Choosing a fallback also permits sending that conversation to the fallback after an explicit provider failure. Calls may be paid; check provider pricing and privacy terms. Limits: 10 attempts per account and 50 shared per UTC day, including tests, stock searches and GitHub lookups. These are not dollar spending caps.</p>
+          <p class="form-note">Your prompt and up to three previous turns are sent to the selected provider. Choosing a fallback also permits sending that conversation to the fallback after an explicit provider failure. Detailed replies can cost more; output is limited to 6,000 characters and may be cut short. Calls and tests may be paid; check provider pricing and privacy terms. Limits: 10 attempts per account and 50 shared per UTC day, including tests, stock searches and GitHub lookups. These are not dollar spending caps.</p>
           <div class="voice-tools">
             <h3>Voice input &amp; playback</h3>
             <p class="form-note">Browser speech services may send audio or text to a third party. Dictation fills the message for review; it does not send automatically. Available languages and male/female voices depend on your browser and device.</p>
@@ -150,7 +151,7 @@
           <form id="mission-job-form">
             <label>Profile <select id="mission-job-channel" name="channel_id" required></select></label>
             <label>Topic or brief <textarea name="topic" maxlength="1600" rows="3" required placeholder="What should this video explore?"></textarea></label>
-            <div class="field-grid"><label>Provider <select id="mission-provider" name="provider"><option value="groq">Groq</option><option value="openai">OpenAI</option><option value="gemini">Gemini</option><option value="mistral">Mistral</option><option value="zai">Z.ai</option><option value="openrouter">OpenRouter</option><option value="huggingface">Hugging Face</option><option value="opencode">OpenCode</option></select></label><label>Model <input id="mission-model" name="model" value="llama-3.1-8b-instant" maxlength="128" required></label></div>
+            <div class="field-grid"><label>Provider <select id="mission-provider" name="provider"><option value="groq">Groq</option><option value="openai">OpenAI</option><option value="gemini">Gemini</option><option value="mistral">Mistral</option><option value="zai">Z.ai</option><option value="openrouter">OpenRouter</option><option value="huggingface">Hugging Face</option><option value="opencode">OpenCode</option></select></label><label>Model <input id="mission-model" name="model" value="openai/gpt-oss-120b" maxlength="128" required></label></div>
             <label>Start planning no earlier than <input name="not_before" type="datetime-local"><small>Optional; interpreted in this browser’s timezone, not the profile timezone. Maximum 30 days. This is not YouTube scheduling.</small></label>
             <button class="button" type="submit">Queue text plan <span>→</span></button>
           </form>

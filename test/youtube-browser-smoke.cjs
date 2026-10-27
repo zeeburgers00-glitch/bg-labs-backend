@@ -21,15 +21,16 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   const uploadId='12345678-0000-4000-8000-000000000002',secondId='12345678-0000-4000-8000-000000000003',channel='UC1234567890123456789012';
   let current=alice,signedIn=true,firstStart=true,failStatus=false,releaseChunk,releaseSecond;
   let reachedChunk,reachedSecond;const chunkReached=new Promise(r=>{reachedChunk=r;}),secondReached=new Promise(r=>{reachedSecond=r;});
-  const jobs=[],keys=[],posts=[];
+  const jobs=[],keys=[],posts=[],chatBodies=[];
   await page.route('**/api/**',async route=>{
    const rq=route.request(),u=new URL(rq.url()),p=u.pathname,m=rq.method();let data={},body={};try{body=rq.postDataJSON()||{}}catch{}
    if(m!=='GET')posts.push(p);
    if(p==='/api/skills/system')data={local_only:false,database_connected:true,text_chat:'unconfigured',ready_for_video:false,piper_installed:false,ffmpeg_installed:false,scene_detection_installed:false,voices:[],hardware:{},warnings:[]};
    else if(p==='/api/cloud/session')data={user:signedIn?{id:current,email:'person@example.test'}:null};
    else if(p==='/api/cloud/projects')data={projects:[]};
-   else if(p==='/api/cloud/providers')data={providers:[],pexels:'not_configured',allowed:true,paused:false};
+   else if(p==='/api/cloud/providers')data={providers:[{id:'groq',label:'Groq',state:'configured_unverified',models:['openai/gpt-oss-120b']}],pexels:'not_configured',allowed:true,paused:false};
    else if(p==='/api/cloud/chat/history')data={turns:[]};
+   else if(p==='/api/cloud/chat'){chatBodies.push(body);data={reply:'A partial response',provider:body.provider,model:body.model,truncated:true,used_fallback:false,remaining_user:8,history_saved:true,audit_saved:true};}
    else if(p==='/api/cloud/usage')data={calls:[]};
    else if(p==='/api/cloud/github/repository')data={repository:{name:'octocat/Hello-World',url:'https://github.com/octocat/Hello-World',description:'<img src=x onerror=alert(1)>',stars:12,forks:3,license:'MIT',archived:false},remaining_user:9,audit_saved:true};
    else if(p==='/api/cloud/mission')data={channels:[],competitors:[],jobs:[],workers:[],paused:false};
@@ -60,8 +61,14 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   await page.waitForSelector('#youtube:not([hidden])');await page.waitForFunction(()=>!document.getElementById('yt-upload').disabled);
   await page.waitForSelector('#mission:not([hidden])');
   await page.locator('#mission-provider').selectOption('openai');
-  assert.equal(await page.locator('#mission-model').inputValue(),'gpt-5.4-nano');
+  assert.equal(await page.locator('#mission-model').inputValue(),'gpt-5.4-mini');
   await page.locator('#mission-provider').selectOption('groq');
+  await page.waitForFunction(()=>!document.getElementById('chat-send').disabled);
+  await page.locator('#ai-length').selectOption('detailed');
+  await page.locator('#chat-prompt').fill('Write a detailed response.');
+  await page.locator('#chat-send').click();
+  await page.waitForFunction(()=>document.getElementById('chat-status').textContent.includes('truncated'));
+  assert.equal(chatBodies[0].length,'detailed');
   await page.waitForFunction(()=>!document.getElementById('github-lookup').disabled);
   await page.locator('#github-repository').fill('octocat/Hello-World');await page.locator('#github-lookup').click();
   await page.waitForSelector('#github-result a');assert.equal(await page.locator('#github-result img').count(),0);

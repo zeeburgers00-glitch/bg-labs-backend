@@ -29,7 +29,7 @@ test('mission migration isolates owners and implements real, cautious queue tran
       await db.exec('set role anon;');
       await assert.rejects(db.query('select id from public.vimax_channels'), /permission denied/);
       await assert.rejects(rpc('vimax_mission_claim',randomUUID()), /permission denied/);
-      await assert.rejects(rpc('vimax_mission_submit',randomUUID(),randomUUID(),'Topic','openai','gpt-5.4-nano',null), /permission denied/);
+      await assert.rejects(rpc('vimax_mission_submit',randomUUID(),randomUUID(),'Topic','openai','gpt-5.4-mini',null), /permission denied/);
       await role(users[0]);
       const alice = await channel('Alice');
       await db.query("insert into public.vimax_competitors(channel_id,url) values($1,'https://www.youtube.com/@example')",[alice]);

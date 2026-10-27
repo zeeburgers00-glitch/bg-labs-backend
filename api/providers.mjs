@@ -1,9 +1,9 @@
 // Server-only, fixed-host provider adapters. Browser input can choose only a
 // configured provider/model; it never supplies a URL, key, or arbitrary model.
 const SPECS = Object.freeze([
-  {id:'openai', label:'OpenAI', key:'OPENAI_API_KEY', models:'OPENAI_MODELS', defaults:['gpt-5.4-nano'], url:'https://api.openai.com/v1/chat/completions', maxTokenField:'max_completion_tokens'},
-  {id:'groq', label:'Groq', key:'GROQ_API_KEY', models:'GROQ_MODELS', defaults:['llama-3.1-8b-instant'], url:'https://api.groq.com/openai/v1/chat/completions'},
-  {id:'gemini', label:'Gemini', key:'GEMINI_API_KEY', models:'GEMINI_MODELS', defaults:['gemini-2.5-flash'], url:'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'},
+  {id:'openai', label:'OpenAI', key:'OPENAI_API_KEY', models:'OPENAI_MODELS', defaults:['gpt-5.4-mini','gpt-5.4'], url:'https://api.openai.com/v1/chat/completions', maxTokenField:'max_completion_tokens'},
+  {id:'groq', label:'Groq', key:'GROQ_API_KEY', models:'GROQ_MODELS', defaults:['openai/gpt-oss-120b','llama-3.1-8b-instant'], url:'https://api.groq.com/openai/v1/chat/completions'},
+  {id:'gemini', label:'Gemini', key:'GEMINI_API_KEY', models:'GEMINI_MODELS', defaults:['gemini-2.5-flash','gemini-3.8-flash','gemini-4-argon'], url:'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'},
   {id:'mistral', label:'Mistral', key:'MISTRAL_API_KEY', models:'MISTRAL_MODELS', defaults:['mistral-small-latest'], url:'https://api.mistral.ai/v1/chat/completions'},
   {id:'zai', label:'Z.ai (general API)', key:'ZAI_API_KEY', models:'ZAI_MODELS', defaults:['glm-4.5-flash'], url:'https://api.z.ai/api/paas/v4/chat/completions'},
   {id:'openrouter', label:'OpenRouter', key:'OPENROUTER_API_KEY', models:'OPENROUTER_MODELS', defaults:['openrouter/free'], url:'https://openrouter.ai/api/v1/chat/completions'},
@@ -91,12 +91,24 @@ async function readResponse(response) {
 function safeCount(value) {
   return Number.isSafeInteger(value) && value >= 0 && value <= 10_000_000 ? value : null;
 }
+// Explicitly bound reasoning for the documented models below. Other models
+// keep their provider defaults rather than receiving an incompatible parameter.
+function reasoningOptions(id, model) {
+  if (id === 'groq' && /^openai\/gpt-oss-(?:20b|120b)$/.test(model)) return {reasoning_effort:'low', reasoning_format:'hidden'};
+  if (id === 'gemini' && ['gemini-3.8-flash','gemini-4-argon'].includes(model)) return {reasoning_effort:'low'};
+  return {};
+}
+export function providerTestTokens(id, model) {
+  // Thinking models may use the small probe budget before producing an answer.
+  return id === 'gemini' || (id === 'groq' && /^openai\/gpt-oss-(?:20b|120b)$/.test(model)) ? 1024 : 16;
+}
 export async function chatCompletion({env, fetchImpl, id, model, messages, maxTokens = 600}) {
   const {spec, key} = selected(env, id, model);
+  if (!Number.isInteger(maxTokens) || maxTokens < 1 || maxTokens > 1600) throw new ProviderError(422, 'Invalid response-length limit.');
   let value;
   try {
     const response = await fetchImpl(spec.url, {method:'POST', headers:{authorization:`Bearer ${key}`, 'content-type':'application/json'},
-      body:JSON.stringify({model, messages, [spec.maxTokenField || 'max_tokens']:maxTokens}), signal:AbortSignal.timeout(25_000), redirect:'error', cache:'no-store'});
+      body:JSON.stringify({model, messages, [spec.maxTokenField || 'max_tokens']:maxTokens, ...reasoningOptions(id, model)}), signal:AbortSignal.timeout(25_000), redirect:'error', cache:'no-store'});
     value = await readResponse(response);
   } catch (error) {
     if (error instanceof ProviderError) throw error;
@@ -106,7 +118,9 @@ export async function chatCompletion({env, fetchImpl, id, model, messages, maxTo
   }
   const text = value?.choices?.[0]?.message?.content;
   if (typeof text !== 'string' || !text.trim()) throw new ProviderError(502, 'The provider returned no text.');
-  return {text:Array.from(text.trim()).slice(0, 6000).join(''), inputTokens:safeCount(value?.usage?.prompt_tokens), outputTokens:safeCount(value?.usage?.completion_tokens)};
+  const chars = Array.from(text.trim());
+  return {text:chars.slice(0, 6000).join(''), truncated:chars.length > 6000 || value?.choices?.[0]?.finish_reason === 'length',
+    inputTokens:safeCount(value?.usage?.prompt_tokens), outputTokens:safeCount(value?.usage?.completion_tokens)};
 }
 function safePexelsUrl(value) {
   try {

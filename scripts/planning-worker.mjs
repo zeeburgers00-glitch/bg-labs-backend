@@ -144,8 +144,10 @@ export function createPlanningWorker({env=process.env,fetchImpl=globalThis.fetch
           logger.warn(`A planning stage stopped (${code}); see the job for its recorded state.`);
           return;
         }
+        const notice='\n[Provider output was truncated; review before use.]';
+        const output=result.truncated ? Array.from(result.text).slice(0,6000-Array.from(notice).length).join('')+notice : result.text;
         const payload={...leaseData,p_stage:stage,p_call_id:started.call_id,p_secret:started.finish_secret,
-          p_output:result.text,p_input_tokens:result.inputTokens,p_output_tokens:result.outputTokens};
+          p_output:output,p_input_tokens:result.inputTokens,p_output_tokens:result.outputTokens};
         let saved;
         try { saved=await rpc('finish',payload); }
         catch {
@@ -154,7 +156,7 @@ export function createPlanningWorker({env=process.env,fetchImpl=globalThis.fetch
           saved=await rpc('finish',payload);
         }
         if (saved?.ok !== true) throw new Error('Stage completion could not be confirmed.');
-        steps[stage]=result.text;
+        steps[stage]=output;
         if (saved.status !== 'running') return;
       }
     } finally { clearInterval(timer); }

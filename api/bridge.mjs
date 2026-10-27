@@ -1,6 +1,6 @@
 // Public, stateless Supabase API. It never exposes ViMax's unauthenticated
 // single-workspace local server or server-side provider keys to the Internet.
-import {ProviderError, providerStatus, pexelsStatus, validateSelection, chatCompletion, searchPexels, githubRepositoryInput, getGithubRepository} from './providers.mjs';
+import {ProviderError, providerStatus, pexelsStatus, validateSelection, chatCompletion, providerTestTokens, searchPexels, githubRepositoryInput, getGithubRepository} from './providers.mjs';
 import {YouTubeError, createYouTube, clearYouTubeCookies} from './youtube.mjs';
 
 const ACCESS_COOKIE = '__Host-vimax_access';
@@ -102,6 +102,8 @@ function chatInput(input) {
   if (!prompt || Array.from(prompt).length > 1600 || /[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(prompt) || !Object.hasOwn(MODES, mode)) {
     throw new HttpError(422, 'Enter up to 1600 characters and select a supported planning mode.');
   }
+  const length = input.length === undefined ? 'standard' : input.length;
+  if (!['standard','detailed'].includes(length)) throw new HttpError(422, 'Choose a supported response length.');
   const primary = {provider:input.provider, model:input.model};
   let fallback = null;
   if (input.fallback !== undefined && input.fallback !== null) {
@@ -109,7 +111,7 @@ function chatInput(input) {
     fallback = {provider:input.fallback.provider, model:input.fallback.model};
     if (fallback.provider === primary.provider && fallback.model === primary.model) throw new HttpError(422, 'Choose a different fallback provider or model.');
   }
-  return {prompt, mode, primary, fallback};
+  return {prompt, mode, length, primary, fallback};
 }
 function stockInput(input) {
   const query = typeof input.query === 'string' ? input.query.trim() : '';
@@ -463,7 +465,7 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch} =
         validateSelection(env, input.provider, input.model);
         const selection = {provider:input.provider, model:input.model};
         const tested = await attempt(session, 'provider_test', selection, () => chatCompletion({env, fetchImpl, id:selection.provider, model:selection.model,
-          messages:[{role:'user', content:'Reply with the word OK.'}], maxTokens:16}));
+          messages:[{role:'user', content:'Reply with the word OK.'}], maxTokens:providerTestTokens(selection.provider,selection.model)}));
         return json({ok:true, provider:selection.provider, model:selection.model, remaining_user:tested.remaining, audit_saved:tested.auditSaved}, 200, session.updates);
       }
       if (path === '/api/cloud/chat/history' && ['GET', 'DELETE'].includes(method)) {
@@ -498,7 +500,7 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch} =
           }
         }
         messages.push({role:'user', content:input.prompt});
-        const run = selection => attempt(session, 'chat', selection, () => chatCompletion({env, fetchImpl, id:selection.provider, model:selection.model, messages}));
+        const run = selection => attempt(session, 'chat', selection, () => chatCompletion({env, fetchImpl, id:selection.provider, model:selection.model, messages, maxTokens:input.length === 'detailed' ? 1600 : 600}));
         let selection = input.primary, completed, usedFallback = false;
         try { completed = await run(selection); }
         catch (error) {
@@ -507,13 +509,15 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch} =
           if (!(input.fallback && error instanceof ProviderError && error.retryable && error.auditSaved)) throw error;
           selection = input.fallback; usedFallback = true; completed = await run(selection);
         }
+        const notice = '\n[Reply truncated; ask for a continuation.]';
+        const reply = completed.result.truncated ? Array.from(completed.result.text).slice(0,6000-Array.from(notice).length).join('')+notice : completed.result.text;
         let saved = false;
         try {
           const stored = await supa('/rest/v1/vimax_chat_turns', {method:'POST', token:session.access,
-            data:{prompt:input.prompt, reply:completed.result.text, provider:selection.provider, model:selection.model}, extraHeaders:{prefer:'return=minimal'}});
+            data:{prompt:input.prompt, reply, provider:selection.provider, model:selection.model}, extraHeaders:{prefer:'return=minimal'}});
           saved = stored.response.ok;
         } catch { /* Return the generated text, but disclose that it was not saved. */ }
-        return json({reply:completed.result.text, provider:selection.provider, model:selection.model, used_fallback:usedFallback,
+        return json({reply, provider:selection.provider, model:selection.model, used_fallback:usedFallback, truncated:completed.result.truncated,
           history_saved:saved, audit_saved:completed.auditSaved, remaining_user:completed.remaining,
           usage:{input_tokens:completed.result.inputTokens, output_tokens:completed.result.outputTokens}}, 200, session.updates);
       }

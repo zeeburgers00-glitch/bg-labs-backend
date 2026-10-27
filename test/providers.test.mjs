@@ -55,7 +55,7 @@ const input = {provider:'groq', model:'llama-3.1-8b-instant', prompt:'Plan a sho
 
 test('fixed-host chat adapters use server-only credentials and enforce model allowlists', async () => {
   const cases = [
-    ['openai','OPENAI_API_KEY','gpt-5.4-nano','https://api.openai.com/v1/chat/completions'],
+    ['openai','OPENAI_API_KEY','gpt-5.4-mini','https://api.openai.com/v1/chat/completions'],
     ['groq','GROQ_API_KEY','llama-3.1-8b-instant','https://api.groq.com/openai/v1/chat/completions'],
     ['gemini','GEMINI_API_KEY','gemini-2.5-flash','https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'],
     ['mistral','MISTRAL_API_KEY','mistral-small-latest','https://api.mistral.ai/v1/chat/completions'],
@@ -72,13 +72,46 @@ test('fixed-host chat adapters use server-only credentials and enforce model all
     }});
     assert.equal(captured.target,url); assert.equal(captured.init.headers.authorization,'Bearer test-only-key');
     assert.equal(captured.init.redirect,'error'); assert.equal(JSON.parse(captured.init.body)[provider === 'openai' ? 'max_completion_tokens' : 'max_tokens'],600);
-    assert.deepEqual(result,{text:'Hello', inputTokens:1, outputTokens:2});
+    assert.deepEqual(result,{text:'Hello', truncated:false, inputTokens:1, outputTokens:2});
     assert.equal(JSON.stringify(providerStatus(env)).includes('test-only-key'),false);
     assert.throws(() => validateSelection(env,provider,'arbitrary-expensive-model'), /allowed/);
   }
   assert.equal(providerStatus({OPENCODE_API_KEY:'test-only-key'}).find(p => p.id === 'opencode').state,'model_required');
   assert.equal(providerStatus({OPENCODE_API_KEY:'test-only-key',OPENCODE_MODELS:'gpt-5'}).find(p => p.id === 'opencode').state,'invalid_configuration');
   assert.throws(() => validateSelection({GROQ_API_KEY:'key with spaces'},'groq','llama-3.1-8b-instant'), /not configured/);
+});
+
+test('stronger documented models use bounded, provider-specific reasoning parameters', async () => {
+  for (const [id,keyName,model,expected] of [
+    ['groq','GROQ_API_KEY','openai/gpt-oss-120b',{reasoning_effort:'low',reasoning_format:'hidden'}],
+    ['gemini','GEMINI_API_KEY','gemini-3.8-flash',{reasoning_effort:'low'}],
+    ['gemini','GEMINI_API_KEY','gemini-4-argon',{reasoning_effort:'low'}],
+  ]) {
+    let request;
+    await chatCompletion({env:{[keyName]:'test-only-key'},id,model,messages:[],fetchImpl:async (_,init)=>{
+      request=JSON.parse(init.body); return Response.json({choices:[{message:{content:'OK'}}]});
+    }});
+    for (const [name,value] of Object.entries(expected)) assert.equal(request[name],value);
+    assert.equal(request.max_tokens,600);
+  }
+  const fake=mockBackend(), bridge=createBridge({env:testEnv,fetchImpl:fake.fetchImpl});
+  const response=await bridge.fetch(req('/api/cloud/providers/test',{method:'POST',body:{provider:'groq',model:'openai/gpt-oss-120b'}}));
+  assert.equal(response.status,200); assert.equal(fake.external[0].payload.max_tokens,1024);
+  assert.equal(fake.external[0].payload.reasoning_format,'hidden');
+  await assert.rejects(chatCompletion({env:testEnv,id:'groq',model:'llama-3.1-8b-instant',messages:[],maxTokens:1601,fetchImpl:fake.fetchImpl}),/response-length/);
+});
+
+test('detailed chat has a bounded token budget and reports truncated output', async () => {
+  const fake=mockBackend({provider:async()=>Response.json({choices:[{message:{content:'x'.repeat(6001)},finish_reason:'length'}]})});
+  const bridge=createBridge({env:testEnv,fetchImpl:fake.fetchImpl});
+  const response=await bridge.fetch(req('/api/cloud/chat',{method:'POST',body:{...input,length:'detailed'}}));
+  assert.equal(response.status,200); const data=await response.json();
+  assert.equal(data.truncated,true); assert.equal(data.reply.length,6000);
+  assert.match(data.reply,/\[Reply truncated; ask for a continuation\.\]$/);
+  assert.equal(fake.external[0].payload.max_tokens,1600);
+  assert.equal(fake.turns[0].reply,data.reply);
+  const denied=await bridge.fetch(req('/api/cloud/chat',{method:'POST',body:{...input,length:'1000000'}}));
+  assert.equal(denied.status,422); assert.equal(fake.external.length,1);
 });
 
 test('provider failures are sanitized, response size is bounded and timeouts do not request a retry', async () => {

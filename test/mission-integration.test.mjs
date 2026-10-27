@@ -39,7 +39,7 @@ async function fixture() {
       providerCalls.push(payload);
       if(providerMode==='timeout') throw new TypeError('network failure');
       if(providerMode==='rate') return Response.json({secret:'must not be shown'},{status:429});
-      return Response.json({choices:[{message:{content:`Real adapter result ${providerCalls.length}`}}],usage:{prompt_tokens:12,completion_tokens:8}});
+      return Response.json({choices:[{message:{content:`Real adapter result ${providerCalls.length}`},...(providerMode==='truncated'?{finish_reason:'length'}:{})}],usage:{prompt_tokens:12,completion_tokens:8}});
     }
     if(url.hostname!=='example.supabase.co') throw new Error('Unexpected external host');
     const token=init.headers?.authorization?.replace('Bearer ','');
@@ -127,20 +127,22 @@ test('OpenAI can be queued and processed through the planning worker with a mock
   try {
     const bridge=createBridge({env,fetchImpl:fx.fetch});
     const profile=(await (await bridge.fetch(req('/api/cloud/mission/channels',{method:'POST',payload:channel}))).json()).channel;
-    const payload={channel_id:profile.id,client_key:randomUUID(),topic:'OpenAI planning test',provider:'openai',model:'gpt-5.4-nano'};
+    const payload={channel_id:profile.id,client_key:randomUUID(),topic:'OpenAI planning test',provider:'openai',model:'gpt-5.4-mini'};
     let response=await bridge.fetch(req('/api/cloud/mission/jobs',{method:'POST',payload}));
     assert.equal(response.status,201); const job=(await response.json()).job;
     response=await bridge.fetch(req('/api/cloud/mission/jobs',{method:'POST',payload}));
     assert.equal(response.status,200); assert.equal((await response.json()).job.id,job.id);
+    fx.setMode('truncated');
     const worker=createPlanningWorker({env:{...workerEnv,OPENAI_API_KEY:'test-only-openai-key'},fetchImpl:fx.fetch,logger:quiet});
     await worker.tick();
     assert.equal(fx.providerCalls.length,3);
     for(const call of fx.providerCalls) {
-      assert.equal(call.model,'gpt-5.4-nano'); assert.equal(call.max_completion_tokens,900);
+      assert.equal(call.model,'gpt-5.4-mini'); assert.equal(call.max_completion_tokens,900);
       assert.equal(Object.hasOwn(call,'max_tokens'),false);
     }
     const detail=await (await bridge.fetch(req(`/api/cloud/mission/jobs/${job.id}`))).json();
     assert.equal(detail.job.status,'needs_review'); assert.equal(detail.steps.length,3);
+    assert.ok(detail.steps.every(step=>step.output.includes('[Provider output was truncated; review before use.]')));
     assert.equal(fx.network.filter(call=>call.host==='api.openai.com' && call.path==='/v1/chat/completions').length,3);
     assert.equal(fx.network.some(call=>call.host==='api.groq.com'),false);
   } finally {await fx.db.close();}

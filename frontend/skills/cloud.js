@@ -151,11 +151,11 @@
     const fallback = value && split > 0 ? {provider:value.slice(0, split), model:value.slice(split + 1)} : null;
     state.busy = true; updateControls(); $('chat-error').textContent = ''; $('chat-status').textContent = 'Sending to the selected provider…';
     try {
-      const data = await api('/api/cloud/chat', {method:'POST', body:JSON.stringify({...choice, mode:$('ai-mode').value, prompt, fallback})});
+      const data = await api('/api/cloud/chat', {method:'POST', body:JSON.stringify({...choice, mode:$('ai-mode').value, length:$('ai-length').value, prompt, fallback})});
       if (!active(version)) return;
       state.turns.push({prompt, reply:data.reply, provider:data.provider, model:data.model}); renderTurns(); $('chat-prompt').value = '';
       state.tests.set(`${data.provider}|${data.model}`, `Responded this session for ${data.model}`); renderProviders();
-      $('chat-status').textContent = `${data.used_fallback ? 'Fallback provider responded. ' : 'Reply received. '}${data.remaining_user} request attempt(s) remain today.${data.history_saved ? '' : ' Warning: this turn could not be saved.'}${data.audit_saved ? '' : ' Warning: usage result could not be saved.'}`;
+      $('chat-status').textContent = `${data.used_fallback ? 'Fallback provider responded. ' : 'Reply received. '}${data.remaining_user} request attempt(s) remain today.${data.truncated ? ' The reply was truncated; ask for a shorter or continued answer.' : ''}${data.history_saved ? '' : ' Warning: this turn could not be saved.'}${data.audit_saved ? '' : ' Warning: usage result could not be saved.'}`;
       if ($('speak-replies').checked) speak(data.reply);
     } catch (error) { if (active(version)) { $('chat-error').textContent = error.message; $('chat-status').textContent = 'No reply received.'; } }
     finally { if (active(version)) { state.busy = false; updateControls(); loadUsage(version).catch(() => {}); } }
