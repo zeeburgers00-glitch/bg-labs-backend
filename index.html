@@ -2686,12 +2686,101 @@
         }
     });
 
-    function showNotifications() {
-        toast('No new notifications', 'info');
+    async function showNotifications() {
+        const existing = document.getElementById('notificationsModal');
+        if (existing) existing.remove();
+        const modal = document.createElement('div');
+        modal.id = 'notificationsModal';
+        modal.className = 'fixed inset-0 z-[110] flex items-center justify-center p-4';
+        modal.style.background = 'rgba(2,6,14,.76)';
+        modal.innerHTML = '<section class="glass-panel w-full max-w-xl rounded-2xl p-5 sm:p-6 max-h-[80vh] overflow-y-auto" role="dialog" aria-modal="true">' +
+            '<div class="flex items-center justify-between gap-3"><div><div class="creator-eyebrow mb-2">WORKSPACE FEED</div><h2 class="text-xl font-bold">Recent activity</h2></div><button onclick="closeNotifications()" class="text-slate-400 hover:text-white p-2" aria-label="Close notifications"><i class="fa-solid fa-xmark"></i></button></div>' +
+            '<div id="notificationsFeed" class="mt-4"><div class="text-sm text-slate-500 py-6">Loading recent activity…</div></div></section>';
+        modal.onclick = function(event) { if (event.target === modal) closeNotifications(); };
+        document.body.appendChild(modal);
+        try {
+            const data = await apiGet('/api/dashboard/stats');
+            const items = Array.isArray(data.recent) ? data.recent : [];
+            const box = document.getElementById('notificationsFeed');
+            if (!box) return;
+            box.innerHTML = items.length ? items.map(function(item) {
+                return '<div class="creator-list-row"><span class="creator-step"><i class="fa-solid '+hubEscape(item.icon||'fa-circle-check')+'"></i></span><div class="flex-1"><p class="text-sm text-slate-200">'+hubEscape(item.title||item.type||'Workspace event')+'</p><p class="text-xs text-slate-500 mt-1">'+hubEscape(item.meta||'')+'</p></div><span class="text-[10px] text-slate-600">'+(item.created_at?hubEscape(new Date(item.created_at).toLocaleString()):'')+'</span></div>';
+            }).join('') : '<div class="text-center text-sm text-slate-500 py-10"><i class="fa-regular fa-bell-slash text-xl mb-3 block"></i>No recent activity yet. Your recent generations and content plans will appear here.</div>';
+        } catch (error) {
+            const box = document.getElementById('notificationsFeed');
+            if (box) box.innerHTML = '<p class="text-sm text-slate-400 py-6">Activity feed is temporarily unavailable.</p>';
+        }
+    }
+    function closeNotifications() {
+        document.getElementById('notificationsModal')?.remove();
     }
 
     function openUserMenu() {
-        toast('User menu coming soon', 'info');
+        closeAccountSettings();
+        const modal = document.createElement('div');
+        modal.id = 'accountSettingsModal';
+        modal.className = 'fixed inset-0 z-[111] flex items-center justify-center p-4';
+        modal.style.background = 'rgba(2,6,14,.78)';
+        const name = hubEscape(currentUser?.full_name || currentUser?.username || '');
+        const email = hubEscape(currentUser?.email || '');
+        modal.innerHTML = '<section class="glass-panel w-full max-w-lg rounded-2xl p-5 sm:p-6" role="dialog" aria-modal="true">' +
+            '<div class="flex items-center justify-between gap-3 mb-5"><div><div class="creator-eyebrow mb-2">ACCOUNT</div><h2 class="text-xl font-bold">Profile & settings</h2><p class="text-xs text-slate-500 mt-1">Manage your workspace profile securely.</p></div><button onclick="closeAccountSettings()" class="text-slate-400 hover:text-white p-2" aria-label="Close profile"><i class="fa-solid fa-xmark"></i></button></div>' +
+            '<div class="flex items-center gap-3 p-3 rounded-xl bg-slate-950/45 border border-slate-700/50 mb-5"><div class="w-11 h-11 rounded-xl grid place-items-center bg-cyan-300/10 border border-cyan-300/15 text-cyan-100 font-bold">'+hubEscape((currentUser?.full_name||currentUser?.username||'U').charAt(0).toUpperCase())+'</div><div class="min-w-0 flex-1"><div class="font-semibold text-sm">'+name+'</div><div class="text-xs text-slate-500 truncate">'+email+'</div></div><span class="creator-pill">'+hubEscape(currentUser?.role||'user')+'</span></div>' +
+            '<form onsubmit="saveAccountSettings(event)" class="space-y-4"><label class="block text-xs text-slate-400">Display name<input id="accountFullName" maxlength="255" class="w-full mt-1 bg-slate-950/70 border border-slate-700 rounded-xl p-3 text-sm" value="'+name+'"></label>' +
+            '<label class="block text-xs text-slate-400">Email address<input id="accountEmail" type="email" maxlength="255" required class="w-full mt-1 bg-slate-950/70 border border-slate-700 rounded-xl p-3 text-sm" value="'+email+'"></label>' +
+            '<label class="block text-xs text-slate-400">New password <span class="text-slate-600">(leave blank to keep current)</span><input id="accountPassword" type="password" autocomplete="new-password" minlength="6" maxlength="128" class="w-full mt-1 bg-slate-950/70 border border-slate-700 rounded-xl p-3 text-sm" placeholder="At least 6 characters"></label>' +
+            '<div id="accountSaveError" class="hidden text-sm text-rose-300"></div><div class="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2"><button type="button" onclick="closeAccountSettings()" class="px-4 py-2 rounded-xl border border-slate-700 text-sm">Cancel</button><button id="accountSaveBtn" type="submit" class="btn-primary px-4 py-2 rounded-xl text-sm font-semibold"><i class="fa-solid fa-floppy-disk mr-2"></i>Save profile</button></div></form>' +
+            '<div class="creator-divider my-5"></div><div class="flex items-center justify-between gap-3"><div><div class="text-sm font-medium">Sign out</div><div class="text-xs text-slate-500">End this session on this browser.</div></div><button type="button" onclick="logout()" class="px-4 py-2 rounded-xl border border-rose-500/30 bg-rose-500/5 text-rose-200 text-xs">Sign out</button></div></section>';
+        modal.onclick = function(event) { if (event.target === modal) closeAccountSettings(); };
+        document.body.appendChild(modal);
+        modal.querySelector('#accountFullName')?.focus();
+    }
+    function closeAccountSettings() {
+        document.getElementById('accountSettingsModal')?.remove();
+    }
+    async function saveAccountSettings(event) {
+        event.preventDefault();
+        const button = document.getElementById('accountSaveBtn');
+        const errorBox = document.getElementById('accountSaveError');
+        const payload = {
+            full_name: document.getElementById('accountFullName')?.value?.trim() || '',
+            email: document.getElementById('accountEmail')?.value?.trim() || ''
+        };
+        const newPassword = document.getElementById('accountPassword')?.value || '';
+        if (newPassword) payload.password = newPassword;
+        if (newPassword && newPassword.length < 6) {
+            errorBox.textContent = 'New password must be at least 6 characters.';
+            errorBox.classList.remove('hidden');
+            return;
+        }
+        button.disabled = true;
+        button.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Saving…';
+        errorBox.classList.add('hidden');
+        try {
+            const response = await fetch(API_BASE + '/api/auth/me', {
+                method:'PUT',
+                headers:{'Content-Type':'application/json',...(token?{'Authorization':'Bearer '+token}:{})},
+                body:JSON.stringify(payload)
+            });
+            const data = await response.json().catch(()=>({detail:'Server returned an invalid response.'}));
+            if (response.status === 401) { logout(); return; }
+            if (!response.ok) throw new Error(typeof data.detail==='string'?data.detail:'Could not save account settings.');
+            currentUser = {...currentUser,...data};
+            const name = document.getElementById('userDisplayName');
+            const mail = document.getElementById('userEmail');
+            const initials = document.getElementById('userInitials');
+            if (name) name.textContent = currentUser.full_name || currentUser.username;
+            if (mail) mail.textContent = currentUser.email || '';
+            if (initials) initials.textContent = (currentUser.full_name || currentUser.username || 'U').charAt(0).toUpperCase();
+            closeAccountSettings();
+            toast('Profile updated successfully.','success');
+        } catch (error) {
+            errorBox.textContent = error.message || 'Could not save account settings.';
+            errorBox.classList.remove('hidden');
+        } finally {
+            const b = document.getElementById('accountSaveBtn');
+            if (b) { b.disabled=false; b.innerHTML='<i class="fa-solid fa-floppy-disk mr-2"></i>Save profile'; }
+        }
     }
 
     // Global form handlers
