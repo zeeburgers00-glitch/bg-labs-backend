@@ -1977,6 +1977,7 @@
             ]);
             creatorPlannerPlans = values[0].plans || [];
             const status = values[1], providers = values[2].providers || [];
+            const channels = status.channel_details || [];
             if (creatorPlannerCurrent) {
                 creatorPlannerCurrent = creatorPlannerPlans.find(p => String(p.id) === String(creatorPlannerCurrent.id)) || creatorPlannerCurrent;
             } else {
@@ -1991,6 +1992,7 @@
                 '<div class="grid grid-cols-2 gap-3"><div class="creator-stat"><div class="stat-label">Plans saved</div><div class="stat-value">'+creatorPlannerPlans.length+'</div><div class="text-xs text-slate-500 mt-1">Persistent in Supabase</div></div><div class="creator-stat"><div class="stat-label">Course passages</div><div class="stat-value">'+(status.chunks||0)+'</div><div class="text-xs text-slate-500 mt-1">Retrieved at generation time</div></div></div></div></section>' +
                 '<div class="grid xl:grid-cols-[.78fr_1.22fr] gap-5"><section class="glass-panel rounded-2xl p-5 h-fit"><div class="creator-eyebrow mb-2">NEW PLAN</div><h3 class="creator-section-title text-lg">Tell JARVIS your goal</h3><p class="creator-section-note mt-1">Use your course as the source of truth. AI suggestions are drafts, not scheduled uploads.</p>' +
                 '<label class="block text-xs text-slate-400 mt-5 mb-2" for="creatorPlanGoal">Channel goal / niche</label><textarea id="creatorPlanGoal" rows="5" class="w-full bg-slate-950/70 border border-slate-700 rounded-xl p-3 text-sm" placeholder="Example: A faceless Urdu channel teaching practical AI tools to beginners. Focus on trustworthy tutorials and Shorts."></textarea>' +
+                '<label class="block text-xs text-slate-400 mt-4 mb-2" for="creatorPlanChannel">YouTube channel (optional)</label><select id="creatorPlanChannel" class="w-full bg-slate-950/70 border border-slate-700 rounded-xl p-3 text-sm"><option value="">Use course + goal only</option>'+channels.map(ch=>'<option value="'+hubEscape(ch.channel_id)+'"'+(ch.is_primary?' selected':'')+'>'+hubEscape(ch.title)+(ch.is_primary?' · primary':'')+'</option>').join('')+'</select>' +
                 '<label class="block text-xs text-slate-400 mt-4 mb-2" for="creatorPlanDays">Planning horizon</label><select id="creatorPlanDays" class="w-full bg-slate-950/70 border border-slate-700 rounded-xl p-3 text-sm"><option value="7">7 days · one week</option><option value="14">14 days · two weeks</option><option value="30">30 days · one month</option></select>' +
                 '<label class="block text-xs text-slate-400 mt-4 mb-2" for="creatorPlanProvider">AI model provider</label><select id="creatorPlanProvider" class="w-full bg-slate-950/70 border border-slate-700 rounded-xl p-3 text-sm">'+providerOptions+'</select>' +
                 '<button id="creatorPlanGenerate" onclick="generateCreatorPlan()" class="mt-5 w-full btn-primary rounded-xl py-3 font-semibold"><i class="fa-solid fa-wand-magic-sparkles mr-2"></i>Generate course-based plan</button>' +
@@ -2038,7 +2040,7 @@
         button.disabled=true; button.innerHTML='<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Building course-based calendar…';
         status.textContent='Retrieving course passages, drafting daily ideas and saving your plan to Supabase…';
         try {
-            const data=await courseRequest('/api/course-ai/content-plan','POST',{goal:goal,days:days,provider:provider});
+            const data=await courseRequest('/api/course-ai/content-plan','POST',{goal:goal,days:days,provider:provider,channel_id:document.getElementById('creatorPlanChannel')?.value||undefined});
             creatorPlannerCurrent=data.plan;
             toast('Content calendar saved. Review it before production.','success');
             await renderPlanner();
