@@ -353,7 +353,7 @@
             document.getElementById('adminLink').classList.remove('hidden');
         }
 
-        navigate('dashboard');
+        navigate('hub');
     }
 
     async function login(username, password) {
@@ -436,8 +436,12 @@
     // ============================================================================
     function navigate(page) {
         // Update sidebar
-        document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active', 'bg-indigo-500/20', 'border-indigo-500/20', 'border-r-4', 'text-indigo-400'));
-        event?.currentTarget?.classList.add('active', 'bg-indigo-500/20', 'border-r-4', 'text-indigo-400');
+        document.querySelectorAll('.sidebar-item').forEach(el => {
+            el.classList.remove('active', 'bg-indigo-500/20', 'border-indigo-500/20', 'border-r-4', 'text-indigo-400');
+            if (el.getAttribute('onclick') === "navigate('" + page + "')") {
+                el.classList.add('active', 'bg-indigo-500/20', 'border-r-4', 'text-indigo-400');
+            }
+        });
 
         const content = document.getElementById('contentArea');
         document.getElementById('pageTitle').textContent = page.charAt(0).toUpperCase() + page.slice(1);
