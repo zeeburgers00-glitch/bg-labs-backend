@@ -1,0 +1,3009 @@
+{
+ "version": 1,
+ "generated": "2026-10-28",
+ "departments": {
+  "A": "Executive Planning and Orchestration",
+  "B": "Channel Creation and Strategy",
+  "C": "Trends and Topic Research",
+  "D": "Scriptwriting",
+  "E": "Visual Production",
+  "F": "Voice and Audio",
+  "G": "Video Editing and Rendering",
+  "H": "Thumbnails and Packaging",
+  "I": "Publishing and Scheduling",
+  "J": "Growth and Analytics",
+  "K": "Monetization Readiness",
+  "L": "Infrastructure, Security, and Compliance"
+ },
+ "defaults": {
+  "execution_status": "idle",
+  "usage_fields": [
+   "attempts",
+   "tokens_reported",
+   "duration_ms"
+  ],
+  "logs": "vimax_mission_events / vimax_ai_calls (hosted) or local companion log (local)",
+  "artifacts": []
+ },
+ "count": 120,
+ "agents": [
+  {
+   "id": "A01",
+   "department": "A",
+   "name": "CEO Orchestrator Agent",
+   "responsibility": "Set channel mission objectives, authorise plans and require human sign-off before anything public",
+   "tools": [
+    "bridge:mission-create",
+    "bridge:mission-events",
+    "gate:human-approval"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "planning worker not hosted",
+   "inputs": [
+    "objective",
+    "channel_id"
+   ],
+   "outputs": [
+    "mission_plan",
+    "approval_requests"
+   ],
+   "dependencies": [
+    "B10"
+   ],
+   "success_criteria": "mission row created with stages and approval flag",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "A02",
+   "department": "A",
+   "name": "Task Decomposition Agent",
+   "responsibility": "Break an approved objective into ordered, independently testable mission stages",
+   "tools": [
+    "bridge:mission-create",
+    "bridge:mission-events"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "planning worker not hosted",
+   "inputs": [
+    "mission_plan"
+   ],
+   "outputs": [
+    "stage_graph"
+   ],
+   "dependencies": [],
+   "success_criteria": "every stage lists inputs, outputs and owner",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "A03",
+   "department": "A",
+   "name": "Workflow Planning Agent",
+   "responsibility": "Order stages so dependencies resolve before side effects and retries stay idempotent",
+   "tools": [
+    "bridge:mission-create"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "planning worker not hosted",
+   "inputs": [
+    "stage_graph"
+   ],
+   "outputs": [
+    "workflow"
+   ],
+   "dependencies": [],
+   "success_criteria": "workflow validates with no cyclic dependencies",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "A04",
+   "department": "A",
+   "name": "Agent Assignment Agent",
+   "responsibility": "Map each stage to exactly one registered agent with the required tool permissions",
+   "tools": [
+    "bridge:mission-events"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "planning worker not hosted",
+   "inputs": [
+    "workflow"
+   ],
+   "outputs": [
+    "assignments"
+   ],
+   "dependencies": [],
+   "success_criteria": "each stage maps to one agent id from the registry",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "A05",
+   "department": "A",
+   "name": "Dependency Management Agent",
+   "responsibility": "Track cross-stage inputs and block downstream stages until artefacts exist",
+   "tools": [
+    "bridge:mission-events"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "planning worker not hosted",
+   "inputs": [
+    "assignments"
+   ],
+   "outputs": [
+    "dependency_map"
+   ],
+   "dependencies": [],
+   "success_criteria": "blocked stage never runs before its input artefact",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "A06",
+   "department": "A",
+   "name": "Budget and Cost Control Agent",
+   "responsibility": "Enforce per-user and shared daily attempt budgets before new provider calls",
+   "tools": [
+    "bridge:usage-report"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "estimate"
+   ],
+   "outputs": [
+    "budget_decision"
+   ],
+   "dependencies": [],
+   "success_criteria": "call rejected server-side once daily attempts exhausted",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "A07",
+   "department": "A",
+   "name": "Priority Management Agent",
+   "responsibility": "Reorder queued missions by owner priority without violating dependencies",
+   "tools": [
+    "bridge:mission-create",
+    "bridge:mission-events"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "planning worker not hosted",
+   "inputs": [
+    "queue"
+   ],
+   "outputs": [
+    "priority_order"
+   ],
+   "dependencies": [],
+   "success_criteria": "priority change does not break stage ordering",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "A08",
+   "department": "A",
+   "name": "Progress Monitoring Agent",
+   "responsibility": "Summarise live mission stage states, lease health and failure counts",
+   "tools": [
+    "bridge:mission-events"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "planning worker not hosted",
+   "inputs": [
+    "mission_id"
+   ],
+   "outputs": [
+    "progress_report"
+   ],
+   "dependencies": [],
+   "success_criteria": "report matches stage rows and events exactly",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "A09",
+   "department": "A",
+   "name": "Failure Recovery Agent",
+   "responsibility": "Classify failed stages, apply bounded retries and mark ambiguous outcomes uncertain",
+   "tools": [
+    "bridge:mission-events",
+    "bridge:usage-report"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "planning worker not hosted",
+   "inputs": [
+    "failure"
+   ],
+   "outputs": [
+    "recovery_decision"
+   ],
+   "dependencies": [],
+   "success_criteria": "no automatic replay of ambiguous billable calls",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "A10",
+   "department": "A",
+   "name": "Final Quality Approval Agent",
+   "responsibility": "Verify the artefact checklist of a finished mission and hold it for owner approval",
+   "tools": [
+    "gate:human-approval",
+    "bridge:mission-events"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "planning worker not hosted",
+   "inputs": [
+    "artefacts"
+   ],
+   "outputs": [
+    "approval_decision"
+   ],
+   "dependencies": [],
+   "success_criteria": "mission stays awaiting-approval until owner acts",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "B01",
+   "department": "B",
+   "name": "Niche Discovery Agent",
+   "responsibility": "Propose channel niches from owner inputs using structured scoring, never invented demand data",
+   "tools": [
+    "bridge:channel-profiles",
+    "skill:ideascore"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "interests"
+   ],
+   "outputs": [
+    "niche_options"
+   ],
+   "dependencies": [],
+   "success_criteria": "each option carries a scored rationale string",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "B02",
+   "department": "B",
+   "name": "Market Research Agent",
+   "responsibility": "Collect owner-provided market notes into the channel profile; no fabricated market figures",
+   "tools": [
+    "bridge:channel-profiles",
+    "bridge:projects-notes"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "niche"
+   ],
+   "outputs": [
+    "market_notes"
+   ],
+   "dependencies": [],
+   "success_criteria": "profile stores cited owner-supplied notes only",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "B03",
+   "department": "B",
+   "name": "Competitor Analysis Agent",
+   "responsibility": "Maintain the owner-curated competitor URL list and snapshot what the owner pastes",
+   "tools": [
+    "bridge:competitors"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "competitor_urls"
+   ],
+   "outputs": [
+    "competitor_list"
+   ],
+   "dependencies": [],
+   "success_criteria": "only owner-approved URLs stored with timestamps",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "B04",
+   "department": "B",
+   "name": "Audience Persona Agent",
+   "responsibility": "Draft audience personas from owner research and record the source of every claim",
+   "tools": [
+    "bridge:channel-profiles"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "market_notes"
+   ],
+   "outputs": [
+    "personas"
+   ],
+   "dependencies": [],
+   "success_criteria": "persona fields mark unverified assumptions",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "B05",
+   "department": "B",
+   "name": "Channel Name Generator Agent",
+   "responsibility": "Generate name candidates and lint each for length, readability and duplication risks",
+   "tools": [
+    "skill:title-lint",
+    "bridge:channel-profiles"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "niche"
+   ],
+   "outputs": [
+    "name_candidates"
+   ],
+   "dependencies": [],
+   "success_criteria": "every candidate passes title lint or is flagged",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "B06",
+   "department": "B",
+   "name": "Brand Identity Agent",
+   "responsibility": "Record brand voice, tone and visual rules in the channel profile for downstream agents",
+   "tools": [
+    "bridge:channel-profiles"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "personas"
+   ],
+   "outputs": [
+    "brand_voice"
+   ],
+   "dependencies": [],
+   "success_criteria": "brand rules consumed by script and packaging stages",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "B07",
+   "department": "B",
+   "name": "Channel Description Agent",
+   "responsibility": "Draft a channel description within YouTube limits with honest positioning",
+   "tools": [
+    "bridge:channel-profiles",
+    "skill:title-lint"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "brand_voice"
+   ],
+   "outputs": [
+    "description_draft"
+   ],
+   "dependencies": [],
+   "success_criteria": "description within limits and free of guaranteed-outcome claims",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "B08",
+   "department": "B",
+   "name": "Channel Keywords Agent",
+   "responsibility": "Compile channel keywords from niche and description without keyword-stuffing",
+   "tools": [
+    "bridge:channel-profiles"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "description_draft"
+   ],
+   "outputs": [
+    "keyword_set"
+   ],
+   "dependencies": [],
+   "success_criteria": "keyword list under limit and deduplicated",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "B09",
+   "department": "B",
+   "name": "Channel Banner and Logo Agent",
+   "responsibility": "Prepare banner/logo briefs and track generation once an image provider is configured",
+   "tools": [
+    "bridge:channel-profiles",
+    "external:comfyui"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "image generation provider not configured; ComfyUI requires GPU hardware",
+   "inputs": [
+    "brand_voice"
+   ],
+   "outputs": [
+    "asset_briefs"
+   ],
+   "dependencies": [],
+   "success_criteria": "brief stored; render marked unavailable until provider added",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "B10",
+   "department": "B",
+   "name": "Channel Setup Checklist Agent",
+   "responsibility": "Assemble the owner-action checklist for steps the YouTube API cannot perform",
+   "tools": [
+    "bridge:channel-profiles",
+    "gate:human-approval"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "profile"
+   ],
+   "outputs": [
+    "checklist"
+   ],
+   "dependencies": [],
+   "success_criteria": "checklist separates API-done items from owner-manual items",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "C01",
+   "department": "C",
+   "name": "YouTube Trend Research Agent",
+   "responsibility": "Fetch YouTube trending or topic data once an authorised data source is connected",
+   "tools": [
+    "bridge:youtube-analytics"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "VIMAX_YOUTUBE_CLIENT_SECRET not configured in Vercel",
+   "inputs": [
+    "region"
+   ],
+   "outputs": [
+    "trend_snapshot"
+   ],
+   "dependencies": [],
+   "success_criteria": "snapshot cites source and time or reports unavailable",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "C02",
+   "department": "C",
+   "name": "Google Trends Research Agent",
+   "responsibility": "Read Google Trends through a configured research provider only",
+   "tools": [
+    "external:web-search"
+   ],
+   "capability": "planned",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "web research provider not integrated (SearXNG/crawl4ai pending)",
+   "inputs": [
+    "niche"
+   ],
+   "outputs": [
+    "trend_series"
+   ],
+   "dependencies": [],
+   "success_criteria": "no trend numbers without a fetched source",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "C03",
+   "department": "C",
+   "name": "Search Demand Analysis Agent",
+   "responsibility": "Compute demand signals from owner-supplied or fetched query data with provenance",
+   "tools": [
+    "external:web-search"
+   ],
+   "capability": "planned",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "web research provider not integrated",
+   "inputs": [
+    "keywords"
+   ],
+   "outputs": [
+    "demand_report"
+   ],
+   "dependencies": [],
+   "success_criteria": "every demand value links to a source URL or is marked estimated",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "C04",
+   "department": "C",
+   "name": "Competitor Video Research Agent",
+   "responsibility": "Organise competitor video metadata the owner exports; no scraping of private data",
+   "tools": [
+    "bridge:competitors",
+    "bridge:projects-notes"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "competitor_list"
+   ],
+   "outputs": [
+    "video_matrix"
+   ],
+   "dependencies": [],
+   "success_criteria": "matrix built only from owner-supplied exports",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "C05",
+   "department": "C",
+   "name": "Topic Scoring Agent",
+   "responsibility": "Score topic candidates with the local idea heuristic and record advisory bands",
+   "tools": [
+    "skill:ideascore"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "sandbox-local-cli"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "topic_candidates"
+   ],
+   "outputs": [
+    "scored_topics"
+   ],
+   "dependencies": [],
+   "success_criteria": "each candidate has a stored score with advisory notice",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "C06",
+   "department": "C",
+   "name": "Audience Question Research Agent",
+   "responsibility": "Collect real audience questions from owner-provided comments and searches",
+   "tools": [
+    "bridge:projects-notes"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "comments_export"
+   ],
+   "outputs": [
+    "question_bank"
+   ],
+   "dependencies": [],
+   "success_criteria": "questions retain their original source text",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "C07",
+   "department": "C",
+   "name": "Evergreen Topic Agent",
+   "responsibility": "Flag topics as evergreen only against stored evidence, not by assertion",
+   "tools": [
+    "skill:ideascore",
+    "bridge:projects-notes"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "scored_topics"
+   ],
+   "outputs": [
+    "evergreen_list"
+   ],
+   "dependencies": [],
+   "success_criteria": "evergreen flag includes supporting note",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "C08",
+   "department": "C",
+   "name": "News Verification Agent",
+   "responsibility": "Mark time-sensitive claims as requiring current-source verification by the owner",
+   "tools": [
+    "bridge:projects-notes",
+    "gate:human-approval"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "script_draft"
+   ],
+   "outputs": [
+    "verification_flags"
+   ],
+   "dependencies": [],
+   "success_criteria": "no news claim passes without a source or explicit flag",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "C09",
+   "department": "C",
+   "name": "Fact-Checking Agent",
+   "responsibility": "Inventory factual claims in drafts and require sources before they are stated as fact",
+   "tools": [
+    "bridge:projects-notes",
+    "gate:human-approval"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "script_draft"
+   ],
+   "outputs": [
+    "claim_register"
+   ],
+   "dependencies": [],
+   "success_criteria": "unsourced claims are flagged, never asserted",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "C10",
+   "department": "C",
+   "name": "Topic Selection Agent",
+   "responsibility": "Choose the final topic by combining scores, evergreen status and verification flags",
+   "tools": [
+    "skill:ideascore",
+    "bridge:mission-events"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "scored_topics",
+    "evergreen_list",
+    "verification_flags"
+   ],
+   "outputs": [
+    "selected_topic"
+   ],
+   "dependencies": [],
+   "success_criteria": "selection rationale stored with the chosen topic",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "D01",
+   "department": "D",
+   "name": "Video Outline Agent",
+   "responsibility": "Build a beat-by-beat outline from the selected topic inside the target duration",
+   "tools": [
+    "worker:mission-run",
+    "bridge:projects-notes"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "worker-host"
+   ],
+   "gated_by": "planning worker not hosted",
+   "inputs": [
+    "selected_topic"
+   ],
+   "outputs": [
+    "outline"
+   ],
+   "dependencies": [],
+   "success_criteria": "outline has ordered beats with time budgets",
+   "retry_limit": 3,
+   "timeout_s": 60
+  },
+  {
+   "id": "D02",
+   "department": "D",
+   "name": "Long-Form Script Agent",
+   "responsibility": "Draft the full narration script stage of the mission queue for owner review",
+   "tools": [
+    "worker:mission-run"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "worker-host"
+   ],
+   "gated_by": "planning worker not hosted",
+   "inputs": [
+    "outline"
+   ],
+   "outputs": [
+    "script_draft"
+   ],
+   "dependencies": [],
+   "success_criteria": "script stored as a mission step artefact",
+   "retry_limit": 3,
+   "timeout_s": 60
+  },
+  {
+   "id": "D03",
+   "department": "D",
+   "name": "Shorts Script Agent",
+   "responsibility": "Draft a compressed Shorts script with a hook inside the first seconds",
+   "tools": [
+    "worker:mission-run"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "worker-host"
+   ],
+   "gated_by": "planning worker not hosted",
+   "inputs": [
+    "selected_topic"
+   ],
+   "outputs": [
+    "shorts_script"
+   ],
+   "dependencies": [],
+   "success_criteria": "shorts script under target duration with early hook",
+   "retry_limit": 3,
+   "timeout_s": 60
+  },
+  {
+   "id": "D04",
+   "department": "D",
+   "name": "Storytelling Agent",
+   "responsibility": "Apply narrative structure of setup, tension and payoff to outline revisions",
+   "tools": [
+    "worker:mission-run"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "worker-host"
+   ],
+   "gated_by": "planning worker not hosted",
+   "inputs": [
+    "outline"
+   ],
+   "outputs": [
+    "structured_outline"
+   ],
+   "dependencies": [],
+   "success_criteria": "beats map to narrative roles explicitly",
+   "retry_limit": 3,
+   "timeout_s": 60
+  },
+  {
+   "id": "D05",
+   "department": "D",
+   "name": "Hook and Opening Agent",
+   "responsibility": "Generate hook variants and score each with the local hook heuristic before selection",
+   "tools": [
+    "skill:hookscore",
+    "worker:mission-run"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "worker-host"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "topic"
+   ],
+   "outputs": [
+    "hook_variants",
+    "hook_scores"
+   ],
+   "dependencies": [],
+   "success_criteria": "at least two scored hook variants stored with panels",
+   "retry_limit": 3,
+   "timeout_s": 60
+  },
+  {
+   "id": "D06",
+   "department": "D",
+   "name": "Retention Optimization Agent",
+   "responsibility": "Read owner-provided retention exports to locate leaks and suggest script fixes",
+   "tools": [
+    "skill:retention"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "sandbox-local-cli"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "retention_csv"
+   ],
+   "outputs": [
+    "retention_findings"
+   ],
+   "dependencies": [],
+   "success_criteria": "findings cite timestamps from the export",
+   "retry_limit": 3,
+   "timeout_s": 60
+  },
+  {
+   "id": "D07",
+   "department": "D",
+   "name": "Educational Content Agent",
+   "responsibility": "Restructure drafts into teaching sequences with checks for understanding",
+   "tools": [
+    "worker:mission-run"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "worker-host"
+   ],
+   "gated_by": "planning worker not hosted",
+   "inputs": [
+    "script_draft"
+   ],
+   "outputs": [
+    "lesson_script"
+   ],
+   "dependencies": [],
+   "success_criteria": "each concept has an example and a recap",
+   "retry_limit": 3,
+   "timeout_s": 60
+  },
+  {
+   "id": "D08",
+   "department": "D",
+   "name": "Documentary Script Agent",
+   "responsibility": "Assemble sourced narrative scripts that separate fact from interpretation",
+   "tools": [
+    "worker:mission-run",
+    "bridge:projects-notes"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "worker-host"
+   ],
+   "gated_by": "planning worker not hosted",
+   "inputs": [
+    "claim_register"
+   ],
+   "outputs": [
+    "documentary_script"
+   ],
+   "dependencies": [],
+   "success_criteria": "every factual segment carries a source note",
+   "retry_limit": 3,
+   "timeout_s": 60
+  },
+  {
+   "id": "D09",
+   "department": "D",
+   "name": "Dialogue and Narration Agent",
+   "responsibility": "Adapt scripts to spoken-word rhythm and mark pronunciation risk words",
+   "tools": [
+    "skill:voiceprint",
+    "worker:mission-run"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "worker-host"
+   ],
+   "gated_by": "planning worker not hosted",
+   "inputs": [
+    "script_draft"
+   ],
+   "outputs": [
+    "narration_script"
+   ],
+   "dependencies": [],
+   "success_criteria": "filler rate and sentence lengths recorded",
+   "retry_limit": 3,
+   "timeout_s": 60
+  },
+  {
+   "id": "D10",
+   "department": "D",
+   "name": "Script Originality and Quality Agent",
+   "responsibility": "Run originality and quality checks against competitor material the owner supplies",
+   "tools": [
+    "skill:ideascore",
+    "skill:voiceprint",
+    "gate:human-approval"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "script_draft",
+    "competitor_list"
+   ],
+   "outputs": [
+    "quality_report"
+   ],
+   "dependencies": [],
+   "success_criteria": "report flags imitation risk and requires owner sign-off",
+   "retry_limit": 3,
+   "timeout_s": 60
+  },
+  {
+   "id": "E01",
+   "department": "E",
+   "name": "Storyboard Agent",
+   "responsibility": "Convert approved scripts into shot lists with an on-screen description per beat",
+   "tools": [
+    "local:pipeline"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "local-companion"
+   ],
+   "gated_by": "local companion dependencies not installed (Piper/FFmpeg/python env)",
+   "inputs": [
+    "script_draft"
+   ],
+   "outputs": [
+    "storyboard"
+   ],
+   "dependencies": [],
+   "success_criteria": "every beat has an on-screen description",
+   "retry_limit": 3,
+   "timeout_s": 900
+  },
+  {
+   "id": "E02",
+   "department": "E",
+   "name": "Scene Planning Agent",
+   "responsibility": "Plan scene order, durations and transitions against the storyboard",
+   "tools": [
+    "local:pipeline"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "local-companion"
+   ],
+   "gated_by": "local companion dependencies not installed",
+   "inputs": [
+    "storyboard"
+   ],
+   "outputs": [
+    "scene_plan"
+   ],
+   "dependencies": [],
+   "success_criteria": "scene durations sum to target runtime",
+   "retry_limit": 3,
+   "timeout_s": 900
+  },
+  {
+   "id": "E03",
+   "department": "E",
+   "name": "AI Image Generation Agent",
+   "responsibility": "Generate visuals through a configured provider only; never fake output",
+   "tools": [
+    "external:comfyui",
+    "bridge:gpu-preview"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "image and video providers not configured; ComfyUI needs GPU, Runpod needs key plus flag",
+   "inputs": [
+    "scene_plan"
+   ],
+   "outputs": [
+    "image_assets"
+   ],
+   "dependencies": [],
+   "success_criteria": "provider availability confirmed before promising images",
+   "retry_limit": 3,
+   "timeout_s": 900
+  },
+  {
+   "id": "E04",
+   "department": "E",
+   "name": "AI Video Generation Agent",
+   "responsibility": "Request optional GPU clip previews with cost display and approval before spend",
+   "tools": [
+    "bridge:gpu-preview"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "VIMAX_GPU_ENABLED=false and RUNPOD_API_KEY missing",
+   "inputs": [
+    "scene_plan"
+   ],
+   "outputs": [
+    "video_clips"
+   ],
+   "dependencies": [],
+   "success_criteria": "no job without enabled flag, key and owner approval",
+   "retry_limit": 3,
+   "timeout_s": 900
+  },
+  {
+   "id": "E05",
+   "department": "E",
+   "name": "Stock Footage Research Agent",
+   "responsibility": "Search Pexels once a key is configured and record licence terms per asset",
+   "tools": [
+    "api:pexels"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "PEXELS_API_KEY not configured",
+   "inputs": [
+    "scene_plan"
+   ],
+   "outputs": [
+    "stock_candidates"
+   ],
+   "dependencies": [],
+   "success_criteria": "each candidate stores URL, owner and licence",
+   "retry_limit": 3,
+   "timeout_s": 900
+  },
+  {
+   "id": "E06",
+   "department": "E",
+   "name": "Stock Image Research Agent",
+   "responsibility": "Source still images from configured free providers with licence capture",
+   "tools": [
+    "api:pexels"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "PEXELS_API_KEY not configured",
+   "inputs": [
+    "scene_plan"
+   ],
+   "outputs": [
+    "image_candidates"
+   ],
+   "dependencies": [],
+   "success_criteria": "licence metadata present for every candidate",
+   "retry_limit": 3,
+   "timeout_s": 900
+  },
+  {
+   "id": "E07",
+   "department": "E",
+   "name": "Visual Asset Licensing Agent",
+   "responsibility": "Maintain the licence register and block assets whose terms are unknown",
+   "tools": [
+    "bridge:projects-notes",
+    "gate:human-approval"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "stock_candidates",
+    "image_candidates"
+   ],
+   "outputs": [
+    "licence_register"
+   ],
+   "dependencies": [],
+   "success_criteria": "asset without known licence cannot reach render",
+   "retry_limit": 3,
+   "timeout_s": 900
+  },
+  {
+   "id": "E08",
+   "department": "E",
+   "name": "B-Roll Selection Agent",
+   "responsibility": "Match B-roll candidates to script beats and mark unmatched beats for fill",
+   "tools": [
+    "local:pipeline"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "local-companion"
+   ],
+   "gated_by": "local companion dependencies not installed",
+   "inputs": [
+    "scene_plan",
+    "stock_candidates"
+   ],
+   "outputs": [
+    "broll_map"
+   ],
+   "dependencies": [],
+   "success_criteria": "every beat has B-roll or an explicit gap flag",
+   "retry_limit": 3,
+   "timeout_s": 900
+  },
+  {
+   "id": "E09",
+   "department": "E",
+   "name": "Animation Agent",
+   "responsibility": "Produce motion and transition specs for the renderer from the scene plan",
+   "tools": [
+    "local:pipeline",
+    "external:comfyui"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "local-companion"
+   ],
+   "gated_by": "local companion dependencies not installed; GPU providers unavailable",
+   "inputs": [
+    "scene_plan"
+   ],
+   "outputs": [
+    "motion_specs"
+   ],
+   "dependencies": [],
+   "success_criteria": "specs reference renderer-supported effects only",
+   "retry_limit": 3,
+   "timeout_s": 900
+  },
+  {
+   "id": "E10",
+   "department": "E",
+   "name": "Visual Continuity Agent",
+   "responsibility": "Check style consistency across shots using stored style rules and reports",
+   "tools": [
+    "bridge:projects-notes",
+    "skill:scene-cuts"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "image_assets",
+    "brand_voice"
+   ],
+   "outputs": [
+    "continuity_report"
+   ],
+   "dependencies": [],
+   "success_criteria": "style violations listed with shot references",
+   "retry_limit": 3,
+   "timeout_s": 900
+  },
+  {
+   "id": "F01",
+   "department": "F",
+   "name": "Text-to-Speech Agent",
+   "responsibility": "Produce voiceovers with the configured local TTS engine after verifying availability",
+   "tools": [
+    "local:pipeline",
+    "external:kokoro-tts"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "local-companion"
+   ],
+   "gated_by": "Piper and Kokoro not installed here; svai TTS edge function pending security hardening",
+   "inputs": [
+    "narration_script"
+   ],
+   "outputs": [
+    "voiceover_audio"
+   ],
+   "dependencies": [],
+   "success_criteria": "audio generated only when engine present, else marked unavailable",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "F02",
+   "department": "F",
+   "name": "Voice Selection Agent",
+   "responsibility": "Select among browser voices with language fit and record the chosen voice id",
+   "tools": [
+    "bridge:chat-history"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "language_pref"
+   ],
+   "outputs": [
+    "voice_choice"
+   ],
+   "dependencies": [],
+   "success_criteria": "selection limited to voices actually available on the device",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "F03",
+   "department": "F",
+   "name": "Pronunciation Correction Agent",
+   "responsibility": "Flag risky words and store phonetic hints for the TTS input",
+   "tools": [
+    "skill:voiceprint",
+    "local:pipeline"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "local-companion"
+   ],
+   "gated_by": "local companion dependencies not installed",
+   "inputs": [
+    "narration_script"
+   ],
+   "outputs": [
+    "pronunciation_map"
+   ],
+   "dependencies": [],
+   "success_criteria": "every flagged word has a stored hint",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "F04",
+   "department": "F",
+   "name": "Voice Timing Agent",
+   "responsibility": "Estimate runtime at 150 words per minute and warn when script exceeds target duration",
+   "tools": [
+    "skill:voiceprint"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "sandbox-local-cli"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "narration_script"
+   ],
+   "outputs": [
+    "timing_plan"
+   ],
+   "dependencies": [],
+   "success_criteria": "runtime estimate stored before rendering",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "F05",
+   "department": "F",
+   "name": "Background Music Agent",
+   "responsibility": "Attach music only from sources with recorded licences; keep music optional",
+   "tools": [
+    "bridge:projects-notes"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "scene_plan"
+   ],
+   "outputs": [
+    "music_plan"
+   ],
+   "dependencies": [],
+   "success_criteria": "track without licence record blocks the step",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "F06",
+   "department": "F",
+   "name": "Sound Effects Agent",
+   "responsibility": "Plan SFX cues against beats using only cleared libraries",
+   "tools": [
+    "bridge:projects-notes"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "scene_plan"
+   ],
+   "outputs": [
+    "sfx_plan"
+   ],
+   "dependencies": [],
+   "success_criteria": "each cue references a cleared source or is dropped",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "F07",
+   "department": "F",
+   "name": "Audio Cleanup Agent",
+   "responsibility": "Schedule noise reduction and cleanup passes in the local render pipeline",
+   "tools": [
+    "local:pipeline"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "local-companion"
+   ],
+   "gated_by": "local companion dependencies not installed",
+   "inputs": [
+    "voiceover_audio"
+   ],
+   "outputs": [
+    "clean_audio"
+   ],
+   "dependencies": [],
+   "success_criteria": "cleanup settings logged with the artefact",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "F08",
+   "department": "F",
+   "name": "Loudness Normalization Agent",
+   "responsibility": "Normalize loudness to YouTube targets inside the render step",
+   "tools": [
+    "local:pipeline"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "local-companion"
+   ],
+   "gated_by": "local companion dependencies not installed",
+   "inputs": [
+    "clean_audio"
+   ],
+   "outputs": [
+    "master_audio"
+   ],
+   "dependencies": [],
+   "success_criteria": "measured loudness within target range",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "F09",
+   "department": "F",
+   "name": "Music Licensing Verification Agent",
+   "responsibility": "Verify and store licence text for every audio asset before use",
+   "tools": [
+    "bridge:projects-notes",
+    "gate:human-approval"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "music_plan",
+    "sfx_plan"
+   ],
+   "outputs": [
+    "licence_proof"
+   ],
+   "dependencies": [],
+   "success_criteria": "missing licence proof holds the asset",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "F10",
+   "department": "F",
+   "name": "Audio Quality Agent",
+   "responsibility": "Inspect final audio for clipping, sync drift and silence anomalies",
+   "tools": [
+    "local:pipeline",
+    "skill:deadair"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "local-companion"
+   ],
+   "gated_by": "local companion dependencies not installed",
+   "inputs": [
+    "master_audio"
+   ],
+   "outputs": [
+    "audio_report"
+   ],
+   "dependencies": [],
+   "success_criteria": "report lists defects with timestamps",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "G01",
+   "department": "G",
+   "name": "Long-Form Editor Agent",
+   "responsibility": "Assemble long-form timelines from approved scene and audio artefacts",
+   "tools": [
+    "local:pipeline"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "local-companion"
+   ],
+   "gated_by": "local companion dependencies not installed",
+   "inputs": [
+    "scene_plan",
+    "master_audio"
+   ],
+   "outputs": [
+    "long_cut"
+   ],
+   "dependencies": [],
+   "success_criteria": "assembly completes with approved assets only",
+   "retry_limit": 3,
+   "timeout_s": 900
+  },
+  {
+   "id": "G02",
+   "department": "G",
+   "name": "Shorts Editor Agent",
+   "responsibility": "Assemble vertical 9 by 16 Shorts cuts with early-hook pacing",
+   "tools": [
+    "local:pipeline"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "local-companion"
+   ],
+   "gated_by": "local companion dependencies not installed",
+   "inputs": [
+    "shorts_script",
+    "scene_plan"
+   ],
+   "outputs": [
+    "shorts_cut"
+   ],
+   "dependencies": [],
+   "success_criteria": "output matches Shorts aspect and duration targets",
+   "retry_limit": 3,
+   "timeout_s": 900
+  },
+  {
+   "id": "G03",
+   "department": "G",
+   "name": "Scene Assembly Agent",
+   "responsibility": "Stitch scenes with transitions and keep the frame timeline continuous",
+   "tools": [
+    "local:pipeline"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "local-companion"
+   ],
+   "gated_by": "local companion dependencies not installed",
+   "inputs": [
+    "scene_plan"
+   ],
+   "outputs": [
+    "video_cut"
+   ],
+   "dependencies": [],
+   "success_criteria": "stitched timeline passes duration checks",
+   "retry_limit": 3,
+   "timeout_s": 900
+  },
+  {
+   "id": "G04",
+   "department": "G",
+   "name": "Subtitle Synchronization Agent",
+   "responsibility": "Generate SRT or VTT from transcript timing and verify cue alignment",
+   "tools": [
+    "local:pipeline",
+    "skill:chapters"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "local-companion"
+   ],
+   "gated_by": "local companion dependencies not installed",
+   "inputs": [
+    "narration_script",
+    "video_cut"
+   ],
+   "outputs": [
+    "subtitle_file"
+   ],
+   "dependencies": [],
+   "success_criteria": "cue offsets validated against audio",
+   "retry_limit": 3,
+   "timeout_s": 900
+  },
+  {
+   "id": "G05",
+   "department": "G",
+   "name": "Automatic Caption Agent",
+   "responsibility": "Transcribe audio locally with Whisper-family models when installed",
+   "tools": [
+    "external:faster-whisper"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "faster-whisper model not installed",
+   "inputs": [
+    "master_audio"
+   ],
+   "outputs": [
+    "captions"
+   ],
+   "dependencies": [],
+   "success_criteria": "captions produced only from real audio",
+   "retry_limit": 3,
+   "timeout_s": 900
+  },
+  {
+   "id": "G06",
+   "department": "G",
+   "name": "Vertical Reframing Agent",
+   "responsibility": "Reframe 16:9 sources to 9:16 with subject-safe cropping rules",
+   "tools": [
+    "local:pipeline"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "local-companion"
+   ],
+   "gated_by": "local companion dependencies not installed",
+   "inputs": [
+    "long_cut"
+   ],
+   "outputs": [
+    "vertical_cut"
+   ],
+   "dependencies": [],
+   "success_criteria": "reframe keeps subject within safe area",
+   "retry_limit": 3,
+   "timeout_s": 900
+  },
+  {
+   "id": "G07",
+   "department": "G",
+   "name": "Transition and Motion Graphics Agent",
+   "responsibility": "Apply approved transitions and reject decorative motion that harms retention",
+   "tools": [
+    "local:pipeline"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "local-companion"
+   ],
+   "gated_by": "local companion dependencies not installed",
+   "inputs": [
+    "video_cut"
+   ],
+   "outputs": [
+    "graphics_pass"
+   ],
+   "dependencies": [],
+   "success_criteria": "transition list stored with rationale",
+   "retry_limit": 3,
+   "timeout_s": 900
+  },
+  {
+   "id": "G08",
+   "department": "G",
+   "name": "Color and Image Quality Agent",
+   "responsibility": "Run colour and exposure checks and record corrective filters per shot",
+   "tools": [
+    "local:pipeline"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "local-companion"
+   ],
+   "gated_by": "local companion dependencies not installed",
+   "inputs": [
+    "video_cut"
+   ],
+   "outputs": [
+    "colour_report"
+   ],
+   "dependencies": [],
+   "success_criteria": "no shot silently exceeds luma limits",
+   "retry_limit": 3,
+   "timeout_s": 900
+  },
+  {
+   "id": "G09",
+   "department": "G",
+   "name": "FFmpeg Rendering Agent",
+   "responsibility": "Execute the bounded FFmpeg render for approved inputs with logged settings",
+   "tools": [
+    "local:pipeline"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "local-companion"
+   ],
+   "gated_by": "local companion dependencies not installed (imageio-ffmpeg exists only in companion env)",
+   "inputs": [
+    "video_cut",
+    "master_audio"
+   ],
+   "outputs": [
+    "render_mp4"
+   ],
+   "dependencies": [],
+   "success_criteria": "render exits zero with matching audio and video duration",
+   "retry_limit": 3,
+   "timeout_s": 900
+  },
+  {
+   "id": "G10",
+   "department": "G",
+   "name": "Final Video Inspection Agent",
+   "responsibility": "Verify container duration, streams, resolution and checksum before approval",
+   "tools": [
+    "local:pipeline",
+    "skill:deadair"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "local-companion"
+   ],
+   "gated_by": "local companion dependencies not installed",
+   "inputs": [
+    "render_mp4"
+   ],
+   "outputs": [
+    "inspection_report"
+   ],
+   "dependencies": [],
+   "success_criteria": "report must pass every hard check",
+   "retry_limit": 3,
+   "timeout_s": 900
+  },
+  {
+   "id": "H01",
+   "department": "H",
+   "name": "Thumbnail Concept Agent",
+   "responsibility": "Draft thumbnail concepts tied to the title and hook promise",
+   "tools": [
+    "skill:title-lint",
+    "bridge:projects-notes"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "title",
+    "hook_variants"
+   ],
+   "outputs": [
+    "thumbnail_concepts"
+   ],
+   "dependencies": [],
+   "success_criteria": "concepts consistent with title promise",
+   "retry_limit": 3,
+   "timeout_s": 60
+  },
+  {
+   "id": "H02",
+   "department": "H",
+   "name": "Thumbnail Image Generation Agent",
+   "responsibility": "Render thumbnails via configured image provider or local tool when available",
+   "tools": [
+    "external:comfyui",
+    "local:pipeline"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "local-companion"
+   ],
+   "gated_by": "image provider not configured; GPU unavailable",
+   "inputs": [
+    "thumbnail_concepts"
+   ],
+   "outputs": [
+    "thumbnail_images"
+   ],
+   "dependencies": [],
+   "success_criteria": "no thumbnail claimed without an actual image file",
+   "retry_limit": 3,
+   "timeout_s": 60
+  },
+  {
+   "id": "H03",
+   "department": "H",
+   "name": "Thumbnail Text Agent",
+   "responsibility": "Shorten thumbnail text to readable limits and lint contrast rules",
+   "tools": [
+    "skill:title-lint"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "sandbox-local-cli"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "thumbnail_concepts"
+   ],
+   "outputs": [
+    "thumbnail_text"
+   ],
+   "dependencies": [],
+   "success_criteria": "text within mobile readability limit",
+   "retry_limit": 3,
+   "timeout_s": 60
+  },
+  {
+   "id": "H04",
+   "department": "H",
+   "name": "Thumbnail Composition Agent",
+   "responsibility": "Compose final thumbnail layout with brand rules and safe margins",
+   "tools": [
+    "local:pipeline",
+    "external:comfyui"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "local-companion"
+   ],
+   "gated_by": "image tooling not available in this environment",
+   "inputs": [
+    "thumbnail_images",
+    "thumbnail_text"
+   ],
+   "outputs": [
+    "composed_thumbnail"
+   ],
+   "dependencies": [],
+   "success_criteria": "composed file passes dimension checks",
+   "retry_limit": 3,
+   "timeout_s": 60
+  },
+  {
+   "id": "H05",
+   "department": "H",
+   "name": "Title Generation Agent",
+   "responsibility": "Generate title variants and lint each against the paired thumbnail",
+   "tools": [
+    "skill:title-lint",
+    "worker:mission-run"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "worker-host"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "script_draft",
+    "composed_thumbnail"
+   ],
+   "outputs": [
+    "title_variants"
+   ],
+   "dependencies": [],
+   "success_criteria": "top variants linted as pairings, not standalone",
+   "retry_limit": 3,
+   "timeout_s": 60
+  },
+  {
+   "id": "H06",
+   "department": "H",
+   "name": "Title Variant Testing Agent",
+   "responsibility": "Rank title variants by lint results and record why each ranks where it does",
+   "tools": [
+    "skill:title-lint"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "sandbox-local-cli"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "title_variants"
+   ],
+   "outputs": [
+    "title_ranking"
+   ],
+   "dependencies": [],
+   "success_criteria": "ranking includes stored lint evidence",
+   "retry_limit": 3,
+   "timeout_s": 60
+  },
+  {
+   "id": "H07",
+   "department": "H",
+   "name": "Description Writing Agent",
+   "responsibility": "Draft the description with hook, timestamps and honest claims only",
+   "tools": [
+    "worker:mission-run",
+    "skill:title-lint"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "worker-host"
+   ],
+   "gated_by": "planning worker not hosted",
+   "inputs": [
+    "script_draft"
+   ],
+   "outputs": [
+    "description_draft"
+   ],
+   "dependencies": [],
+   "success_criteria": "description within limits and no invented links",
+   "retry_limit": 3,
+   "timeout_s": 60
+  },
+  {
+   "id": "H08",
+   "department": "H",
+   "name": "Chapters and Timestamps Agent",
+   "responsibility": "Generate validated chapter marks that will render on YouTube",
+   "tools": [
+    "skill:chapters"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "sandbox-local-cli"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "transcript"
+   ],
+   "outputs": [
+    "chapter_marks"
+   ],
+   "dependencies": [],
+   "success_criteria": "chapters pass YouTube rendering rules or are marked invalid",
+   "retry_limit": 3,
+   "timeout_s": 60
+  },
+  {
+   "id": "H09",
+   "department": "H",
+   "name": "Tags and Hashtags Agent",
+   "responsibility": "Build tag sets within YouTube limits, deduplicated and niche-relevant",
+   "tools": [
+    "worker:mission-run",
+    "bridge:channel-profiles"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "worker-host"
+   ],
+   "gated_by": "planning worker not hosted",
+   "inputs": [
+    "description_draft"
+   ],
+   "outputs": [
+    "tag_set"
+   ],
+   "dependencies": [],
+   "success_criteria": "tags under 500 characters and unique",
+   "retry_limit": 3,
+   "timeout_s": 60
+  },
+  {
+   "id": "H10",
+   "department": "H",
+   "name": "Metadata Validation Agent",
+   "responsibility": "Validate the final metadata bundle against platform limits and policy checks",
+   "tools": [
+    "skill:title-lint",
+    "gate:human-approval"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "title_variants",
+    "description_draft",
+    "tag_set",
+    "composed_thumbnail"
+   ],
+   "outputs": [
+    "metadata_bundle"
+   ],
+   "dependencies": [],
+   "success_criteria": "bundle passes validation before upload stage",
+   "retry_limit": 3,
+   "timeout_s": 60
+  },
+  {
+   "id": "I01",
+   "department": "I",
+   "name": "Upload Preparation Agent",
+   "responsibility": "Assemble the upload payload with private privacy and idempotency keys",
+   "tools": [
+    "bridge:youtube-upload",
+    "bridge:mission-events"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "VIMAX_YOUTUBE_CLIENT_SECRET not configured in Vercel",
+   "inputs": [
+    "render_mp4",
+    "metadata_bundle"
+   ],
+   "outputs": [
+    "upload_payload"
+   ],
+   "dependencies": [],
+   "success_criteria": "payload hashed for duplicate prevention",
+   "retry_limit": 2,
+   "timeout_s": 300
+  },
+  {
+   "id": "I02",
+   "department": "I",
+   "name": "YouTube OAuth and Permission Agent",
+   "responsibility": "Manage per-channel consent, scope checks and encrypted grant storage",
+   "tools": [
+    "bridge:youtube-oauth",
+    "bridge:youtube-status"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "VIMAX_YOUTUBE_CLIENT_SECRET not configured in Vercel",
+   "inputs": [
+    "channel_id"
+   ],
+   "outputs": [
+    "grant_status"
+   ],
+   "dependencies": [],
+   "success_criteria": "grant verified against allowlist before any upload",
+   "retry_limit": 2,
+   "timeout_s": 300
+  },
+  {
+   "id": "I03",
+   "department": "I",
+   "name": "Channel Destination Verification Agent",
+   "responsibility": "Confirm the target channel id matches the selected connection before upload",
+   "tools": [
+    "bridge:youtube-status",
+    "gate:human-approval"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "upload_payload",
+    "grant_status"
+   ],
+   "outputs": [
+    "destination_check"
+   ],
+   "dependencies": [],
+   "success_criteria": "mismatched destination blocks the upload",
+   "retry_limit": 2,
+   "timeout_s": 300
+  },
+  {
+   "id": "I04",
+   "department": "I",
+   "name": "Video Upload Agent",
+   "responsibility": "Execute resumable upload with progress, retry and cancellation",
+   "tools": [
+    "bridge:youtube-upload"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "VIMAX_YOUTUBE_CLIENT_SECRET not configured in Vercel",
+   "inputs": [
+    "upload_payload",
+    "destination_check"
+   ],
+   "outputs": [
+    "upload_record"
+   ],
+   "dependencies": [],
+   "success_criteria": "video_id recorded or failure stored with retry state",
+   "retry_limit": 2,
+   "timeout_s": 300
+  },
+  {
+   "id": "I05",
+   "department": "I",
+   "name": "Playlist Management Agent",
+   "responsibility": "Add uploaded videos to owner-defined playlists through the official API",
+   "tools": [
+    "bridge:youtube-upload"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "VIMAX_YOUTUBE_CLIENT_SECRET not configured in Vercel",
+   "inputs": [
+    "upload_record"
+   ],
+   "outputs": [
+    "playlist_ops"
+   ],
+   "dependencies": [],
+   "success_criteria": "playlist changes limited to owner-approved lists",
+   "retry_limit": 2,
+   "timeout_s": 300
+  },
+  {
+   "id": "I06",
+   "department": "I",
+   "name": "Publishing Schedule Agent",
+   "responsibility": "Schedule publication times via mission not_before after approval",
+   "tools": [
+    "bridge:mission-create",
+    "gate:human-approval"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "planning worker not hosted",
+   "inputs": [
+    "upload_record",
+    "approval"
+   ],
+   "outputs": [
+    "schedule"
+   ],
+   "dependencies": [],
+   "success_criteria": "nothing public without recorded approval",
+   "retry_limit": 2,
+   "timeout_s": 300
+  },
+  {
+   "id": "I07",
+   "department": "I",
+   "name": "Subtitle Upload Agent",
+   "responsibility": "Attach subtitle files through the API where supported",
+   "tools": [
+    "bridge:youtube-upload"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "VIMAX_YOUTUBE_CLIENT_SECRET not configured in Vercel",
+   "inputs": [
+    "subtitle_file",
+    "upload_record"
+   ],
+   "outputs": [
+    "caption_upload"
+   ],
+   "dependencies": [],
+   "success_criteria": "caption upload result recorded honestly",
+   "retry_limit": 2,
+   "timeout_s": 300
+  },
+  {
+   "id": "I08",
+   "department": "I",
+   "name": "Thumbnail Upload Agent",
+   "responsibility": "Set custom thumbnails through the API after approval",
+   "tools": [
+    "bridge:youtube-upload",
+    "gate:human-approval"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "VIMAX_YOUTUBE_CLIENT_SECRET not configured in Vercel",
+   "inputs": [
+    "composed_thumbnail",
+    "upload_record"
+   ],
+   "outputs": [
+    "thumbnail_upload"
+   ],
+   "dependencies": [],
+   "success_criteria": "thumbnail change only on approved video",
+   "retry_limit": 2,
+   "timeout_s": 300
+  },
+  {
+   "id": "I09",
+   "department": "I",
+   "name": "Upload Status Verification Agent",
+   "responsibility": "Poll upload and processing state until terminal, with timeout",
+   "tools": [
+    "bridge:youtube-upload",
+    "bridge:mission-events"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "VIMAX_YOUTUBE_CLIENT_SECRET not configured in Vercel",
+   "inputs": [
+    "upload_record"
+   ],
+   "outputs": [
+    "status_report"
+   ],
+   "dependencies": [],
+   "success_criteria": "terminal states reached or reported stuck",
+   "retry_limit": 2,
+   "timeout_s": 300
+  },
+  {
+   "id": "I10",
+   "department": "I",
+   "name": "Publishing Error Recovery Agent",
+   "responsibility": "Classify upload failures and require review before expensive retries",
+   "tools": [
+    "bridge:youtube-upload",
+    "gate:human-approval"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "VIMAX_YOUTUBE_CLIENT_SECRET not configured in Vercel",
+   "inputs": [
+    "status_report"
+   ],
+   "outputs": [
+    "recovery_action"
+   ],
+   "dependencies": [],
+   "success_criteria": "no duplicate uploads after ambiguous failures",
+   "retry_limit": 2,
+   "timeout_s": 300
+  },
+  {
+   "id": "J01",
+   "department": "J",
+   "name": "YouTube Analytics Agent",
+   "responsibility": "Fetch authorised channel metrics when analytics flag and consent are enabled",
+   "tools": [
+    "bridge:youtube-analytics"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "VIMAX_YOUTUBE_ANALYTICS_ENABLED=false; separate read-only consent required",
+   "inputs": [
+    "channel_id"
+   ],
+   "outputs": [
+    "analytics_snapshot"
+   ],
+   "dependencies": [],
+   "success_criteria": "metrics labelled confirmed versus unavailable",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "J02",
+   "department": "J",
+   "name": "Click-Through Rate Analysis Agent",
+   "responsibility": "Analyse CTR from real analytics or owner-pasted stats, else report unavailable",
+   "tools": [
+    "skill:funnel",
+    "bridge:youtube-analytics"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "YouTube Analytics API not enabled; local funnel works on pasted stats",
+   "inputs": [
+    "stats_input"
+   ],
+   "outputs": [
+    "ctr_report"
+   ],
+   "dependencies": [],
+   "success_criteria": "no CTR number without a source",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "J03",
+   "department": "J",
+   "name": "Audience Retention Agent",
+   "responsibility": "Parse owner-provided retention exports into hook leak, cliff and slide findings",
+   "tools": [
+    "skill:retention"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "sandbox-local-cli"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "retention_csv"
+   ],
+   "outputs": [
+    "retention_findings"
+   ],
+   "dependencies": [],
+   "success_criteria": "findings cite exact timestamps",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "J04",
+   "department": "J",
+   "name": "Watch-Time Analysis Agent",
+   "responsibility": "Compute watch-time summaries from authorised analytics or mark unavailable",
+   "tools": [
+    "bridge:youtube-analytics"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "YouTube Analytics API not enabled",
+   "inputs": [
+    "analytics_snapshot"
+   ],
+   "outputs": [
+    "watchtime_report"
+   ],
+   "dependencies": [],
+   "success_criteria": "estimates clearly separated from confirmed data",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "J05",
+   "department": "J",
+   "name": "Subscriber Growth Agent",
+   "responsibility": "Track subscriber deltas over time with confirmed data only",
+   "tools": [
+    "bridge:youtube-analytics"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "YouTube Analytics API not enabled",
+   "inputs": [
+    "analytics_snapshot"
+   ],
+   "outputs": [
+    "growth_report"
+   ],
+   "dependencies": [],
+   "success_criteria": "no projected subscriber claims",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "J06",
+   "department": "J",
+   "name": "Content Performance Agent",
+   "responsibility": "Rank videos by outlier multiple over the channel's own median",
+   "tools": [
+    "skill:funnel",
+    "bridge:youtube-analytics"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "Analytics API not enabled; manual stats accepted via funnel tool",
+   "inputs": [
+    "stats_input"
+   ],
+   "outputs": [
+    "performance_ranking"
+   ],
+   "dependencies": [],
+   "success_criteria": "ranking uses own-channel baselines, not raw views",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "J07",
+   "department": "J",
+   "name": "Publishing Time Analysis Agent",
+   "responsibility": "Correlate publish slots with performance from recorded history",
+   "tools": [
+    "bridge:projects-notes",
+    "bridge:youtube-analytics"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "Analytics API not enabled",
+   "inputs": [
+    "schedule",
+    "analytics_snapshot"
+   ],
+   "outputs": [
+    "timing_insights"
+   ],
+   "dependencies": [],
+   "success_criteria": "insights require real datapoints",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "J08",
+   "department": "J",
+   "name": "Content Experiment Agent",
+   "responsibility": "Define measurable A/B experiments and record outcomes without guarantees",
+   "tools": [
+    "bridge:projects-notes",
+    "gate:human-approval"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "hypothesis"
+   ],
+   "outputs": [
+    "experiment_plan"
+   ],
+   "dependencies": [],
+   "success_criteria": "experiment has metric, window and stop rule",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "J09",
+   "department": "J",
+   "name": "Underperforming Video Diagnosis Agent",
+   "responsibility": "Diagnose weak performers from available signals and label missing data",
+   "tools": [
+    "skill:funnel",
+    "skill:retention"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "sandbox-local-cli"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "stats_input",
+    "retention_csv"
+   ],
+   "outputs": [
+    "diagnosis"
+   ],
+   "dependencies": [],
+   "success_criteria": "diagnosis lists which signals were unavailable",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "J10",
+   "department": "J",
+   "name": "Growth Strategy Agent",
+   "responsibility": "Recommend next-video actions grounded in stored reports, never virality promises",
+   "tools": [
+    "bridge:projects-notes",
+    "skill:ideascore"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "diagnosis",
+    "performance_ranking"
+   ],
+   "outputs": [
+    "strategy_notes"
+   ],
+   "dependencies": [],
+   "success_criteria": "recommendations cite stored reports",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "K01",
+   "department": "K",
+   "name": "YouTube Partner Program Eligibility Agent",
+   "responsibility": "Display official eligibility criteria beside confirmed metrics; never guarantee acceptance",
+   "tools": [
+    "bridge:youtube-analytics",
+    "bridge:projects-notes"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "Analytics API not enabled; eligibility needs owner confirmation",
+   "inputs": [
+    "analytics_snapshot"
+   ],
+   "outputs": [
+    "eligibility_view"
+   ],
+   "dependencies": [],
+   "success_criteria": "criteria marked confirmed, estimated or unavailable",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "K02",
+   "department": "K",
+   "name": "Public Watch-Hour Tracking Agent",
+   "responsibility": "Track public watch hours from confirmed analytics only",
+   "tools": [
+    "bridge:youtube-analytics"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "YouTube Analytics API not enabled",
+   "inputs": [
+    "analytics_snapshot"
+   ],
+   "outputs": [
+    "watchhours_tracker"
+   ],
+   "dependencies": [],
+   "success_criteria": "no rounding up to threshold",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "K03",
+   "department": "K",
+   "name": "Valid Shorts Views Tracking Agent",
+   "responsibility": "Track eligible Shorts views when the official metric is available",
+   "tools": [
+    "bridge:youtube-analytics"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "YouTube Analytics API not enabled",
+   "inputs": [
+    "analytics_snapshot"
+   ],
+   "outputs": [
+    "shorts_views_tracker"
+   ],
+   "dependencies": [],
+   "success_criteria": "metric absent means unavailable, not estimated",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "K04",
+   "department": "K",
+   "name": "Subscriber Eligibility Tracking Agent",
+   "responsibility": "Show current subscribers against threshold with source timestamp",
+   "tools": [
+    "bridge:youtube-analytics",
+    "bridge:youtube-status"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "Analytics API not enabled",
+   "inputs": [
+    "analytics_snapshot"
+   ],
+   "outputs": [
+    "subscriber_tracker"
+   ],
+   "dependencies": [],
+   "success_criteria": "snapshot carries source time",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "K05",
+   "department": "K",
+   "name": "Originality and Reused Content Review Agent",
+   "responsibility": "Run advisory originality checks and assemble owner review evidence",
+   "tools": [
+    "skill:ideascore",
+    "skill:voiceprint",
+    "gate:human-approval"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "script_draft",
+    "render_mp4"
+   ],
+   "outputs": [
+    "originality_review"
+   ],
+   "dependencies": [],
+   "success_criteria": "review flags reuse risk; owner confirms",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "K06",
+   "department": "K",
+   "name": "Copyright Risk Review Agent",
+   "responsibility": "Inventory third-party assets and their licences; block unknowns",
+   "tools": [
+    "bridge:projects-notes",
+    "gate:human-approval"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "licence_register",
+    "music_plan"
+   ],
+   "outputs": [
+    "copyright_review"
+   ],
+   "dependencies": [],
+   "success_criteria": "any unknown licence halts readiness",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "K07",
+   "department": "K",
+   "name": "Community Guidelines Review Agent",
+   "responsibility": "Check content against a policy checklist and require owner attestation",
+   "tools": [
+    "bridge:projects-notes",
+    "gate:human-approval"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "metadata_bundle",
+    "render_mp4"
+   ],
+   "outputs": [
+    "policy_review"
+   ],
+   "dependencies": [],
+   "success_criteria": "attestation stored with checklist answers",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "K08",
+   "department": "K",
+   "name": "Monetization Policy Checklist Agent",
+   "responsibility": "Assemble the full readiness checklist with per-item evidence links",
+   "tools": [
+    "bridge:projects-notes"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "eligibility_view",
+    "copyright_review",
+    "policy_review"
+   ],
+   "outputs": [
+    "readiness_checklist"
+   ],
+   "dependencies": [],
+   "success_criteria": "every item links to evidence or is marked missing",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "K09",
+   "department": "K",
+   "name": "Monetization Application Preparation Agent",
+   "responsibility": "Prepare application materials; the owner submits in YouTube Studio",
+   "tools": [
+    "bridge:projects-notes",
+    "gate:human-approval"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "readiness_checklist"
+   ],
+   "outputs": [
+    "application_packet"
+   ],
+   "dependencies": [],
+   "success_criteria": "packet marked draft; no submission claimed",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "K10",
+   "department": "K",
+   "name": "Monetization Status Monitoring Agent",
+   "responsibility": "Record owner-reported application status; official status only via supported data",
+   "tools": [
+    "bridge:projects-notes",
+    "bridge:youtube-analytics"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "no supported API for application status; owner input required",
+   "inputs": [
+    "owner_status"
+   ],
+   "outputs": [
+    "status_monitor"
+   ],
+   "dependencies": [],
+   "success_criteria": "status provenance always recorded",
+   "retry_limit": 3,
+   "timeout_s": 300
+  },
+  {
+   "id": "L01",
+   "department": "L",
+   "name": "API Integration Agent",
+   "responsibility": "Maintain fixed-host provider adapters, OAuth callbacks and health checks",
+   "tools": [
+    "bridge:health",
+    "bridge:providers-test"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "provider_config"
+   ],
+   "outputs": [
+    "integration_health"
+   ],
+   "dependencies": [],
+   "success_criteria": "health endpoint reports each configured adapter",
+   "retry_limit": 2,
+   "timeout_s": 300
+  },
+  {
+   "id": "L02",
+   "department": "L",
+   "name": "Database Management Agent",
+   "responsibility": "Apply additive migrations with RLS preserved and no destructive SQL",
+   "tools": [
+    "bridge:health"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "migration_plan"
+   ],
+   "outputs": [
+    "migration_state"
+   ],
+   "dependencies": [],
+   "success_criteria": "migrations additive; RLS tests pass",
+   "retry_limit": 2,
+   "timeout_s": 300
+  },
+  {
+   "id": "L03",
+   "department": "L",
+   "name": "Background Job Queue Agent",
+   "responsibility": "Operate the mission queue leases, heartbeats and cancellation",
+   "tools": [
+    "worker:mission-run",
+    "bridge:mission-events"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "worker-host"
+   ],
+   "gated_by": "planning worker not hosted",
+   "inputs": [
+    "jobs"
+   ],
+   "outputs": [
+    "queue_state"
+   ],
+   "dependencies": [],
+   "success_criteria": "leases expire safely with no double execution",
+   "retry_limit": 2,
+   "timeout_s": 300
+  },
+  {
+   "id": "L04",
+   "department": "L",
+   "name": "Secret and Credential Security Agent",
+   "responsibility": "Keep secrets in server-side sensitive env vars and cipher columns only",
+   "tools": [
+    "bridge:health",
+    "bridge:usage-report"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "secret_inventory"
+   ],
+   "outputs": [
+    "security_state"
+   ],
+   "dependencies": [],
+   "success_criteria": "no secret in client bundle or logs",
+   "retry_limit": 2,
+   "timeout_s": 300
+  },
+  {
+   "id": "L05",
+   "department": "L",
+   "name": "Storage and Asset Cleanup Agent",
+   "responsibility": "Prune expired artefacts with retention rules once object storage exists",
+   "tools": [
+    "bridge:projects-notes"
+   ],
+   "capability": "planned",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "per-user object storage not implemented yet",
+   "inputs": [
+    "artefact_list"
+   ],
+   "outputs": [
+    "cleanup_plan"
+   ],
+   "dependencies": [],
+   "success_criteria": "deletion requires retention window and owner rule",
+   "retry_limit": 2,
+   "timeout_s": 300
+  },
+  {
+   "id": "L06",
+   "department": "L",
+   "name": "Retry and Recovery Agent",
+   "responsibility": "Apply bounded retries with backoff and mark ambiguous outcomes uncertain",
+   "tools": [
+    "bridge:mission-events",
+    "bridge:usage-report"
+   ],
+   "capability": "config-gated",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "planning worker not hosted",
+   "inputs": [
+    "failure"
+   ],
+   "outputs": [
+    "retry_decision"
+   ],
+   "dependencies": [],
+   "success_criteria": "no retry storms; attempts capped per stage",
+   "retry_limit": 2,
+   "timeout_s": 300
+  },
+  {
+   "id": "L07",
+   "department": "L",
+   "name": "System Health Monitor Agent",
+   "responsibility": "Expose service health, database status and queue liveness",
+   "tools": [
+    "bridge:health"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [],
+   "outputs": [
+    "health_report"
+   ],
+   "dependencies": [],
+   "success_criteria": "health endpoint answers with component states",
+   "retry_limit": 2,
+   "timeout_s": 300
+  },
+  {
+   "id": "L08",
+   "department": "L",
+   "name": "Cost and Usage Reporting Agent",
+   "responsibility": "Report attempt counts and provider-reported tokens without fake money precision",
+   "tools": [
+    "bridge:usage-report"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [],
+   "outputs": [
+    "usage_report"
+   ],
+   "dependencies": [],
+   "success_criteria": "report matches recorded attempts and tokens",
+   "retry_limit": 2,
+   "timeout_s": 300
+  },
+  {
+   "id": "L09",
+   "department": "L",
+   "name": "Audit Log Agent",
+   "responsibility": "Record sensitive operations for review once database audit logging is enabled",
+   "tools": [
+    "bridge:mission-events"
+   ],
+   "capability": "planned",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": "postgres audit logging currently disabled",
+   "inputs": [
+    "operations"
+   ],
+   "outputs": [
+    "audit_entries"
+   ],
+   "dependencies": [],
+   "success_criteria": "entries immutable and user-scoped",
+   "retry_limit": 2,
+   "timeout_s": 300
+  },
+  {
+   "id": "L10",
+   "department": "L",
+   "name": "Human Approval and Safety Gate Agent",
+   "responsibility": "Hold every public or destructive action until explicit owner confirmation",
+   "tools": [
+    "gate:human-approval",
+    "bridge:mission-events"
+   ],
+   "capability": "wired",
+   "runs_on": [
+    "vercel-bridge"
+   ],
+   "gated_by": null,
+   "inputs": [
+    "pending_action"
+   ],
+   "outputs": [
+    "approval_record"
+   ],
+   "dependencies": [],
+   "success_criteria": "no public action without stored approval record",
+   "retry_limit": 2,
+   "timeout_s": 300
+  }
+ ]
+}

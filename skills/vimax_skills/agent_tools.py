@@ -5,7 +5,17 @@ import json
 import os
 from pathlib import Path
 
-from .analyzers import lint_title, score_hook, score_idea
+from .analyzers import (
+    chapter_marks,
+    edit_decision_list,
+    funnel_report,
+    lint_title,
+    retention_leaks,
+    score_hook,
+    score_idea,
+    sponsor_rate,
+    voice_profile,
+)
 from .scene_analysis import detect_scenes, generated_video
 from .workforce import analyze_funnel, parse_youtube_reference
 
@@ -72,5 +82,47 @@ def build_skill_specs():
             handler=wrap("video_scene_cuts", scene_analysis),
             schema={"job_id": ToolArgumentSchema(str, required=True)},
             permission_mode="read-only", concurrency_safe=False,
+        ),
+        ToolSpec(
+            name="yt_edit_deadair",
+            description="Produce an edit decision list (dead-air cuts) from a supplied transcript in SRT/VTT text. Advisory local heuristic; does not modify files.",
+            handler=wrap("yt_edit_deadair", lambda a: edit_decision_list(a["transcript"], float(a.get("floor", 0.45)))),
+            schema={"transcript": ToolArgumentSchema(str, required=True), "floor": ToolArgumentSchema(float, default=0.45)},
+            permission_mode="read-only", concurrency_safe=True,
+        ),
+        ToolSpec(
+            name="yt_chapters",
+            description="Draft YouTube chapter marks from supplied timestamped transcript text, validated against YouTube's chapter rules. Advisory output; nothing is uploaded.",
+            handler=wrap("yt_chapters", lambda a: chapter_marks(a["transcript"], int(a.get("target", 8)))),
+            schema={"transcript": ToolArgumentSchema(str, required=True), "target": ToolArgumentSchema(int, default=8)},
+            permission_mode="read-only", concurrency_safe=True,
+        ),
+        ToolSpec(
+            name="yt_retention_reader",
+            description="Read a pasted YouTube Studio audience-retention CSV export and report hook leak, cliffs and slide. Local heuristic analysis of user-provided data only.",
+            handler=wrap("yt_retention_reader", lambda a: retention_leaks(a["export_csv"])),
+            schema={"export_csv": ToolArgumentSchema(str, required=True)},
+            permission_mode="read-only", concurrency_safe=True,
+        ),
+        ToolSpec(
+            name="yt_sponsor_ratecard",
+            description="Produce an illustrative sponsor rate band from a view count, niche and placement. Unverified CPM assumption, not a quote; makes no external calls.",
+            handler=wrap("yt_sponsor_ratecard", lambda a: sponsor_rate(int(a["views"]), str(a.get("niche", "general")), str(a.get("placement", "integrated")))),
+            schema={"views": ToolArgumentSchema(int, required=True), "niche": ToolArgumentSchema(str, default="general"), "placement": ToolArgumentSchema(str, default="integrated")},
+            permission_mode="read-only", concurrency_safe=True,
+        ),
+        ToolSpec(
+            name="yt_voice_profile",
+            description="Summarise simple pacing and word-choice statistics of a supplied English transcript (filler rate, sentence length, signature words). Advisory only.",
+            handler=wrap("yt_voice_profile", lambda a: voice_profile(a["transcript"])),
+            schema={"transcript": ToolArgumentSchema(str, required=True)},
+            permission_mode="read-only", concurrency_safe=True,
+        ),
+        ToolSpec(
+            name="yt_funnel_report",
+            description="Compute a local CTR/retention funnel report from pasted impressions, CTR, average view duration and video length. Heuristic estimates; not YouTube analytics.",
+            handler=wrap("yt_funnel_report", lambda a: funnel_report(int(a["impressions"]), float(a["ctr"]), str(a["avd"]), str(a["length"]), str(a.get("format", "long")), int(a["views"]) if a.get("views") is not None else None)),
+            schema={"impressions": ToolArgumentSchema(int, required=True), "ctr": ToolArgumentSchema(float, required=True), "avd": ToolArgumentSchema(str, required=True), "length": ToolArgumentSchema(str, required=True), "format": ToolArgumentSchema(str, default="long"), "views": ToolArgumentSchema(int, default=None)},
+            permission_mode="read-only", concurrency_safe=True,
         ),
     ]
