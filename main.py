@@ -240,6 +240,9 @@ except Exception:
 # ============================================================
 @app.get("/")
 async def root():
+    html_path = BASE_DIR / "index.html"
+    if html_path.exists():
+        return FileResponse(str(html_path), media_type="text/html")
     return {"name": "BG LABS API", "version": "9.0.0", "status": "running", "docs": "/docs"}
 
 @app.get("/health")

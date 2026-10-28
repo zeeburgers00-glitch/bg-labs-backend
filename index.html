@@ -1,0 +1,1941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BG LABS - AI Agent Workspace</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass { background: rgba(30, 30, 30, 0.7); backdrop-filter: blur(12px); }
+        .glass-panel { background: rgba(17, 17, 17, 0.6); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.08); }
+        .gradient-bg { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%); }
+        .btn-primary { background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); transition: all 0.3s; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.4); }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-4px); border-color: #6366f1; }
+        .sidebar-item { transition: all 0.2s; }
+        .sidebar-item:hover { background: rgba(99, 102, 241, 0.1); color: #6366f1; }
+        .sidebar-item.active { background: rgba(99, 102, 241, 0.2); border-right: 3px solid #6366f1; color: #6366f1; }
+        .wave { animation: wave 2s infinite; }
+        @keyframes wave { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        .pulse-dot { animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        .loader { border: 3px solid #f3f3f3; border-top: 3px solid #6366f1; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .fade-in { animation: fadeIn 0.4s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #1f1f1f; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #6366f1; }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen selection:bg-indigo-500">
+
+    <!-- Auth Overlay -->
+    <div id="authOverlay" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/95 backdrop-blur-sm hidden">
+        <div class="w-full max-w-md p-6 glass-panel rounded-2xl shadow-2xl">
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <i class="fa-solid fa-magic text-2xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-white">Welcome to BG LABS</h2>
+                <p class="text-gray-400 mt-2">Sign in to access your AI workspace</p>
+            </div>
+
+            <div class="space-y-4">
+                <button onclick="showLoginForm()" id="loginBtn" class="w-full py-3 px-4 rounded-lg bg-gray-800 border border-gray-700 text-white font-medium hover:bg-gray-700 transition">
+                    Sign In
+                </button>
+                <button onclick="showRegisterForm()" id="registerBtn" class="w-full py-3 px-4 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-medium hover:shadow-lg transition">
+                    Create Account
+                </button>
+            </div>
+
+            <div id="authForm" class="mt-6 space-y-4"></div>
+            <p id="authSwitch" class="text-center text-sm text-gray-400">
+                <span class="cursor-pointer text-indigo-400 hover:underline" onclick="showLoginForm()">Already have an account? Sign in</span>
+            </p>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="mainApp" class="hidden h-screen flex overflow-hidden">
+        <!-- Sidebar -->
+        <aside class="w-64 glass border-r border-gray-700 flex flex-col z-20">
+            <div class="h-16 flex items-center justify-center border-b border-gray-700">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
+                        <i class="fa-solid fa-magic text-white text-sm"></i>
+                    </div>
+                    <span class="font-bold text-lg tracking-tight text-white">BG<span class="text-indigo-400">LABS</span></span>
+                </div>
+            </div>
+
+            <nav class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-1">
+                <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 mb-4">Workspace</div>
+
+                <div class="sidebar-item active px-4 py-3 rounded-lg cursor-pointer flex items-center gap-3 text-gray-300 hover:bg-gray-800" onclick="navigate('dashboard')">
+                    <i class="fa-solid fa-layer-group w-5 text-center"></i>
+                    <span>Dashboard</span>
+                </div>
+
+                <div class="sidebar-item px-4 py-3 rounded-lg cursor-pointer flex items-center gap-3 text-gray-300 hover:bg-gray-800" onclick="navigate('studio')">
+                    <i class="fa-solid fa-microphone w-5 text-center"></i>
+                    <span>AI Studio</span>
+                </div>
+
+                <div class="sidebar-item px-4 py-3 rounded-lg cursor-pointer flex items-center gap-3 text-gray-300 hover:bg-gray-800" onclick="navigate('voices')">
+                    <i class="fa-solid fa-volume-high w-5 text-center"></i>
+                    <span>Voice Library</span>
+                </div>
+
+                <div class="sidebar-item px-4 py-3 rounded-lg cursor-pointer flex items-center gap-3 text-gray-300 hover:bg-gray-800" onclick="navigate('image')">
+                    <i class="fa-solid fa-image w-5 text-center"></i>
+                    <span>Image Generator</span>
+                </div>
+
+                <div class="sidebar-item px-4 py-3 rounded-lg cursor-pointer flex items-center gap-3 text-gray-300 hover:bg-gray-800" onclick="navigate('script')">
+                    <i class="fa-solid fa-file-lines w-5 text-center"></i>
+                    <span>Script Writer</span>
+                </div>
+
+                <div class="sidebar-item px-4 py-3 rounded-lg cursor-pointer flex items-center gap-3 text-gray-300 hover:bg-gray-800" onclick="navigate('avatar')">
+                    <i class="fa-solid fa-user-tie w-5 text-center"></i>
+                    <span>Avatar Studio</span>
+                </div>
+
+                <div class="sidebar-item px-4 py-3 rounded-lg cursor-pointer flex items-center gap-3 text-gray-300 hover:bg-gray-800" onclick="navigate('youtube')">
+                    <i class="fa-brands fa-youtube w-5 text-center"></i>
+                    <span>YouTube Automation</span>
+                </div>
+
+                <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 mb-4 mt-6">Account</div>
+
+                <div class="sidebar-item px-4 py-3 rounded-lg cursor-pointer flex items-center gap-3 text-gray-300 hover:bg-gray-800" onclick="navigate('billing')">
+                    <i class="fa-solid fa-credit-card w-5 text-center"></i>
+                    <span>Billing</span>
+                </div>
+
+                <div class="sidebar-item px-4 py-3 rounded-lg cursor-pointer flex items-center gap-3 text-gray-300 hover:bg-gray-800" onclick="navigate('referral')">
+                    <i class="fa-solid fa-share-nodes w-5 text-center"></i>
+                    <span>Referral</span>
+                </div>
+
+                <div id="adminLink" class="sidebar-item px-4 py-3 rounded-lg cursor-pointer flex items-center gap-3 text-gray-300 hover:bg-gray-800 hidden" onclick="navigate('admin')">
+                    <i class="fa-solid fa-shield-halved w-5 text-center"></i>
+                    <span>Admin Panel</span>
+                </div>
+
+                <div class="sidebar-item px-4 py-3 rounded-lg cursor-pointer flex items-center gap-3 text-gray-300 hover:bg-gray-800" onclick="logout()">
+                    <i class="fa-solid fa-sign-out-alt w-5 text-center"></i>
+                    <span>Sign Out</span>
+                </div>
+            </nav>
+
+            <div class="p-4 border-t border-gray-700">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-sm font-bold">
+                        <span id="userInitials">U</span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-white truncate" id="userDisplayName">User</p>
+                        <p class="text-xs text-gray-400 truncate" id="userEmail">user@email.com</p>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="text-gray-400">Credits</span>
+                        <span class="text-indigo-400 font-medium" id="userCredits">0</span>
+                    </div>
+                    <div class="w-full bg-gray-700 h-1.5 rounded-full overflow-hidden">
+                        <div class="bg-indigo-500 h-full" style="width: 50%"></div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col overflow-hidden relative">
+            <!-- Background gradient -->
+            <div class="absolute inset-0 -z-10 opacity-20 pointer-events-none">
+                <div class="absolute top-0 left-1/4 w-96 h-96 bg-indigo-500 rounded-full mix-blend-multiply filter blur-[128px] opacity-20 animate-pulse"></div>
+                <div class="absolute top-0 right-1/4 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-[128px] opacity-20 animate-pulse" style="animation-delay: 2s"></div>
+                <div class="absolute bottom-0 left-1/3 w-80 h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-[128px] opacity-20" style="animation-delay: 4s"></div>
+            </div>
+
+            <!-- Top Bar -->
+            <header class="h-16 glass border-b border-gray-700 flex items-center justify-between px-6 z-10">
+                <div class="flex items-center gap-4">
+                    <button onclick="toggleSidebar()" class="lg:hidden text-gray-400 hover:text-white">
+                        <i class="fa-solid fa-bars text-xl"></i>
+                    </button>
+                    <h1 class="text-xl font-semibold text-white" id="pageTitle">Dashboard</h1>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="hidden md:flex items-center gap-2 text-xs text-gray-400">
+                        <div class="w-2 h-2 rounded-full bg-green-500 pulse-dot"></div>
+                        <span>All systems operational</span>
+                    </div>
+                    <button class="text-gray-400 hover:text-white transition" onclick="showNotifications()">
+                        <i class="fa-regular fa-bell text-xl"></i>
+                    </button>
+                    <button onclick="openUserMenu()" class="text-gray-400 hover:text-white transition">
+                        <i class="fa-regular fa-user text-xl"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Content Area -->
+            <main class="flex-1 overflow-y-auto p-6 lg:p-8 custom-scrollbar" id="contentArea">
+                <!-- Page content injected here -->
+            </main>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <script>
+    // ============================================================================
+    // CONFIG
+    // ============================================================================
+    const API_BASE = window.location.origin; // Same origin as backend
+    let token = localStorage.getItem('bglabs_token') || null;
+    let currentUser = null;
+    let sidebarOpen = true;
+
+    // ============================================================================
+    // INIT
+    // ============================================================================
+    document.addEventListener('DOMContentLoaded', () => {
+        if (token) {
+            initApp();
+        } else {
+            document.getElementById('authOverlay').classList.remove('hidden');
+            document.getElementById('mainApp').classList.add('hidden');
+        }
+    });
+
+    // ============================================================================
+    // AUTH
+    // ============================================================================
+    async function initApp() {
+        try {
+            const res = await apiGet('/api/auth/me');
+            currentUser = res;
+            renderApp();
+        } catch (e) {
+            token = null;
+            localStorage.removeItem('bglabs_token');
+            location.reload();
+        }
+    }
+
+    function renderApp() {
+        document.getElementById('authOverlay').classList.add('hidden');
+        document.getElementById('mainApp').classList.remove('hidden');
+        document.getElementById('userDisplayName').textContent = currentUser.full_name || currentUser.username;
+        document.getElementById('userEmail').textContent = currentUser.email;
+        document.getElementById('userInitials').textContent = (currentUser.full_name || currentUser.username).charAt(0).toUpperCase();
+        document.getElementById('userCredits').textContent = currentUser.credits || 0;
+
+        if (currentUser.role === 'admin') {
+            document.getElementById('adminLink').classList.remove('hidden');
+        }
+
+        navigate('dashboard');
+    }
+
+    async function login(username, password) {
+        const formData = new FormData();
+        formData.append('username', username);
+        formData.append('password', password);
+        const res = await fetch(`${API_BASE}/api/auth/login`, {
+            method: 'POST',
+            body: formData
+        });
+        if (!res.ok) throw new Error('Login failed');
+        const data = await res.json();
+        token = data.access_token;
+        localStorage.setItem('bglabs_token', token);
+        await initApp();
+    }
+
+    async function register(email, username, full_name, password) {
+        const formData = new FormData();
+        formData.append('email', email);
+        formData.append('username', username);
+        formData.append('full_name', full_name);
+        formData.append('password', password);
+        const res = await fetch(`${API_BASE}/api/auth/register`, {
+            method: 'POST',
+            body: formData
+        });
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || 'Registration failed');
+        }
+        const data = await res.json();
+        token = data.access_token;
+        localStorage.setItem('bglabs_token', token);
+        await initApp();
+    }
+
+    function logout() {
+        token = null;
+        currentUser = null;
+        localStorage.removeItem('bglabs_token');
+        location.reload();
+    }
+
+    // ============================================================================
+    // API HELPERS
+    // ============================================================================
+    async function apiGet(path) {
+        const res = await fetch(`${API_BASE}${path}`, {
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        if (res.status === 401) { logout(); throw new Error('Unauthorized'); }
+        return res.json();
+    }
+
+    async function apiPost(path, body) {
+        const res = await fetch(`${API_BASE}${path}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+            body: JSON.stringify(body)
+        });
+        if (res.status === 401) { logout(); throw new Error('Unauthorized'); }
+        return res.json();
+    }
+
+    async function apiPostForm(path, formData) {
+        const res = await fetch(`${API_BASE}${path}`, {
+            method: 'POST',
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+            body: formData
+        });
+        if (res.status === 401) { logout(); throw new Error('Unauthorized'); }
+        return res.json();
+    }
+
+    // ============================================================================
+    // NAVIGATION
+    // ============================================================================
+    function navigate(page) {
+        // Update sidebar
+        document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active', 'bg-indigo-500/20', 'border-indigo-500/20', 'border-r-4', 'text-indigo-400'));
+        event?.currentTarget?.classList.add('active', 'bg-indigo-500/20', 'border-r-4', 'text-indigo-400');
+
+        const content = document.getElementById('contentArea');
+        document.getElementById('pageTitle').textContent = page.charAt(0).toUpperCase() + page.slice(1);
+
+        content.innerHTML = '<div class="animate-pulse flex items-center justify-center h-64"><div class="loader"></div></div>';
+
+        setTimeout(() => {
+            switch(page) {
+                case 'dashboard': renderDashboard(); break;
+                case 'studio': renderStudio(); break;
+                case 'voices': renderVoices(); break;
+                case 'image': renderImageGenerator(); break;
+                case 'script': renderScriptWriter(); break;
+                case 'avatar': renderAvatarStudio(); break;
+                case 'youtube': renderYouTube(); break;
+                case 'billing': renderBilling(); break;
+                case 'referral': renderReferral(); break;
+                case 'admin': renderAdmin(); break;
+            }
+        }, 300);
+    }
+
+    // ============================================================================
+    // TOAST
+    // ============================================================================
+    function toast(message, type = 'info') {
+        const container = document.getElementById('toastContainer');
+        const el = document.createElement('div');
+        const colors = {
+            success: 'bg-green-500/90',
+            error: 'bg-red-500/90',
+            info: 'bg-indigo-500/90',
+            warning: 'bg-yellow-500/90'
+        };
+        el.className = `${colors[type]} text-white px-4 py-3 rounded-lg shadow-xl flex items-center gap-3 slide-in-right`;
+        el.innerHTML = `<i class="fa-${type === 'success' ? 'solid fa-check-circle' : type === 'error' ? 'solid fa-exclamation-circle' : 'solid fa-info-circle'}"></i> <span>${message}</span>`;
+        container.appendChild(el);
+        setTimeout(() => el.remove(), 4000);
+    }
+
+    // ============================================================================
+    // DASHBOARD
+    // ============================================================================
+    async function renderDashboard() {
+        const content = document.getElementById('contentArea');
+        content.innerHTML = `
+            <div class="fade-in">
+                <div class="mb-8">
+                    <h2 class="text-3xl font-bold text-white mb-2">Overview</h2>
+                    <p class="text-gray-400">Welcome back, ${currentUser.full_name || currentUser.username}. Here's what's happening in your workspace.</p>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="glass-panel p-6 rounded-xl card-hover">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-400 text-sm">Credits</p>
+                                <h3 class="text-2xl font-bold text-white" id="dashCredits">${currentUser.credits}</h3>
+                            </div>
+                            <div class="w-12 h-12 bg-indigo-500/20 rounded-lg flex items-center justify-center text-indigo-400">
+                                <i class="fa-solid fa-coins"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="glass-panel p-6 rounded-lg card-hover">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-400 text-sm">Projects</p>
+                                <h3 class="text-2xl font-bold text-white" id="dashProjects">-</h3>
+                            </div>
+                            <div class="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center text-purple-400">
+                                <i class="fa-solid fa-folder"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="glass-panel p-6 rounded-lg card-hover">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-400 text-sm">Audio Files</p>
+                                <h3 class="text-2xl font-bold text-white" id="dashAudio">-</h3>
+                            </div>
+                            <div class="w-12 h-12 bg-pink-500/20 rounded-lg flex items-center justify-center text-pink-400">
+                                <i class="fa-solid fa-file-audio"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="glass-panel p-6 rounded-lg card-hover">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-400 text-sm">Subscription</p>
+                                <h3 class="text-xl font-bold text-white">${currentUser.subscription_tier || 'free'}</h3>
+                            </div>
+                            <div class="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center text-blue-400">
+                                <i class="fa-solid fa-crown"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="glass-panel p-6 rounded-xl mb-8">
+                    <h3 class="text-lg font-semibold text-white mb-6">Quick Actions</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <button onclick="navigate('studio')" class="card-hover p-4 border border-gray-700 rounded-lg hover:border-indigo-500 transition flex items-center gap-3 group">
+                            <div class="w-10 h-10 rounded bg-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white transition">
+                                <i class="fa-solid fa-microphone"></i>
+                            </div>
+                            <div>
+                                <p class="font-medium text-white">Generate Audio</p>
+                                <p class="text-xs text-gray-400">Text-to-Speech</p>
+                            </div>
+                        </button>
+                        <button onclick="navigate('image')" class="card-hover p-4 border border-gray-700 rounded-lg hover:border-indigo-500 transition flex items-center gap-3 group">
+                            <div class="w-10 h-10 rounded bg-purple-500/20 flex items-center justify-center text-purple-400 group-hover:bg-purple-500 group-hover:text-white transition">
+                                <i class="fa-solid fa-image"></i>
+                            </div>
+                            <div>
+                                <p class="font-medium text-white">Create Image</p>
+                                <p class="text-xs text-gray-400">AI Image Gen</p>
+                            </div>
+                        </button>
+                        <button onclick="navigate('script')" class="card-hover p-4 border border-gray-700 rounded-lg hover:border-indigo-500 transition flex items-center gap-3 group">
+                            <div class="w-10 h-10 rounded bg-pink-500/20 flex items-center justify-center text-pink-400 group-hover:bg-pink-500 group-hover:text-white transition">
+                                <i class="fa-solid fa-file-lines"></i>
+                            </div>
+                            <div>
+                                <p class="font-medium text-white">Write Script</p>
+                                <p class="text-xs text-gray-400">Script Generator</p>
+                            </div>
+                        </button>
+                        <button onclick="navigate('avatar')" class="card-hover p-4 border border-gray-700 rounded-lg hover:border-indigo-500 transition flex items-center gap-3 group">
+                            <div class="w-10 h-10 rounded bg-blue-500/20 flex items-center justify-center text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition">
+                                <i class="fa-solid fa-user-tie"></i>
+                            </div>
+                            <div>
+                                <p class="font-medium text-white">Avatar Video</p>
+                                <p class="text-xs text-gray-400">Talking Head</p>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="glass-panel p-6 rounded-xl">
+                    <h3 class="text-lg font-semibold text-white mb-6">Recent Activity</h3>
+                    <div class="space-y-4" id="recentActivity">
+                        <div class="flex items-center gap-4 p-3 rounded-lg bg-gray-800/50">
+                            <div class="w-8 h-8 rounded bg-indigo-500/20 flex items-center justify-center text-indigo-400">
+                                <i class="fa-solid fa-circle-check text-xs"></i>
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-sm text-white">Account connected</p>
+                                <p class="text-xs text-gray-400">Just now</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // ============================================================================
+    // STUDIO (TTS)
+    // ============================================================================
+    async function renderStudio() {
+        const content = document.getElementById('contentArea');
+        content.innerHTML = `
+            <div class="fade-in">
+                <div class="flex justify-between items-end mb-8">
+                    <div>
+                        <h2 class="text-3xl font-bold text-white mb-2">AI Studio</h2>
+                        <p class="text-gray-400">Convert text to speech with realistic AI voices</p>
+                    </div>
+                    <button onclick="document.getElementById('ttsPanel').scrollIntoView()" class="btn-primary px-6 py-3 rounded-lg text-white font-medium">
+                        <i class="fa-solid fa-play mr-2"></i>Generate Audio
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- Left: Generator -->
+                    <div class="lg:col-span-2 space-y-6">
+                        <div class="glass-panel p-6 rounded-xl">
+                            <h3 class="text-lg font-semibold text-white mb-6">Text to Speech</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-300 mb-2">Text</label>
+                                    <textarea id="ttsText" rows="6" class="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-4 text-white focus:outline-none focus:border-indigo-500 transition" placeholder="Enter text to convert to speech..."></textarea>
+                                    <p class="text-xs text-gray-500 mt-1" id="ttsCharCount">0 characters</p>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-300 mb-2">Voice</label>
+                                        <select id="ttsVoice" class="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-indigo-500">
+                                            <option value="aria">Aria (Neural)</option>
+                                            <option value="jenny">Jenny (Neural)</option>
+                                            <option value="guy">Guy (Neural)</option>
+                                            <option value="nancy">Nancy (Neural)</option>
+                                            <option value="tony">Tony (Neural)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-300 mb-2">Language</label>
+                                        <select id="ttsLang" class="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-indigo-500">
+                                            <option value="en">English</option>
+                                            <option value="es">Spanish</option>
+                                            <option value="fr">French</option>
+                                            <option value="de">German</option>
+                                            <option value="hi">Hindi</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-300 mb-2">Speed</label>
+                                        <input type="range" id="ttsSpeed" min="0.5" max="2" step="0.1" value="1" class="w-full accent-indigo-500">
+                                    </div>
+                                </div>
+                                <button onclick="generateTTS()" class="w-full btn-primary py-4 rounded-lg text-white font-bold mt-4">
+                                    Generate Audio
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Audio Player -->
+                        <div id="audioPlayerContainer" class="hidden glass-panel p-6 rounded-xl fade-in">
+                            <h3 class="text-lg font-semibold text-white mb-4">Generated Audio</h3>
+                            <div class="flex items-center gap-4">
+                                <audio id="ttsAudio" controls class="w-full"></audio>
+                            </div>
+                            <div class="mt-4 flex gap-3">
+                                <button onclick="downloadTTS()" class="flex-1 bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-white text-sm font-medium transition">
+                                    Download
+                                </button>
+                                <button onclick="document.getElementById('audioPlayerContainer').classList.add('hidden')" class="flex-1 border border-gray-600 hover:bg-gray-700 px-4 py-2 rounded-lg text-white text-sm font-medium transition">
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: History -->
+                    <div class="space-y-6">
+                        <div class="glass-panel p-6 rounded-xl">
+                            <h3 class="text-lg font-semibold text-white mb-4">Recent Audio</h3>
+                            <div id="ttsHistory" class="space-y-3">
+                                <div class="text-center py-8 text-gray-400">
+                                    <i class="fa-regular fa-clock text-2xl mb-2"></i>
+                                    <p>No audio files yet</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        loadTTSHistory();
+    }
+
+    function updateCharCount() {
+        const text = document.getElementById('ttsText').value;
+        document.getElementById('ttsCharCount').textContent = `${text.length} characters`;
+    }
+
+    async function generateTTS() {
+        const text = document.getElementById('ttsText').value;
+        const voice = document.getElementById('ttsVoice').value;
+        const lang = document.getElementById('ttsLang').value;
+        const speed = document.getElementById('ttsSpeed').value;
+
+        if (!text.trim()) {
+            toast('Please enter some text', 'error');
+            return;
+        }
+
+        try {
+            const btn = document.querySelector('button[onclick="generateTTS()"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<div class="loader text-white"></div>';
+            btn.disabled = true;
+
+            const res = await apiPost('/api/studio/generate', {
+                text,
+                voice_key: voice,
+                language: lang,
+                speed: parseFloat(speed),
+                temperature: 1.0
+            });
+
+            const audioEl = document.getElementById('ttsAudio');
+            audioEl.src = `${API_BASE}${res.url}`;
+            document.getElementById('audioPlayerContainer').classList.remove('hidden');
+
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            toast('Audio generated successfully!', 'success');
+            loadTTSHistory();
+        } catch (e) {
+            toast(e.message || 'Generation failed', 'error');
+        }
+    }
+
+    async function downloadTTS() {
+        const url = document.getElementById('ttsAudio').src;
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'audio.mp3';
+        a.click();
+    }
+
+    async function loadTTSHistory() {
+        try {
+            const res = await apiGet('/api/studio/audio');
+            const container = document.getElementById('ttsHistory');
+            if (!res || res.length === 0) {
+                container.innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fa-regular fa-clock text-2xl mb-2"></i><p>No audio files yet</p></div>';
+                return;
+            }
+            container.innerHTML = res.map(item => `
+                <div class="flex items-center gap-4 p-3 bg-gray-800/30 rounded-lg border border-gray-700/50">
+                    <audio controls class="w-32" src="${API_BASE}${item.url}"></audio>
+                    <div class="flex-1">
+                        <div class="text-sm font-medium text-white truncate">${item.text_content || 'Audio'}</div>
+                        <div class="text-xs text-gray-500">${new Date(item.created_at).toLocaleDateString()}</div>
+                    </div>
+                    <button onclick="deleteAudio(${item.id})" class="text-gray-500 hover:text-red-400">
+                        <i class="fa-regular fa-trash-alt"></i>
+                    </button>
+                </div>
+            `).join('');
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function deleteAudio(id) {
+        if (!confirm('Delete this audio file?')) return;
+        try {
+            await fetch(`${API_BASE}/api/studio/audio/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            loadTTSHistory();
+            toast('Deleted successfully', 'success');
+        } catch (e) {
+            toast('Delete failed', 'error');
+        }
+    }
+
+    // ============================================================================
+    // VOICES
+    // ============================================================================
+    async function renderVoices() {
+        const content = document.getElementById('contentArea');
+        content.innerHTML = `
+            <div class="fade-in">
+                <div class="flex justify-between items-end mb-8">
+                    <div>
+                        <h2 class="text-3xl font-bold text-white mb-2">Voice Library</h2>
+                        <p class="text-gray-400">Browse and manage AI voices</p>
+                    </div>
+                    <button onclick="navigate('studio')" class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-white text-sm font-medium transition">
+                        <i class="fa-solid fa-arrow-left mr-2"></i>Back to Studio
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                    <div class="glass-panel p-4 rounded-xl">
+                        <h3 class="text-sm font-semibold text-gray-400 uppercase mb-2">Built-in Voices</h3>
+                        <div id="builtinVoices" class="space-y-2">
+                            <div class="text-center py-4 text-gray-400">Loading...</div>
+                        </div>
+                    </div>
+                    <div class="glass-panel p-4 rounded-xl">
+                        <h3 class="text-sm font-semibold text-gray-400 uppercase mb-2">Custom Voices</h3>
+                        <div id="customVoices" class="space-y-2">
+                            <div class="text-center py-4 text-gray-400">Loading...</div>
+                        </div>
+                    </div>
+                    <div class="glass-panel p-4 rounded-xl flex flex-col justify-center items-center h-32">
+                        <div class="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mb-3">
+                            <i class="fa-solid fa-microphone-lines text-2xl text-white"></i>
+                        </div>
+                        <h3 class="text-white font-medium">Clone Voice</h3>
+                        <button onclick="document.getElementById('voiceCloneModal').classList.remove('hidden')" class="mt-3 text-indigo-400 hover:text-indigo-300 text-sm font-medium underline">Clone your voice</button>
+                    </div>
+                </div>
+
+                <!-- Voice Clone Modal -->
+                <div id="voiceCloneModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 backdrop-blur-sm">
+                    <div class="glass-panel p-6 rounded-xl w-full max-w-md mx-4">
+                        <h3 class="text-lg font-bold text-white mb-6">Clone Your Voice</h3>
+                        <form id="voiceCloneForm" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Voice Name</label>
+                                <input type="text" id="cloneName" placeholder="My Voice" class="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Description</label>
+                                <input type="text" id="cloneDesc" placeholder="Optional description" class="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Audio Sample (WAV, MP3, OGG, FLAC)</label>
+                                <input type="file" id="cloneAudio" accept=".wav,.mp3,.ogg,.flac" class="w-full block text-gray-400">
+                            </div>
+                            <div class="flex gap-3 mt-6">
+                                <button type="button" onclick="document.getElementById('voiceCloneModal').classList.add('hidden')" class="flex-1 bg-gray-700 hover:bg-gray-600 px-4 py-3 rounded-lg text-white font-medium">Cancel</button>
+                                <button type="submit" class="flex-1 btn-primary px-4 py-3 rounded-lg text-white font-bold">Clone Voice</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        loadVoices();
+        document.getElementById('voiceCloneForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const formData = new FormData();
+            formData.append('name', document.getElementById('cloneName').value);
+            formData.append('description', document.getElementById('cloneDesc').value);
+            formData.append('audio_file', document.getElementById('cloneAudio').files[0]);
+            try {
+                await apiPostForm('/api/voices/clone', formData);
+                document.getElementById('voiceCloneModal').classList.add('hidden');
+                toast('Voice cloned successfully!', 'success');
+                loadVoices();
+            } catch (err) {
+                toast(err.message || 'Voice cloning failed', 'error');
+            }
+        };
+    }
+
+    async function loadVoices() {
+        try {
+            const res = await apiGet('/api/voices/builtin');
+            const container = document.getElementById('builtinVoices');
+            container.innerHTML = (res.voices || []).map(v => `
+                <div class="flex items-center gap-3 p-3 bg-gray-800/30 rounded-lg border border-gray-700/50">
+                    <div class="w-10 h-10 rounded bg-gray-700 flex items-center justify-center text-sm font-bold">
+                        ${v.name ? v.name.charAt(0).toUpperCase() : 'V'}
+                    </div>
+                    <div class="flex-1">
+                        <div class="text-sm text-white font-medium">${v.name || 'Unknown'}</div>
+                        <div class="text-xs text-gray-500">${v.language || 'en'} • ${v.gender || 'neutral'}</div>
+                    </div>
+                    <button onclick="testVoice('${v.name || v.id}')" class="text-indigo-400 hover:text-indigo-300">
+                        <i class="fa-solid fa-play"></i>
+                    </button>
+                </div>
+            `).join('');
+
+            const customRes = await apiGet('/api/voices/custom');
+            const customContainer = document.getElementById('customVoices');
+            customContainer.innerHTML = (customRes || []).map(v => `
+                <div class="flex items-center gap-3 p-3 bg-gray-800/30 rounded-lg border border-gray-700/50">
+                    <div class="w-10 h-10 rounded bg-purple-500/20 flex items-center justify-center text-sm font-bold text-purple-400">
+                        C
+                    </div>
+                    <div class="flex-1">
+                        <div class="text-sm text-white font-medium">${v.name || 'Custom Voice'}</div>
+                        <div class="text-xs text-gray-500">Custom • Cloned</div>
+                    </div>
+                    <button onclick="deleteVoice('${v.id || v.voice_key}')" class="text-red-500 hover:text-red-400">
+                        <i class="fa-regular fa-trash-alt"></i>
+                    </button>
+                </div>
+            `).join('') || '<div class="text-center py-4 text-gray-400">No custom voices</div>';
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function testVoice(name) {
+        try {
+            await apiPost('/api/studio/generate', {
+                text: `Hello, this is ${name} speaking.`,
+                voice_key: name,
+                language: 'en',
+                speed: 1.0
+            });
+            toast(`Testing ${name} voice`, 'info');
+        } catch (e) {
+            toast('Test failed', 'error');
+        }
+    }
+
+    async function deleteVoice(key) {
+        if (!confirm('Delete this custom voice?')) return;
+        try {
+            await fetch(`${API_BASE}/api/voices/${key}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            toast('Voice deleted', 'success');
+            loadVoices();
+        } catch (e) {
+            toast('Delete failed', 'error');
+        }
+    }
+
+    // ============================================================================
+    // IMAGE GENERATOR
+    // ============================================================================
+    async function renderImageGenerator() {
+        const content = document.getElementById('contentArea');
+        content.innerHTML = `
+            <div class="fade-in">
+                <div class="flex justify-between items-end mb-8">
+                    <div>
+                        <h2 class="text-3xl font-bold text-white mb-2">Image Generator</h2>
+                        <p class="text-gray-400">Create stunning AI images</p>
+                    </div>
+                    <button onclick="document.getElementById('imgGenPanel').scrollIntoView()" class="btn-primary px-6 py-3 rounded-lg text-white font-medium">
+                        <i class="fa-solid fa-magic mr-2"></i>Generate Image
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-2 space-y-6">
+                        <div id="imgGenPanel" class="glass-panel p-6 rounded-xl">
+                            <h3 class="text-lg font-semibold text-white mb-6">Generate Image</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-300 mb-2">Prompt</label>
+                                    <textarea id="imgPrompt" rows="4" class="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-4 text-white focus:outline-none focus:border-indigo-500" placeholder="A beautiful cyberpunk cityscape at night..."></textarea>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-300 mb-2">Model</label>
+                                        <select id="imgModel" class="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-indigo-500">
+                                            <option value="dall-e-3">DALL-E 3</option>
+                                            <option value="stable-diffusion-xl">Stable Diffusion XL</option>
+                                            <option value="midjourney-v6">Midjourney v6</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-300 mb-2">Style</label>
+                                        <select id="imgStyle" class="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-indigo-500">
+                                            <option value="vivid">Vivid</option>
+                                            <option value="cinematic">Cinematic</option>
+                                            <option value="anime">Anime</option>
+                                            <option value="digital-art">Digital Art</option>
+                                            <option value="oil-painting">Oil Painting</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-300 mb-2">Size</label>
+                                        <select id="imgSize" class="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-indigo-500">
+                                            <option value="1024x1024">1024x1024</option>
+                                            <option value="1792x1024">1792x1024</option>
+                                            <option value="1024x1792">1024x1792</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <button onclick="generateImage()" class="w-full btn-primary py-4 rounded-lg text-white font-bold">
+                                    Generate Image
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="imgResultContainer" class="hidden glass-panel p-6 rounded-xl fade-in">
+                            <h3 class="text-lg font-semibold text-white mb-4">Result</h3>
+                            <div class="flex flex-col items-center gap-4">
+                                <img id="imgResult" src="" alt="Generated" class="max-w-full max-h-[500px] rounded-xl border border-gray-700 shadow-2xl">
+                                <div class="flex gap-3">
+                                    <button onclick="downloadImage()" class="bg-gray-700 hover:bg-gray-600 px-6 py-2 rounded-lg text-white text-sm font-medium transition">Download</button>
+                                    <button onclick="saveImage()" class="btn-primary px-6 py-2 rounded-lg text-white text-sm font-medium transition">Save to Gallery</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-6">
+                        <div class="glass-panel p-6 rounded-xl">
+                            <h3 class="text-lg font-semibold text-white mb-4">My Gallery</h3>
+                            <div id="imgGallery" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div class="text-center py-8 text-gray-400">
+                                    <i class="fa-regular fa-image text-2xl mb-2"></i>
+                                    <p>No images yet</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        loadImageGallery();
+    }
+
+    async function generateImage() {
+        const prompt = document.getElementById('imgPrompt').value;
+        const model = document.getElementById('imgModel').value;
+        const size = document.getElementById('imgSize').value;
+        const style = document.getElementById('imgStyle').value;
+
+        if (!prompt.trim()) {
+            toast('Please enter a prompt', 'error');
+            return;
+        }
+
+        try {
+            const btn = document.querySelector('button[onclick="generateImage()"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<div class="loader text-white"></div>';
+            btn.disabled = true;
+
+            const res = await apiPost('/api/image/generate', {
+                prompt,
+                model,
+                size,
+                style,
+                n: 1
+            });
+
+            document.getElementById('imgResult').src = `${API_BASE}${res.result?.image_url || res.url || ''}`;
+            document.getElementById('imgResultContainer').classList.remove('hidden');
+
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            toast('Image generated!', 'success');
+            loadImageGallery();
+        } catch (e) {
+            toast(e.message || 'Generation failed', 'error');
+        }
+    }
+
+    async function loadImageGallery() {
+        try {
+            const res = await apiGet('/api/image/my-images');
+            const container = document.getElementById('imgGallery');
+            if (!res || res.length === 0) {
+                container.innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fa-regular fa-image text-2xl mb-2"></i><p>No images yet</p></div>';
+                return;
+            }
+            container.innerHTML = res.map(proj => {
+                const images = (proj.settings && proj.settings.images) || [];
+                return images.map(img => `
+                    <div class="group relative rounded-xl overflow-hidden border border-gray-700/50 bg-gray-800/30">
+                        <img src="${img.url}" class="w-full h-48 object-cover" alt="Generated">
+                        <div class="absolute inset-0 bg-black/50 group-hover:opacity-100 transition opacity-0 flex flex-col items-center justify-center p-4">
+                            <div class="text-white text-sm font-medium mb-1">${proj.name}</div>
+                            <div class="text-xs text-gray-400">${img.prompt?.slice(0, 50)}...</div>
+                            <button onclick="downloadImageUrl('${img.url}')" class="mt-3 text-indigo-400 hover:text-indigo-300 text-sm font-medium underline">Download</button>
+                        </div>
+                    </div>
+                `).join('');
+            }).join('');
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    function downloadImage() {
+        const url = document.getElementById('imgResult').src;
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'image.png';
+        a.click();
+    }
+
+    function downloadImageUrl(url) {
+        const a = document.createElement('a');
+        a.href = `${API_BASE}${url}`;
+        a.download = 'image.png';
+        a.click();
+    }
+
+    async function saveImage() {
+        const url = document.getElementById('imgResult').src;
+        const prompt = document.getElementById('imgPrompt').value;
+        try {
+            await apiPost('/api/image/save', {
+                prompt,
+                image_url: url.replace(`${API_BASE}`, ''),
+                model: document.getElementById('imgModel').value,
+                size: document.getElementById('imgSize').value
+            });
+            toast('Saved to gallery!', 'success');
+            loadImageGallery();
+        } catch (e) {
+            toast('Save failed', 'error');
+        }
+    }
+
+    // ============================================================================
+    // SCRIPT WRITER
+    // ============================================================================
+    async function renderScriptWriter() {
+        const content = document.getElementById('contentArea');
+        content.innerHTML = `
+            <div class="fade-in">
+                <div class="flex justify-between items-end mb-8">
+                    <div>
+                        <h2 class="text-3xl font-bold text-white mb-2">Script Writer</h2>
+                        <p class="text-gray-400">Generate scripts for videos, podcasts, and more</p>
+                    </div>
+                    <button onclick="document.getElementById('scriptGenPanel').scrollIntoView()" class="btn-primary px-6 py-3 rounded-lg text-white font-medium">
+                        <i class="fa-solid fa-wand-magic-sparkles mr-2"></i>Generate Script
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-2 space-y-6">
+                        <div id="scriptGenPanel" class="glass-panel p-6 rounded-xl">
+                            <h3 class="text-lg font-semibold text-white mb-6">Generate Script</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-300 mb-2">Topic</label>
+                                    <input type="text" id="scriptTopic" placeholder="e.g. How to start a YouTube channel" class="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-indigo-500">
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-300 mb-2">Template</label>
+                                        <select id="scriptTemplate" class="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-indigo-500">
+                                            <option value="youtube">YouTube Video</option>
+                                            <option value="educational">Educational</option>
+                                            <option value="storytelling">Storytelling</option>
+                                            <option value="sales">Sales/Marketing</option>
+                                            <option value="podcast">Podcast</option>
+                                            <option value="short_form">Short Form</option>
+                                            <option value="webinar">Webinar</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-300 mb-2">Style</label>
+                                        <select id="scriptStyle" class="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-indigo-500">
+                                            <option value="conversational">Conversational</option>
+                                            <option value="professional">Professional</option>
+                                            <option value="energetic">Energetic</option>
+                                            <option value="calm">Calm</option>
+                                            <option value="authoritative">Authoritative</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-300 mb-2">Length</label>
+                                        <select id="scriptLength" class="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-indigo-500">
+                                            <option value="short">Short</option>
+                                            <option value="medium">Medium</option>
+                                            <option value="long">Long</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <button onclick="generateScript()" class="w-full btn-primary py-4 rounded-lg text-white font-bold">
+                                    Generate Script
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="scriptResultContainer" class="hidden glass-panel p-6 rounded-xl fade-in">
+                            <h3 class="text-lg font-semibold text-white mb-4">Generated Script</h3>
+                            <div class="flex justify-between items-center mb-4">
+                                <span id="scriptWordCount" class="text-xs text-gray-400">0 words</span>
+                                <div class="flex gap-2">
+                                    <button onclick="exportScript('txt')" class="bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded-lg text-white text-xs font-medium transition">TXT</button>
+                                    <button onclick="exportScript('srt')" class="bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded-lg text-white text-xs font-medium transition">SRT</button>
+                                    <button onclick="exportScript('json')" class="bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded-lg text-white text-xs font-medium transition">JSON</button>
+                                </div>
+                            </div>
+                            <div id="scriptContent" class="bg-gray-800/50 border border-gray-700 rounded-lg p-4 text-gray-200 leading-relaxed h-64 overflow-y-auto font-mono text-sm"></div>
+                            <div class="mt-4">
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Edit Script</label>
+                                <textarea id="scriptEdit" rows="6" class="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-4 text-white focus:outline-none focus:border-indigo-500"></textarea>
+                                <button onclick="updateScript()" class="w-full mt-3 bg-indigo-500 hover:bg-indigo-600 px-4 py-2 rounded-lg text-white font-medium transition">Save Changes</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-6">
+                        <div class="glass-panel p-6 rounded-xl">
+                            <h3 class="text-lg font-semibold text-white mb-4">My Scripts</h3>
+                            <div id="scriptGallery" class="space-y-3">
+                                <div class="text-center py-8 text-gray-400">
+                                    <i class="fa-regular fa-file-lines text-2xl mb-2"></i>
+                                    <p>No scripts yet</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        loadScriptGallery();
+    }
+
+    async function generateScript() {
+        const topic = document.getElementById('scriptTopic').value;
+        const template = document.getElementById('scriptTemplate').value;
+        const style = document.getElementById('scriptStyle').value;
+        const length = document.getElementById('scriptLength').value;
+
+        if (!topic.trim()) {
+            toast('Please enter a topic', 'error');
+            return;
+        }
+
+        try {
+            const btn = document.querySelector('button[onclick="generateScript()"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<div class="loader text-white"></div>';
+            btn.disabled = true;
+
+            const res = await apiPost('/api/script/generate', {
+                topic,
+                template,
+                style,
+                tone: 'friendly',
+                target_length: length,
+                target_audience: 'general',
+                language: 'english'
+            });
+
+            document.getElementById('scriptResultContainer').classList.remove('hidden');
+            document.getElementById('scriptContent').textContent = res.script || res.content || JSON.stringify(res);
+            document.getElementById('scriptEdit').value = res.script || res.content || '';
+            document.getElementById('scriptWordCount').textContent = `${res.word_count || 0} words`;
+            window.currentScriptProjectId = res.project_id;
+
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            toast('Script generated!', 'success');
+            loadScriptGallery();
+        } catch (e) {
+            toast(e.message || 'Generation failed', 'error');
+        }
+    }
+
+    async function updateScript() {
+        if (!window.currentScriptProjectId) return;
+        const content = document.getElementById('scriptEdit').value;
+        try {
+            await apiPost(`/api/script/projects/${window.currentScriptProjectId}`, { script_content: content });
+            document.getElementById('scriptContent').textContent = content;
+            toast('Script updated!', 'success');
+        } catch (e) {
+            toast('Update failed', 'error');
+        }
+    }
+
+    async function loadScriptGallery() {
+        try {
+            const res = await apiGet('/api/script/projects');
+            const container = document.getElementById('scriptGallery');
+            if (!res || res.length === 0) {
+                container.innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fa-regular fa-file-lines text-2xl mb-2"></i><p>No scripts yet</p></div>';
+                return;
+            }
+            container.innerHTML = res.map(p => `
+                <div class="flex items-center justify-between p-3 bg-gray-800/30 rounded-lg border border-gray-700/50">
+                    <div class="flex-1">
+                        <div class="text-sm font-medium text-white truncate">${p.name}</div>
+                        <div class="text-xs text-gray-500">${p.settings?.topic || ''}</div>
+                    </div>
+                    <button onclick="loadScript(${p.id})" class="text-indigo-400 hover:text-indigo-300 text-sm font-medium">Open</button>
+                </div>
+            `).join('');
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function loadScript(id) {
+        try {
+            const res = await apiGet(`/api/script/projects/${id}`);
+            document.getElementById('scriptResultContainer').classList.remove('hidden');
+            document.getElementById('scriptContent').textContent = res.settings?.script_content || 'No content';
+            document.getElementById('scriptEdit').value = res.settings?.script_content || '';
+            document.getElementById('scriptWordCount').textContent = `${(res.settings?.script_content || '').split(/\s+/).filter(Boolean).length} words`;
+            window.currentScriptProjectId = id;
+        } catch (e) {
+            toast('Failed to load script', 'error');
+        }
+    }
+
+    async function exportScript(format) {
+        if (!window.currentScriptProjectId) return;
+        try {
+            const res = await apiGet(`/api/script/projects/${window.currentScriptProjectId}/export?format=${format}`);
+            const a = document.createElement('a');
+            a.href = `data:text/${format === 'json' ? 'json' : 'plain'},${encodeURIComponent(res.content || JSON.stringify(res))}`;
+            a.download = res.filename || `script.${format}`;
+            a.click();
+            toast('Exported!', 'success');
+        } catch (e) {
+            toast('Export failed', 'error');
+        }
+    }
+
+    // ============================================================================
+    // AVATAR STUDIO
+    // ============================================================================
+    async function renderAvatarStudio() {
+        const content = document.getElementById('contentArea');
+        content.innerHTML = `
+            <div class="fade-in">
+                <div class="flex justify-between items-end mb-8">
+                    <div>
+                        <h2 class="text-3xl font-bold text-white mb-2">Avatar Studio</h2>
+                        <p class="text-gray-400">Create talking head AI videos</p>
+                    </div>
+                    <button onclick="document.getElementById('avatarCreatePanel').scrollIntoView()" class="btn-primary px-6 py-3 rounded-lg text-white font-medium">
+                        <i class="fa-solid fa-video mr-2"></i>Create Avatar Project
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-2 space-y-6">
+                        <div id="avatarCreatePanel" class="glass-panel p-6 rounded-xl">
+                            <h3 class="text-lg font-semibold text-white mb-6">Create Avatar Project</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-300 mb-2">Project Name</label>
+                                    <input type="text" id="avatarName" placeholder="My Avatar Video" class="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-indigo-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-300 mb-2">Template</label>
+                                    <select id="avatarTemplate" class="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-indigo-500">
+                                        <option value="news_anchor">News Anchor</option>
+                                        <option value="youtube_host">YouTube Host</option>
+                                        <option value="corporate_presenter">Corporate Presenter</option>
+                                        <option value="course_instructor">Course Instructor</option>
+                                        <option value="social_media">Social Media Creator</option>
+                                    </select>
+                                </div>
+                                <button onclick="createAvatarProject()" class="w-full btn-primary py-4 rounded-lg text-white font-bold">
+                                    Create Project
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-6">
+                        <div class="glass-panel p-6 rounded-xl">
+                            <h3 class="text-lg font-semibold text-white mb-4">My Avatar Projects</h3>
+                            <div id="avatarGallery" class="space-y-3">
+                                <div class="text-center py-8 text-gray-400">
+                                    <i class="fa-regular fa-user-tie text-2xl mb-2"></i>
+                                    <p>No projects yet</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        loadAvatarProjects();
+    }
+
+    async function createAvatarProject() {
+        const name = document.getElementById('avatarName').value;
+        const avatarType = document.getElementById('avatarTemplate').value;
+
+        if (!name.trim()) {
+            toast('Please enter a project name', 'error');
+            return;
+        }
+
+        try {
+            const bgMap = {
+                'news_anchor': 'news_studio',
+                'youtube_host': 'home_office',
+                'corporate_presenter': 'boardroom',
+                'course_instructor': 'classroom',
+                'social_media': 'gradient'
+            };
+
+            const res = await apiPostForm('/api/avatar/create', Object.fromEntries(new FormData()));
+            // Use FormData properly
+            const fd = new FormData();
+            fd.append('name', name);
+            fd.append('description', `Avatar project using ${avatarType} template`);
+            fd.append('avatar_type', 'talking_head');
+            fd.append('background', bgMap[avatarType] || 'studio');
+
+            const result = await apiPostForm('/api/avatar/create', fd);
+            toast('Avatar project created!', 'success');
+            loadAvatarProjects();
+        } catch (e) {
+            toast(e.message || 'Creation failed', 'error');
+        }
+    }
+
+    async function loadAvatarProjects() {
+        try {
+            const res = await apiGet('/api/avatar/projects');
+            const container = document.getElementById('avatarGallery');
+            if (!res || res.length === 0) {
+                container.innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fa-regular fa-user-tie text-2xl mb-2"></i><p>No projects yet</p></div>';
+                return;
+            }
+            container.innerHTML = res.map(p => `
+                <div class="flex items-center justify-between p-3 bg-gray-800/30 rounded-lg border border-gray-700/50 group">
+                    <div class="flex-1">
+                        <div class="text-sm font-medium text-white truncate">${p.name}</div>
+                        <div class="text-xs text-gray-500">${p.settings?.avatar_type || 'avatar'} • ${p.settings?.background || 'studio'}</div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="text-indigo-400 hover:text-indigo-300 text-sm"><i class="fa-regular fa-pen-to-square"></i></button>
+                        <button class="text-red-500 hover:text-red-400 text-sm"><i class="fa-regular fa-trash-alt"></i></button>
+                    </div>
+                </div>
+            `).join('');
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    // ============================================================================
+    // YOUTUBE AUTOMATION
+    // ============================================================================
+    async function renderYouTube() {
+        const content = document.getElementById('contentArea');
+        content.innerHTML = `
+            <div class="fade-in">
+                <div class="flex justify-between items-end mb-8">
+                    <div>
+                        <h2 class="text-3xl font-bold text-white mb-2">YouTube Automation</h2>
+                        <p class="text-gray-400">Full YouTube video pipeline: script, voiceover, thumbnail</p>
+                    </div>
+                    <button onclick="document.getElementById('ytFullPanel').scrollIntoView()" class="btn-primary px-6 py-3 rounded-lg text-white font-medium">
+                        <i class="fa-solid fa-wand-magic-sparkles mr-2"></i>Full Automation
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-2 space-y-6">
+                        <div id="ytFullPanel" class="glass-panel p-6 rounded-xl">
+                            <h3 class="text-lg font-semibold text-white mb-6">Full YouTube Automation</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-300 mb-2">Video Topic</label>
+                                    <input type="text" id="ytTopic" placeholder="e.g. 10 Tips for Productivity" class="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-indigo-500">
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-300 mb-2">Style</label>
+                                        <select id="ytStyle" class="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-indigo-500">
+                                            <option value="educational">Educational</option>
+                                            <option value="entertainment">Entertainment</option>
+                                            <option value="review">Review</option>
+                                            <option value="tutorial">Tutorial</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-300 mb-2">Length</label>
+                                        <select id="ytLength" class="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-indigo-500">
+                                            <option value="short">Short</option>
+                                            <option value="medium">Medium</option>
+                                            <option value="long">Long</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-300 mb-2">Voice</label>
+                                        <select id="ytVoice" class="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-indigo-500">
+                                            <option value="aria">Aria</option>
+                                            <option value="jenny">Jenny</option>
+                                            <option value="guy">Guy</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-3 mt-4">
+                                    <input type="checkbox" id="ytThumbnail" checked class="rounded bg-gray-700 border-gray-600 text-indigo-600 focus:ring-indigo-500">
+                                    <label for="ytThumbnail" class="text-sm text-gray-300">Include Thumbnail</label>
+                                </div>
+                                <button onclick="createYTAutomation()" class="w-full btn-primary py-4 rounded-lg text-white font-bold">
+                                    Start Full Automation
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="ytResultContainer" class="hidden glass-panel p-6 rounded-xl fade-in">
+                            <h3 class="text-lg font-semibold text-white mb-4">Automation Progress</h3>
+                            <div class="space-y-3" id="ytSteps">
+                                <div class="flex items-center gap-3 p-3 bg-gray-800/30 rounded-lg border border-gray-700/50">
+                                    <div class="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-xs text-white">1</div>
+                                    <div class="flex-1 text-sm text-white">Script Generation</div>
+                                    <div class="text-xs text-gray-400">Pending</div>
+                                </div>
+                                <div class="flex items-center gap-3 p-3 bg-gray-800/30 rounded-lg border border-gray-700/50">
+                                    <div class="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-xs text-white">2</div>
+                                    <div class="flex-1 text-sm text-white">Voiceover Generation</div>
+                                    <div class="text-xs text-gray-400">Pending</div>
+                                </div>
+                                <div class="flex items-center gap-3 p-3 bg-gray-800/30 rounded-lg border border-gray-700/50">
+                                    <div class="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-xs text-white">3</div>
+                                    <div class="flex-1 text-sm text-white">Thumbnail Generation</div>
+                                    <div class="text-xs text-gray-400">Pending</div>
+                                </div>
+                                <div class="flex items-center gap-3 p-3 bg-gray-800/30 rounded-lg border border-gray-700/50">
+                                    <div class="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-xs text-white">4</div>
+                                    <div class="flex-1 text-sm text-white">Video Assembly</div>
+                                    <div class="text-xs text-gray-400">Pending</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-6">
+                        <div class="glass-panel p-6 rounded-xl">
+                            <h3 class="text-lg font-semibold text-white mb-4">My Projects</h3>
+                            <div id="ytGallery" class="space-y-3">
+                                <div class="text-center py-8 text-gray-400">
+                                    <i class="fa-brands fa-youtube text-2xl mb-2"></i>
+                                    <p>No projects yet</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        loadYouTubeProjects();
+    }
+
+    async function createYTAutomation() {
+        const topic = document.getElementById('ytTopic').value;
+        if (!topic.trim()) {
+            toast('Please enter a topic', 'error');
+            return;
+        }
+
+        try {
+            const res = await apiPost('/api/youtube/full-automation', {
+                topic,
+                voice_key: document.getElementById('ytVoice').value,
+                style: document.getElementById('ytStyle').value,
+                length: document.getElementById('ytLength').value,
+                include_thumbnail: document.getElementById('ytThumbnail').checked
+            });
+
+            document.getElementById('ytResultContainer').classList.remove('hidden');
+            window.currentYTProjectId = res.project_id;
+            toast('YouTube automation started!', 'success');
+            loadYouTubeProjects();
+        } catch (e) {
+            toast(e.message || 'Automation failed', 'error');
+        }
+    }
+
+    async function loadYouTubeProjects() {
+        try {
+            const res = await apiGet('/api/youtube/projects');
+            const container = document.getElementById('ytGallery');
+            if (!res || res.length === 0) {
+                container.innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fa-brands fa-youtube text-2xl mb-2"></i><p>No projects yet</p></div>';
+                return;
+            }
+            container.innerHTML = res.map(p => `
+                <div class="flex items-center justify-between p-3 bg-gray-800/30 rounded-lg border border-gray-700/50">
+                    <div class="flex-1">
+                        <div class="text-sm font-medium text-white truncate">${p.name}</div>
+                        <div class="text-xs text-gray-500">${p.settings?.topic || 'YouTube automation'}</div>
+                    </div>
+                    <div class="text-xs text-indigo-400 font-medium">Active</div>
+                </div>
+            `).join('');
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    // ============================================================================
+    // BILLING
+    // ============================================================================
+    async function renderBilling() {
+        const content = document.getElementById('contentArea');
+        content.innerHTML = `
+            <div class="fade-in">
+                <div class="flex justify-between items-end mb-8">
+                    <div>
+                        <h2 class="text-3xl font-bold text-white mb-2">Billing</h2>
+                        <p class="text-gray-400">Manage your subscription and credits</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- Current Plan -->
+                    <div class="lg:col-span-1 space-y-6">
+                        <div class="glass-panel p-6 rounded-xl">
+                            <h3 class="text-lg font-semibold text-white mb-4">Current Plan</h3>
+                            <div id="billingCurrent" class="text-center py-4">
+                                <div class="text-gray-400 text-sm">Loading...</div>
+                            </div>
+                        </div>
+
+                        <div class="glass-panel p-6 rounded-xl">
+                            <h3 class="text-lg font-semibold text-white mb-4">Usage</h3>
+                            <div id="billingUsage" class="text-center py-4">
+                                <div class="text-gray-400 text-sm">Loading...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Plans -->
+                    <div class="lg:col-span-2 space-y-6">
+                        <div class="glass-panel p-6 rounded-xl">
+                            <h3 class="text-lg font-semibold text-white mb-6">Subscription Plans</h3>
+                            <div id="billingPlans" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <div class="text-center py-8 text-gray-400">Loading plans...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        loadBilling();
+    }
+
+    async function loadBilling() {
+        try {
+            const [current, plans] = await Promise.all([
+                apiGet('/api/billing/current'),
+                apiGet('/api/billing/plans')
+            ]);
+
+            document.getElementById('billingCurrent').innerHTML = `
+                <div class="text-2xl font-bold text-white">${current.tier}</div>
+                <div class="text-gray-400 text-sm mt-1">${current.credits} credits</div>
+                <div class="text-xs text-gray-500 mt-2">${current.status}</div>
+                <button onclick="alert('Stripe integration coming soon')" class="mt-4 w-full bg-indigo-500 hover:bg-indigo-600 px-4 py-2 rounded-lg text-white text-sm font-medium transition">Manage Subscription</button>
+            `;
+
+            document.getElementById('billingUsage').innerHTML = `
+                <div class="text-2xl font-bold text-white">${current.credits}</div>
+                <div class="text-gray-400 text-sm mt=1">Credits remaining</div>
+                <div class="w-full bg-gray-700 h-2 rounded-full mt-3 overflow-hidden">
+                    <div class="bg-indigo-500 h-full" style="width: ${Math.min(100, (100 - current.credits) / 100 * 100)}%"></div>
+                </div>
+            `;
+
+            document.getElementById('billingPlans').innerHTML = Object.entries(plans.plans || {}).map(([key, plan]) => `
+                <div class="p-5 rounded-xl border border-gray-700 ${key === 'free' ? 'border-indigo-500/50 bg-indigo-500/10' : ''} hover:border-indigo-500 transition">
+                    <div class="text-xs font-semibold text-gray-400 uppercase mb-2">${key.toUpperCase()}</div>
+                    <div class="text-2xl font-bold text-white mb-2">${plan.name}</div>
+                    <div class="text-xl font-bold text-indigo-400 mb-4">$${plan.monthly_price}/mo</div>
+                    <ul class="text-xs text-gray-400 space-y-1 mb-6">
+                        ${plan.features?.map(f => `<li class="flex items-center gap-2"><i class="fa-solid fa-check text-xs text-green-500"></i> ${f}</li>`).join('') || ''}
+                    </ul>
+                    <button onclick="alert('Upgrade to ${plan.name} - Stripe integration coming soon')" class="w-full ${key === 'free' ? 'bg-gray-700 hover:bg-gray-600' : 'bg-indigo-500 hover:bg-indigo-600'} py-2 rounded-lg text-white text-sm font-medium transition">
+                        ${key === 'free' ? 'Current Plan' : 'Select Plan'}
+                    </button>
+                </div>
+            `).join('');
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    // ============================================================================
+    // REFERRAL
+    // ============================================================================
+    async function renderReferral() {
+        const content = document.getElementById('contentArea');
+        content.innerHTML = `
+            <div class="fade-in">
+                <div class="flex justify-between items-end mb-8">
+                    <div>
+                        <h2 class="text-3xl font-bold text-white mb-2">Referral Program</h2>
+                        <p class="text-gray-400">Invite friends and earn credits</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-1 space-y-6">
+                        <div class="glass-panel p-6 rounded-xl text-center">
+                            <h3 class="text-lg font-semibold text-white mb-4">Your Referral Code</h3>
+                            <div class="flex items-center justify-center gap-2 mb-4">
+                                <input type="text" id="refCode" readonly class="bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2 text-white font-mono text-sm w-32">
+                                <button onclick="copyRefCode()" class="bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded-lg text-white text-xs">Copy</button>
+                            </div>
+                            <div class="bg-gray-800/50 border border-gray-700 rounded-lg p-3">
+                                <div class="text-xs text-gray-400 mb-1">Your Referral Link</div>
+                                <input type="text" id="refLink" readonly class="w-full bg-transparent text-indigo-400 text-sm break-all">
+                            </div>
+                            <div class="mt-4 text-xs text-gray-500">
+                                Earn <span class="text-indigo-400">50 credits</span> for each friend who joins<br>
+                                Get <span class="text-indigo-400">100 credits</span> when they use your code
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-2 space-y-6">
+                        <div class="glass-panel p-6 rounded-xl">
+                            <h3 class="text-lg font-semibold text-white mb-6">Referral Stats</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                                <div class="p-4 bg-gray-800/30 rounded-lg">
+                                    <div class="text-2xl font-bold text-white" id="refTotal">0</div>
+                                    <div class="text-xs text-gray-400">Total Referrals</div>
+                                </div>
+                                <div class="p-4 bg-gray-800/30 rounded-lg">
+                                    <div class="text-2xl font-bold text-white" id="refActive">0</div>
+                                    <div class="text-xs text-gray-400">Active Referrals</div>
+                                </div>
+                                <div class="p-4 bg-gray-800/30 rounded-lg">
+                                    <div class="text-2xl font-bold text-white" id="refCredits">0</div>
+                                    <div class="text-xs text-gray-400">Credits Earned</div>
+                                </div>
+                                <div class="p-4 bg-gray-800/30 rounded-lg">
+                                    <div class="text-2xl font-bold text-white" id="refPending">0</div>
+                                    <div class="text-xs text-gray-400">Pending Payout</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="glass-panel p-6 rounded-xl">
+                            <h3 class="text-lg font-semibold text-white mb-6">My Referrals</h3>
+                            <div id="refList" class="space-y-3">
+                                <div class="text-center py-8 text-gray-400">
+                                    <i class="fa-regular fa-users text-2xl mb-2"></i>
+                                    <p>No referrals yet</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        loadReferral();
+    }
+
+    async function loadReferral() {
+        try {
+            const [myCode, stats, referrals] = await Promise.all([
+                apiGet('/api/referral/my-code'),
+                apiGet('/api/referral/stats'),
+                apiGet('/api/referral/my-referrals')
+            ]);
+
+            document.getElementById('refCode').value = myCode.referral_code;
+            document.getElementById('refLink').value = myCode.referral_link;
+            document.getElementById('refTotal').textContent = stats.total_referrals;
+            document.getElementById('refActive').textContent = stats.active_referrals;
+            document.getElementById('refCredits').textContent = Math.floor(stats.total_credits_generated || 0);
+            document.getElementById('refPending').textContent = Math.floor(stats.pending_payout || 0);
+
+            const refList = document.getElementById('refList');
+            if (!referrals.referrals || referrals.referrals.length === 0) {
+                refList.innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fa-regular fa-users text-2xl mb-2"></i><p>No referrals yet</p></div>';
+            } else {
+                refList.innerHTML = referrals.referrals.map(r => `
+                    <div class="flex items-center justify-between p-3 bg-gray-800/30 rounded-lg border border-gray-700/50">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded bg-gray-700 flex items-center justify-center text-xs font-bold">
+                                ${r.username.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                                <div class="text-sm text-white">${r.username}</div>
+                                <div class="text-xs text-gray-500">${r.email}</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm text-white font-medium">${r.credits_used} credits</div>
+                            <div class="text-xs text-gray-500">${new Date(r.joined_at).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    function copyRefCode() {
+        const input = document.getElementById('refCode');
+        input.select();
+        document.execCommand('copy');
+        toast('Code copied!', 'success');
+    }
+
+    // ============================================================================
+    // ADMIN
+    // ============================================================================
+    async function renderAdmin() {
+        const content = document.getElementById('contentArea');
+        content.innerHTML = `
+            <div class="fade-in">
+                <div class="flex justify-between items-end mb-8">
+                    <div>
+                        <h2 class="text-3xl font-bold text-white mb-2">Admin Panel</h2>
+                        <p class="text-gray-400">Platform management and statistics</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+                    <div class="lg:col-span-2">
+                        <div class="glass-panel p-6 rounded-xl">
+                            <h3 class="text-lg font-semibold text-white mb-6">Platform Stats</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4" id="adminStats">
+                                <div class="text-center py-8 text-gray-400">Loading...</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-1">
+                        <div class="glass-panel p-6 rounded-xl">
+                            <h3 class="text-lg font-semibold text-white mb-6">Quick Actions</h3>
+                            <button onclick="alert('User management coming soon')" class="w-full bg-gray-700 hover:bg-gray-600 px-4 py-3 rounded-lg text-white text-sm font-medium transition mb-3">
+                                <i class="fa-solid fa-users mr-2"></i>Manage Users
+                            </button>
+                            <button onclick="alert('Voice management coming soon')" class="w-full bg-gray-700 hover:bg-gray-600 px-4 py-3 rounded-lg text-white text-sm font-medium transition mb-3">
+                                <i class="fa-solid fa-volume-high mr-2"></i>Manage Voices
+                            </button>
+                            <button onclick="alert('Project management coming soon')" class="w-full bg-gray-700 hover:bg-gray-600 px-4 py-3 rounded-lg text-white text-sm font-medium transition">
+                                <i class="fa-solid fa-folder mr-2"></i>Manage Projects
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-6 rounded-xl">
+                    <h3 class="text-lg font-semibold text-white mb-6">All Users</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="border-b border-gray-700">
+                                    <th class="pb-3 text-xs font-semibold text-gray-400 uppercase">User</th>
+                                    <th class="pb-3 text-xs font-semibold text-gray-400 uppercase">Role</th>
+                                    <th class="pb-3 text-xs font-semibold text-gray-400 uppercase">Credits</th>
+                                    <th class="pb-3 text-xs font-semibold text-gray-400 uppercase">Status</th>
+                                    <th class="pb-3 text-xs font-semibold text-gray-400 uppercase">Referrals</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminUsers" class="text-sm">
+                                <tr>
+                                    <td colspan="5" class="p-4 text-center text-gray-400">Loading...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        loadAdminStats();
+    }
+
+    async function loadAdminStats() {
+        try {
+            const [stats, users] = await Promise.all([
+                apiGet('/api/admin/stats'),
+                apiGet('/api/admin/users')
+            ]);
+
+            document.getElementById('adminStats').innerHTML = `
+                <div class="p-4 bg-gray-800/30 rounded-lg">
+                    <div class="text-2xl font-bold text-white">${stats.total_users}</div>
+                    <div class="text-xs text-gray-400">Total Users</div>
+                </div>
+                <div class="p-4 bg-gray-800/30 rounded-lg">
+                    <div class="text-2xl font-bold text-white">${stats.active_users}</div>
+                    <div class="text-xs text-gray-400">Active Users</div>
+                </div>
+                <div class="p-4 bg-gray-800/30 rounded-lg">
+                    <div class="text-2xl font-bold text-white">${stats.total_projects}</div>
+                    <div class="text-xs text-gray-400">Total Projects</div>
+                </div>
+                <div class="p-4 bg-gray-800/30 rounded-lg">
+                    <div class="text-2xl font-bold text-white">${stats.total_audio_generated}</div>
+                    <div class="text-xs text-gray-400">Audio Generated</div>
+                </div>
+            `;
+
+            const tbody = document.getElementById('adminUsers');
+            if (!users || users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-400">No users found</td></tr>';
+                return;
+            }
+            tbody.innerHTML = users.map(u => `
+                <tr class="border-b border-gray-700/50 hover:bg-gray-800/30 transition">
+                    <td class="p-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded bg-gray-700 flex items-center justify-center text-xs font-bold">
+                                ${u.username.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                                <div class="text-white font-medium">${u.username}</div>
+                                <div class="text-xs text-gray-500">${u.email}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="p-3">
+                        <span class="px-2 py-1 rounded-full text-xs ${u.role === 'admin' ? 'bg-purple-500/20 text-purple-400' : 'bg-gray-700 text-gray-400'}">
+                            ${u.role}
+                        </span>
+                    </td>
+                    <td class="p-3 text-white">${u.credits}</td>
+                    <td class="p-3">
+                        <span class="px-2 py-1 rounded-full text-xs ${u.is_active ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">
+                            ${u.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                    </td>
+                    <td class="p-3 text-white">${u.referrals_count || 0}</td>
+                </tr>
+            `).join('');
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    // ============================================================================
+    // UTILS
+    // ============================================================================
+    function toggleSidebar() {
+        sidebarOpen = !sidebarOpen;
+        const sidebar = document.querySelector('aside');
+        if (sidebarOpen) {
+            sidebar.classList.remove('translate-x-[-100%]');
+        } else {
+            sidebar.classList.add('translate-x-[-100%]');
+        }
+    }
+
+    // Make sidebar mobile-toggleable
+    window.addEventListener('resize', () => {
+        if (window.innerWidth >= 1024) {
+            document.querySelector('aside').classList.remove('translate-x-[-100%]');
+        }
+    });
+
+    function showNotifications() {
+        toast('No new notifications', 'info');
+    }
+
+    function openUserMenu() {
+        toast('User menu coming soon', 'info');
+    }
+
+    // Global form handlers
+    document.getElementById('ttsText').addEventListener('input', updateCharCount);
+
+    // Auth form toggles
+    function showLoginForm() {
+        document.getElementById('loginBtn').className = 'w-full py-3 px-4 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-medium hover:shadow-lg transition';
+        document.getElementById('registerBtn').className = 'w-full py-3 px-4 rounded-lg bg-gray-800 border border-gray-700 text-white font-medium hover:bg-gray-700 transition';
+        document.getElementById('authSwitch').innerHTML = '<span class="cursor-pointer text-indigo-400 hover:underline" onclick="showRegisterForm()">Create an account</span>';
+        document.getElementById('authForm').innerHTML = `
+            <form onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Username or Email</label>
+                    <input type="text" id="loginUsername" required class="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Password</label>
+                    <input type="password" id="loginPassword" required class="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-indigo-500">
+                </div>
+                <button type="submit" class="w-full btn-primary py-3 rounded-lg text-white font-bold">Sign In</button>
+            </form>
+        `;
+    }
+
+    function showRegisterForm() {
+        document.getElementById('registerBtn').className = 'w-full py-3 px-4 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-medium hover:shadow-lg transition';
+        document.getElementById('loginBtn').className = 'w-full py-3 px-4 rounded-lg bg-gray-800 border border-gray-700 text-white font-medium hover:bg-gray-700 transition';
+        document.getElementById('authSwitch').innerHTML = '<span class="cursor-pointer text-indigo-400 hover:underline" onclick="showLoginForm()">Already have an account? Sign in</span>';
+        document.getElementById('authForm').innerHTML = `
+            <form onsubmit="handleRegister(event)" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Full Name</label>
+                    <input type="text" id="regFullName" required class="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Email</label>
+                    <input type="email" id="regEmail" required class="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Username</label>
+                    <input type="text" id="regUsername" required class="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Password</label>
+                    <input type="password" id="regPassword" required class="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-indigo-500">
+                </div>
+                <button type="submit" class="w-full btn-primary py-3 rounded-lg text-white font-bold">Create Account</button>
+            </form>
+        `;
+    }
+
+    async function handleLogin(e) {
+        e.preventDefault();
+        try {
+            await login(document.getElementById('loginUsername').value, document.getElementById('loginPassword').value);
+        } catch (err) {
+            toast(err.message || 'Login failed', 'error');
+        }
+    }
+
+    async function handleRegister(e) {
+        e.preventDefault();
+        try {
+            await register(
+                document.getElementById('regEmail').value,
+                document.getElementById('regUsername').value,
+                document.getElementById('regFullName').value,
+                document.getElementById('regPassword').value
+            );
+        } catch (err) {
+            toast(err.message || 'Registration failed', 'error');
+        }
+    }
+
+    // Initialize login form by default
+    showLoginForm();
+    </script>
+</body>
+</html>
