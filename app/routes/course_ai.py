@@ -262,8 +262,8 @@ async def chat(body: CourseChatRequest, request: Request):
     if not rows: raise HTTPException(409,"Import the course folder first from the Course AI page.")
     lower=body.message.lower()
     plan_intent = bool(re.search(
-        r"\\b(customi[sz]e|branding|optimi[sz]e|set\\s*up|setup|improve|update)\\b.{0,60}\\b(channel|youtube)\\b"
-        r"|\\b(channel|youtube)\\b.{0,60}\\b(customi[sz]e|branding|optimi[sz]e|set\\s*up|setup|improve|description|keywords)\\b"
+        r"\b(customi[sz]e|branding|optimi[sz]e|set\s*up|setup|improve|update)\b.{0,60}\b(channel|youtube)\b"
+        r"|\b(channel|youtube)\b.{0,60}\b(customi[sz]e|branding|optimi[sz]e|set\s*up|setup|improve|description|keywords)\b"
         r"|channel (ko|ki|ka) (professional|customize|customise|setup|settings|branding)",
         lower))
     if plan_intent:
