@@ -44,7 +44,17 @@ jobs:
           source = Path("main.py").read_text(encoding="utf-8")
           assert "assistant_hub_router" in source
           assert "course_ai_router" in source
+          assert "avatar_api_router" in source
           assert "vimax_router" in source
+          avatar = Path("app/routes/avatar_api.py").read_text(encoding="utf-8")
+          for route in [
+              '@router.get("/talking-video/config")',
+              '@router.post("/talking-video")',
+              '@router.get("/talking-video/{job_id}")'
+          ]:
+              assert route in avatar, f"Missing talking-avatar API route: {route}"
+          for hook in ["FAL_QUEUE_MODEL", "voice-clone", "speech-02-hd", "image_url", "audio_url"]:
+              assert hook in avatar, f"Missing talking-avatar pipeline hook: {hook}"
           course = Path("app/routes/course_ai.py").read_text(encoding="utf-8")
           for route in [
               '@router.post("/drive/import")',
@@ -88,7 +98,11 @@ jobs:
             "function courseAiQuickPrompt",
             "function renderCourseAiInsights",
             "Course-trained YouTube AI",
-            "navigate('planner')"
+            "navigate('planner')",
+            "Talking Avatar Studio",
+            "function generateTalkingAvatar",
+            "function pollTalkingAvatar",
+            "/api/avatar/talking-video"
           ]) {
             if (!html.includes(required)) throw new Error("Missing UI hook: " + required);
           }
