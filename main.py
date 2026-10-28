@@ -138,8 +138,10 @@ app.add_middleware(
 
 # The web UI contract (index.html) - always mounted.
 from app.routes.frontend_api import router as frontend_router  # noqa: E402
+from app.routes.assistant_hub import router as assistant_hub_router  # noqa: E402
 
 app.include_router(frontend_router)
+app.include_router(assistant_hub_router)
 
 loaded_optional_routers: List[str] = []
 if os.getenv("ENABLE_EXTRA_ROUTERS", "").lower() in ("1", "true", "yes"):
