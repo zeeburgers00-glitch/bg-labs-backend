@@ -38,7 +38,7 @@ MODULES = [
         "name": "AI chat",
         "status": "requires-provider-key",
         "endpoint": "/api/hub/chat",
-        "notes": "Uses a configured Groq, OpenAI, or OpenRouter API key.",
+        "notes": "Uses configured free-tier Groq, Gemini, Mistral, OpenRouter free routing or limited Hugging Face credits.",
     },
     {
         "id": "image-generation",
@@ -112,24 +112,48 @@ MODULES = [
     },
 ]
 
+# Free-tier/credit-limited providers only. Provider limits still apply.
+# Model allowlists prevent the chat endpoint from silently selecting paid models.
 PROVIDERS = {
     "groq": {
-        "name": "Groq",
+        "name": "Groq (free tier)",
         "base_url": "https://api.groq.com/openai/v1",
         "key_env": "GROQ_API_KEY",
-        "default_model": "llama-3.3-70b-versatile",
+        "default_model": "openai/gpt-oss-20b",
+        "models": ["openai/gpt-oss-20b"],
+        "free_note": "Free developer-tier rate limits apply.",
     },
-    "openai": {
-        "name": "OpenAI",
-        "base_url": "https://api.openai.com/v1",
-        "key_env": "OPENAI_API_KEY",
-        "default_model": "gpt-4o-mini",
+    "gemini": {
+        "name": "Google Gemini (free tier)",
+        "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
+        "key_env": "GEMINI_API_KEY",
+        "default_model": "gemini-3.6-flash",
+        "models": ["gemini-3.6-flash"],
+        "free_note": "Free-tier models and quota only; limits vary by model and account.",
+    },
+    "mistral": {
+        "name": "Mistral (free mode)",
+        "base_url": "https://api.mistral.ai/v1",
+        "key_env": "MISTRAL_API_KEY",
+        "default_model": "mistral-small-latest",
+        "models": ["mistral-small-latest"],
+        "free_note": "Mistral Free mode and rate limits apply.",
     },
     "openrouter": {
-        "name": "OpenRouter",
+        "name": "OpenRouter (free router)",
         "base_url": "https://openrouter.ai/api/v1",
         "key_env": "OPENROUTER_API_KEY",
-        "default_model": "openai/gpt-4o-mini",
+        "default_model": "openrouter/free",
+        "models": ["openrouter/free"],
+        "free_note": "Uses OpenRouter's free-model router only; its free request limits apply.",
+    },
+    "huggingface": {
+        "name": "Hugging Face (limited free credits)",
+        "base_url": "https://router.huggingface.co/v1",
+        "key_env": "HF_TOKEN",
+        "default_model": "deepseek-ai/DeepSeek-R1:fastest",
+        "models": ["deepseek-ai/DeepSeek-R1:fastest"],
+        "free_note": "Free-user Inference Providers credit is limited (currently $0.10/month) and is not unlimited.",
     },
 }
 
@@ -169,10 +193,23 @@ async def list_providers():
             "configured": bool(os.getenv(provider["key_env"])),
             "key_env": provider["key_env"],
             "default_model": provider["default_model"],
+            "free_note": provider["free_note"],
         })
     return {
         "default_provider": os.getenv("JARVIS_PROVIDER", "groq"),
         "providers": configured,
+        "media_services": [{
+            "id": "pexels",
+            "name": "Pexels photos/videos",
+            "configured": bool(os.getenv("PEXELS_API_KEY")),
+            "key_env": "PEXELS_API_KEY",
+            "free_note": "Free API with request limits; attribution/link-back requirements apply.",
+        }],
+        "excluded_paid_or_unverified": [
+            {"id": "opencode-zen", "reason": "Per-request billing; excluded to honor free-only mode."},
+            {"id": "hacker-ai", "reason": "Provider/pricing could not be verified reliably yet."},
+            {"id": "zai", "reason": "Free trial status is account-dependent; not enabled to avoid accidental paid usage."},
+        ],
         "local_model": {
             "available_from_backend": False,
             "notes": "Ollama/local models run on the user's PC; connect them through the Windows app or a secure local bridge.",
@@ -214,7 +251,12 @@ async def chat(body: ChatRequest, request: Request):
             detail=f"{provider['key_env']} is not configured in Vercel Environment Variables.",
         )
 
-    model = (body.model or os.getenv("JARVIS_MODEL") or provider["default_model"]).strip()
+    model = (body.model or provider["default_model"]).strip()
+    if model not in provider["models"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Free-only mode allows this provider's configured free model only: {provider['default_model']}",
+        )
     messages = [{
         "role": "system",
         "content": (
@@ -259,4 +301,56 @@ async def chat(body: ChatRequest, request: Request):
         "model": model,
         "reply": answer,
         "user_id": user["id"],
+    }
+
+
+@router.get("/media/pexels/search")
+async def search_pexels(
+    request: Request,
+    query: str = Field(min_length=2, max_length=200),
+    media_type: Literal["photos", "videos"] = "photos",
+    per_page: int = 12,
+):
+    """Search Pexels for free stock assets. Requires user auth and the free Pexels API key."""
+    user = await get_current_user(request)
+    if not check_rate_limit(get_client_ip(request), f"pexels:{user['id']}", limit=20, window=60):
+        raise HTTPException(status_code=429, detail="Pexels search rate limit exceeded.")
+
+    api_key = os.getenv("PEXELS_API_KEY", "").strip()
+    if not api_key:
+        raise HTTPException(status_code=503, detail="PEXELS_API_KEY is not configured in Vercel.")
+
+    per_page = max(1, min(per_page, 30))
+    endpoint = (
+        "https://api.pexels.com/v1/search"
+        if media_type == "photos"
+        else "https://api.pexels.com/v1/videos/search"
+    )
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(20.0, connect=8.0)) as client:
+            response = await client.get(
+                endpoint,
+                headers={"Authorization": api_key},
+                params={"query": query, "per_page": per_page},
+            )
+    except httpx.HTTPError:
+        raise HTTPException(status_code=502, detail="Could not reach the Pexels API.")
+
+    if response.status_code >= 400:
+        raise HTTPException(status_code=502, detail=f"Pexels API returned HTTP {response.status_code}.")
+    try:
+        data = response.json()
+    except ValueError:
+        raise HTTPException(status_code=502, detail="Pexels returned an unexpected response.")
+
+    return {
+        "provider": "pexels",
+        "media_type": media_type,
+        "query": query,
+        "total_results": data.get("total_results", 0),
+        "page": data.get("page", 1),
+        "per_page": data.get("per_page", per_page),
+        "results": data.get("photos" if media_type == "photos" else "videos", []),
+        "attribution": "Please link to Pexels and provide photographer credit when applicable.",
+        "attribution_url": "https://www.pexels.com/",
     }
