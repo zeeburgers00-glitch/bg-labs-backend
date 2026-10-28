@@ -40,12 +40,25 @@ jobs:
               parsed += 1
           json.loads(Path("vercel.json").read_text(encoding="utf-8"))
           assert Path("app/routes/assistant_hub.py").exists()
+          assert Path("app/routes/course_ai.py").exists()
           source = Path("main.py").read_text(encoding="utf-8")
           assert "assistant_hub_router" in source
+          assert "course_ai_router" in source
           assert "vimax_router" in source
+          course = Path("app/routes/course_ai.py").read_text(encoding="utf-8")
+          for route in [
+              '@router.post("/drive/import")',
+              '@router.post("/chat")',
+              '@router.post("/channel-plan")',
+              '@router.post("/channel-branding")',
+              '@router.post("/content-plan")',
+              '@router.get("/plans")',
+              '@router.post("/plans/{plan_id}/status")'
+          ]:
+              assert route in course, f"Missing course/creator route: {route}"
           vimax = Path("app/routes/vimax_api.py").read_text(encoding="utf-8")
           assert "Daily ViMax attempt cap reached" in vimax
-          print(f"Parsed {parsed} Python files; Vercel config and required routes validated.")
+          print(f"Parsed {parsed} Python files; API routes, course retrieval, calendar and Vercel config validated.")
           PY
 
       - name: Set up Node.js
@@ -66,9 +79,15 @@ jobs:
             "navigate('hub')",
             "case 'hub': renderHub(); break;",
             "daily_attempts",
-            "function renderViMaxStudio"
+            "function renderViMaxStudio",
+            "JARVIS COMMAND CENTER",
+            "function openCommandPalette",
+            "function renderPlanner",
+            "function generateCreatorPlan",
+            "Course-trained YouTube AI",
+            "navigate('planner')"
           ]) {
             if (!html.includes(required)) throw new Error("Missing UI hook: " + required);
           }
-          console.log(`Parsed ${scripts.length} inline script(s); required JARVIS/ViMax UI hooks found.`);
+          console.log(`Parsed ${scripts.length} inline script(s); required JARVIS, course AI, Creator Calendar and ViMax UI hooks found.`);
           NODE
