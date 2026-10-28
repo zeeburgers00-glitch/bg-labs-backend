@@ -704,7 +704,8 @@
   $('integration-search').addEventListener('input', renderIntegrationCatalog);
   $('integration-category').addEventListener('change', renderIntegrationCatalog);
   renderIntegrationCatalog();
-\n  $('workforce-open').addEventListener('click', () => {
+
+  $('workforce-open').addEventListener('click', () => {
     if (!state.user) return;
     showDialog('workforce-dialog'); void loadWorkforceRegistry(state.version); void loadAgentRegistry(state.version); void loadPublicResearchStatus(state.version);
   });
