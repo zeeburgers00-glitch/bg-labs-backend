@@ -49,6 +49,7 @@ SCOPES: Tuple[str, ...] = (
     "https://www.googleapis.com/auth/youtube.upload",
     "https://www.googleapis.com/auth/youtube.readonly",
     "https://www.googleapis.com/auth/youtube.force-ssl",
+    "https://www.googleapis.com/auth/drive.readonly",
 )
 
 TIMEOUT = float(os.getenv("GOOGLE_TIMEOUT", "45"))
