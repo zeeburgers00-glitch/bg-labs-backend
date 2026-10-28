@@ -389,14 +389,21 @@
         offerChannelAfterLogin = false; channel.autoAttempted = true;
         await selectChannel(version, savedDefault.id, true);
       } else if (offerChannelAfterLogin) {
-        // App login and channel authorization are separate. A fresh login may
-        // offer the channel dialog, but must not navigate away to another OAuth
-        // flow until the user explicitly chooses to connect a channel.
+        // Continue-with-Google starts the app session first. If YouTube OAuth is
+        // configured and this account is allowed, immediately begin the separate
+        // YouTube consent flow so the user only needs to approve the requested
+        // YouTube permissions instead of finding another button in the app.
         offerChannelAfterLogin = false;
-        channel.notice = channel.saved.length ? 'Signed in. Choose a saved channel or reconnect it with Google.'
-          : channel.configured && channel.allowed ? 'Signed in. Choose Add channel with Google when you are ready to grant separate access.'
-          : 'Signed in. Channel setup must be completed before you can connect.';
-        updateChannelControls(); showDialog('channel-dialog');
+        if (channel.configured && channel.allowed && !channel.autoAttempted && !channel.busy) {
+          channel.autoAttempted = true;
+          channel.notice = 'Signed in. Opening Google to approve YouTube channel access…';
+          updateChannelControls();
+          void startChannel(version);
+        } else {
+          channel.notice = channel.saved.length ? 'Signed in. Choose a saved channel or reconnect it with Google.'
+            : 'Google sign-in succeeded, but YouTube channel access is not configured or enabled for this account.';
+          updateChannelControls(); showDialog('channel-dialog');
+        }
       }
     } catch (error) {
       if (isCurrent(version) && sequence === state.channel.sequence && error.name !== 'AbortError') {
