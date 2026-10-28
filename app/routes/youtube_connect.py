@@ -42,7 +42,9 @@ logger = logging.getLogger("bglabs.youtube")
 router = APIRouter(tags=["YouTube Connect"])
 
 CONN_TYPE = "youtube_connection"
+MANAGER_RUN_TYPE = "youtube_ai_manager_run"
 MAX_CHANNELS = 25
+MAX_MANAGER_RUNS = 30
 
 
 # ============================================================================
@@ -523,6 +525,206 @@ async def reply_comment(request: Request) -> Dict[str, Any]:
     return {"posted": True, "reply": posted.get("text", text), "comment_id": posted.get("comment_id", ""),
             "generated_by": generated_by, "video_id": video_id, "parent_id": comment_id,
             "channel": target["settings"].get("title", ""), "at": _now()}
+
+
+# ============================================================================
+# AI CHANNEL MANAGER
+# ============================================================================
+def _manager_config(settings: Dict[str, Any]) -> Dict[str, Any]:
+    """Safe defaults: AI prepares work, a human approves public actions."""
+    saved = settings.get("ai_manager") or {}
+    return {
+        "enabled": bool(saved.get("enabled", False)),
+        "approval_required": True,
+        "goal": str(saved.get("goal") or "grow watch time and subscribers"),
+        "audience": str(saved.get("audience") or ""),
+        "tone": str(saved.get("tone") or "friendly"),
+        "language": str(saved.get("language") or "English"),
+        "content_frequency": str(saved.get("content_frequency") or "2 videos per week"),
+        "permissions": {
+            "analytics": bool((saved.get("permissions") or {}).get("analytics", True)),
+            "content_plan": bool((saved.get("permissions") or {}).get("content_plan", True)),
+            "comment_drafts": bool((saved.get("permissions") or {}).get("comment_drafts", True)),
+            "metadata_drafts": bool((saved.get("permissions") or {}).get("metadata_drafts", True)),
+            "publish": False,
+            "post_replies": False,
+        },
+        "last_run": saved.get("last_run"),
+    }
+
+
+@router.get("/api/youtube/manager/status")
+async def manager_status(request: Request, channel_id: str = Query("")) -> Dict[str, Any]:
+    user = await get_current_user(request)
+    store = await get_store()
+    connections = await _load_connections(store, user["id"])
+    target = await _find_connection(connections, channel_id) if channel_id else (connections[0] if connections else None)
+    if not target:
+        raise HTTPException(409, "Connect a channel with 'Continue with Google' first.")
+    return {"channel": google.public_channel(target["settings"]),
+            "manager": _manager_config(target["settings"]),
+            "capabilities": ["analytics audit", "content strategy", "comment triage + reply drafts",
+                             "metadata drafts", "full video package"],
+            "safety": "Public replies, uploads and publishing always require your approval."}
+
+
+@router.post("/api/youtube/manager/config")
+async def manager_config(request: Request) -> Dict[str, Any]:
+    user = await get_current_user(request)
+    body = await request.json()
+    store = await get_store()
+    connections = await _load_connections(store, user["id"])
+    channel_id = str(body.get("channel_id") or "").strip()
+    target = await _find_connection(connections, channel_id) if channel_id else (connections[0] if connections else None)
+    if not target:
+        raise HTTPException(409, "Connect a channel with 'Continue with Google' first.")
+    old = _manager_config(target["settings"])
+    permissions = dict(old["permissions"])
+    requested = body.get("permissions") or {}
+    for key in ("analytics", "content_plan", "comment_drafts", "metadata_drafts"):
+        if key in requested:
+            permissions[key] = bool(requested[key])
+    # Deliberately cannot be enabled from this endpoint: generated public actions
+    # must go through the existing explicit reply/upload endpoints.
+    permissions["publish"] = False
+    permissions["post_replies"] = False
+    config = {
+        "enabled": bool(body.get("enabled", old["enabled"])),
+        "approval_required": True,
+        "goal": str(body.get("goal") or old["goal"])[:300],
+        "audience": str(body.get("audience") or old["audience"])[:300],
+        "tone": str(body.get("tone") or old["tone"])[:60],
+        "language": str(body.get("language") or old["language"])[:60],
+        "content_frequency": str(body.get("content_frequency") or old["content_frequency"])[:100],
+        "permissions": permissions,
+        "last_run": old.get("last_run"),
+    }
+    settings = dict(target["settings"])
+    settings["ai_manager"] = config
+    await store.update_project(target["id"], user["id"], settings=settings)
+    return {"saved": True, "channel": google.public_channel(settings), "manager": config}
+
+
+@router.post("/api/youtube/manager/run")
+async def manager_run(request: Request) -> Dict[str, Any]:
+    """Run the AI team against real connected-channel data and save the report."""
+    user = await get_current_user(request)
+    if not check_rate_limit(get_client_ip(request), "yt-ai-manager", 6, 300):
+        raise HTTPException(429, "AI Channel Manager limit reached. Try again in a few minutes.")
+    body = await request.json()
+    store = await get_store()
+    connections = await _load_connections(store, user["id"])
+    channel_id = str(body.get("channel_id") or "").strip()
+    target = await _find_connection(connections, channel_id) if channel_id else (connections[0] if connections else None)
+    if not target:
+        raise HTTPException(409, "Connect a channel with 'Continue with Google' first.")
+    config = _manager_config(target["settings"])
+    if not config["enabled"] and not bool(body.get("run_once")):
+        raise HTTPException(409, "Enable AI Channel Manager first, or send run_once=true.")
+
+    try:
+        access_token, fresh, mode = await _usable_tokens(target)
+        videos = await google.fetch_uploads(access_token, fresh.get("uploads_playlist", ""),
+                                             max_results=max(3, min(15, int(body.get("max_videos") or 10))),
+                                             api_key_override=_key_for(mode))
+    except google.GoogleError as exc:
+        raise HTTPException(exc.status, exc.message) from None
+
+    stats = fresh.get("stats") or {}
+    recent_titles = [str(v.get("title") or "") for v in videos]
+    totals = {
+        "channelViews": stats.get("views", 0), "subscriberCount": stats.get("subscribers", 0),
+        "videoCount": stats.get("videos", 0),
+        "recentViews": sum((v.get("stats") or {}).get("views", 0) for v in videos),
+        "recentLikes": sum((v.get("stats") or {}).get("likes", 0) for v in videos),
+        "recentComments": sum((v.get("stats") or {}).get("comments", 0) for v in videos),
+        "recentAverageViews": int(sum((v.get("stats") or {}).get("views", 0) for v in videos) / len(videos))
+                              if videos else 0,
+    }
+    report: Dict[str, Any] = {
+        "channel": google.public_channel(fresh), "configuration": config,
+        "data": {"totals": totals, "recent_videos": videos}, "generated_at": _now(),
+        "approval_required": True,
+    }
+
+    if config["permissions"]["analytics"]:
+        report["analytics"] = await agent_core.run_agent("analytics", {"goal": config["goal"], "data": totals})
+    if config["permissions"]["content_plan"]:
+        context = "Recent uploads: " + "; ".join(recent_titles[:10]) if recent_titles else "No recent uploads."
+        report["strategy"] = await agent_core.run_agent("strategist", {
+            "topic": fresh.get("title") or "YouTube channel", "audience": config["audience"],
+            "goal": config["goal"], "count": 10,
+            "context": f"{context} Publishing target: {config['content_frequency']}. Avoid repeating recent topics.",
+        })
+
+    comment_rows: List[Dict[str, Any]] = []
+    if config["permissions"]["comment_drafts"] and mode == "oauth":
+        for video in videos[:3]:
+            if len(comment_rows) >= 24:
+                break
+            try:
+                rows = await google.fetch_comments(access_token, str(video.get("video_id") or ""),
+                                                    max_results=8, api_key_override="")
+            except google.GoogleError:
+                continue
+            for row in rows:
+                comment_rows.append({"video_id": video.get("video_id"), "video_title": video.get("title"), **row})
+        if comment_rows:
+            lines = "\n".join(f"[{i+1}] {row.get('author','Viewer')}: {row.get('text','')}"
+                              for i, row in enumerate(comment_rows))
+            community = await agent_core.run_agent("comment_responder", {
+                "video_topic": " / ".join(recent_titles[:3]), "comments": lines, "tone": config["tone"]})
+            report["community"] = community
+            report["comment_source"] = comment_rows
+        else:
+            report["community"] = {"result": {"replies": [], "summary": "No recent comments found."},
+                                   "engine": "builtin", "provider": "none"}
+
+    strategy_result = ((report.get("strategy") or {}).get("result") or {})
+    ideas = strategy_result.get("ideas") or []
+    selected_topic = str(body.get("topic") or (ideas[0].get("title") if ideas else "") or
+                         (recent_titles[0] if recent_titles else fresh.get("title") or "Next video"))
+    if bool(body.get("build_package")):
+        report["video_package"] = await agent_core.run_autopilot({
+            "topic": selected_topic, "audience": config["audience"], "goal": config["goal"],
+            "tone": config["tone"], "language": config["language"], "length": body.get("length") or "medium",
+            "context": "Prepared by AI Channel Manager from connected channel data."
+        })
+
+    report["review_queue"] = {
+        "comment_replies": len((((report.get("community") or {}).get("result") or {}).get("replies") or [])),
+        "video_ideas": len(ideas), "video_package_ready": bool(report.get("video_package")),
+        "public_actions_taken": 0,
+    }
+    report["next_actions"] = [
+        "Review analytics and choose one recommended experiment.",
+        "Approve/edit comment drafts before posting them from the Comments panel.",
+        "Pick one video idea; run again with build_package=true for script, voice, thumbnail and SEO.",
+        "Upload only after reviewing the final metadata and video.",
+    ]
+
+    run_row = await store.add_project(user_id=user["id"],
+                                      name=f"AI Manager: {fresh.get('title', 'YouTube')} - {_now()[:10]}",
+                                      project_type=MANAGER_RUN_TYPE,
+                                      settings={"channel_id": fresh.get("channel_id"), "report": report,
+                                                "created_at": _now()})
+    settings = dict(fresh)
+    manager_saved = dict(settings.get("ai_manager") or config)
+    manager_saved["last_run"] = _now()
+    settings["ai_manager"] = manager_saved
+    await store.update_project(target["id"], user["id"], settings=settings)
+    return {"run_id": run_row.get("id"), **report}
+
+
+@router.get("/api/youtube/manager/runs")
+async def manager_runs(request: Request, channel_id: str = Query(""), limit: int = Query(10)) -> Dict[str, Any]:
+    user = await get_current_user(request)
+    store = await get_store()
+    rows = await store.list_projects(user["id"], project_type=MANAGER_RUN_TYPE,
+                                     limit=max(1, min(MAX_MANAGER_RUNS, limit)))
+    if channel_id:
+        rows = [row for row in rows if (row.get("settings") or {}).get("channel_id") == channel_id]
+    return {"runs": rows, "count": len(rows)}
 
 
 # ============================================================================
