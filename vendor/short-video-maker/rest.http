@@ -1,0 +1,55 @@
+@host = http://localhost:3123
+
+# @name create_video
+POST {{host}}/api/short-video HTTP/1.1
+Content-Type: application/json
+
+{
+    "scenes": [
+      {
+        "text": "hello world",
+        "searchTerms": ["rain"]
+      }
+    ],
+    "config": {
+      "paddingBack": 1500,
+      "music": "uneasy",
+      "captionPosition": "center",
+      "captionBackgroundColor": "#ff0000",
+      "voice": "bm_lewis",
+      "orientation": "landscape",
+      "musicVolume": "muted"
+    }
+}
+
+###
+
+@videoId = {{create_video.response.body.videoId}}
+
+# @name get_video_status
+GET {{host}}/api/short-video/{{videoId}}/status HTTP/1.1
+Accept: application/json
+
+###
+
+# @name list_of_videos
+GET {{host}}/api/short-videos HTTP/1.1
+Accept: application/json
+
+###
+
+# @name delete_video
+DELETE {{host}}/api/short-video/{{videoId}} HTTP/1.1
+Accept: application/json
+
+###
+
+# @name list_available_voices
+GET {{host}}/api/voices HTTP/1.1
+Accept: application/json
+
+###
+
+# @name list_available_music_tags
+GET {{host}}/api/music-tags HTTP/1.1
+Accept: application/json

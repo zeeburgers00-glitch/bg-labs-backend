@@ -1,0 +1,14 @@
+version: "3"
+
+services:
+  short-creator:
+    build:
+      context: .
+      dockerfile: main.Dockerfile
+    env_file:
+      - .env
+    environment:
+      - DEV=false
+    ports:
+      - "3123:3123"
+    entrypoint: ["node", "dist/index.js"]
