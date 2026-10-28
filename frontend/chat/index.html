@@ -140,6 +140,17 @@
     <div class="dialog-heading"><div><p class="eyebrow">CREATOR TOOLKIT</p><h2 id="workforce-title">Skills &amp; roles</h2></div><button class="icon-button close-dialog" type="button" data-close="workforce-dialog" aria-label="Close">×</button></div>
     <p class="dialog-intro">Seven specialist roles can run read-only checks here; other role specifications await integration. The 120-slot plan is not 120 running agents. Nothing in this toolkit publishes or grants access to a channel.</p>
     <p class="hint">The preserved advanced workspace has <a href="/skills/full.html#mission">channel profiles and a text-only queue</a> and a separate <a href="/skills/full.html#youtube">manual private upload</a>. The queue needs a worker; upload needs YouTube setup and consent. Neither generates a full video.</p>
+    <section aria-labelledby="integrations-title" class="integration-hub">
+      <h3 id="integrations-title">All tools &amp; integrations</h3>
+      <p class="hint">A single searchable directory of the tools discussed for ViMax/JARVIS. Statuses are transparent: listed or linked does not mean installed, authenticated, or working. Use each provider's official setup and keep secrets in server-side environment variables.</p>
+      <div class="integration-controls">
+        <label class="integration-search-label">Search tools<input id="integration-search" type="search" maxlength="120" placeholder="Search tools, APIs, voice, agents…"></label>
+        <label>Category<select id="integration-category"><option value="all">All categories</option></select></label>
+      </div>
+      <p id="integration-count" class="hint" role="status" aria-live="polite"></p>
+      <div id="integration-catalog" class="integration-catalog"></div>
+    </section>
+    <div class="dialog-divider"></div>
     <section aria-labelledby="public-research-title">
       <h3 id="public-research-title">Public channel sample</h3>
       <p class="hint">Optional official YouTube Data API lookup: up to ten recent public video titles, dates, durations and visible counts. It does not watch videos, inspect scripts or verify style, access private Analytics, or authorize a channel. Requires server setup and sends up to three API requests; each uses one Google quota unit. One shared lookup attempt is also reserved.</p>
