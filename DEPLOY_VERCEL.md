@@ -51,6 +51,14 @@ git push origin <branch>     # or use the Vercel CLI / dashboard "Redeploy"
 
 Production deploys are created from the branch you target; `main` is the production branch.
 
+## Talking Avatar Studio
+
+Avatar Studio now accepts a portrait photo plus a script and either a 10+ second voice sample or a finished narration file. A voice sample is sent to fal.ai for voice cloning; the generated narration is then sent to FlashTalk for lip-synced video. Uploading finished narration skips voice cloning. Generation may incur provider charges.
+
+Configure `FAL_KEY` in Vercel Project Settings → Environment Variables for **Production, Preview and Development**, then redeploy. Create/manage it at [fal.ai dashboard](https://fal.ai/dashboard/keys). The key is used only by the server and is never sent to the browser. Without it, the UI displays setup instructions and generation returns a configuration error rather than pretending a video was created.
+
+Use only a face image and voice sample you own or have permission to use. Image and each uploaded audio file are limited to 2 MB in the web flow; a script can be up to 5,000 characters. Video generation is queued, so keep the Avatar Studio open to watch status and get the final video URL.
+
 ## Known account setting: Deployment Protection
 
 This Vercel account has **Vercel Authentication** (`all_except_custom_domains`) enabled by
