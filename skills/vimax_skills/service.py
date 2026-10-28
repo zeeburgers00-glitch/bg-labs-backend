@@ -23,12 +23,19 @@ from .clips import extract_clip
 from .health import capabilities, ffmpeg_executable, load_voices, scene_detection_available
 from .jobs import JobManager
 from .scene_analysis import detect_scenes, generated_video
+from .workforce import run_local_skill
 
 CATALOG = Path(__file__).resolve().parents[2] / "catalog" / "catalog.json"
+WORKFORCE_REGISTRY = Path(__file__).resolve().parents[2] / "catalog" / "workforce-skills.json"
 FILE_TYPES = {"video.mp4": "video/mp4", "thumbnail.png": "image/png", "subtitles.srt": "application/x-subrip",
               "subtitles.vtt": "text/vtt", "storyboard.json": "application/json", "script.txt": "text/plain; charset=utf-8",
               "research.txt": "text/plain; charset=utf-8", "narration.wav": "audio/wav", "scene-detection.json": "application/json",
               "scene-clip.mp4": "video/mp4"}
+
+
+class WorkforceInput(BaseModel):
+    model_config = {"extra": "forbid"}
+    input: dict
 
 
 class AnalysisInput(BaseModel):
@@ -112,6 +119,19 @@ def create_app(*, token: str | None = None, output_root: Path | None = None) -> 
     @app.get("/api/skills/catalog")
     def catalog():
         return json.loads(CATALOG.read_text(encoding="utf-8"))
+
+    @app.get("/api/skills/workforce")
+    def workforce_registry():
+        return json.loads(WORKFORCE_REGISTRY.read_text(encoding="utf-8"))
+
+    @app.post("/api/skills/workforce/{skill_id}")
+    def workforce_run(skill_id: str, payload: WorkforceInput):
+        try:
+            return {"skill": skill_id, "result": run_local_skill(skill_id, payload.input)}
+        except LookupError as exc:
+            raise HTTPException(404, str(exc)) from exc
+        except (ValueError, TypeError) as exc:
+            raise HTTPException(422, str(exc)) from exc
 
     @app.get("/api/skills/system")
     def system():

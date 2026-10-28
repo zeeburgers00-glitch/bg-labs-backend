@@ -1,0 +1,906 @@
+{
+  "schema_version": 1,
+  "assessed_at": "2026-10-28",
+  "workforce_notice": "Assignments are proposed specialist roles, not running agents. No 120-agent orchestration, automatic tool invocation, or publishing is provided by this registry. Permissions describe the listed adapter, not a general authorization engine.",
+  "repositories": [
+    {
+      "id": "darkzogx--youtube-automation-agent",
+      "name": "darkzOGx/youtube-automation-agent",
+      "url": "https://github.com/darkzOGx/youtube-automation-agent",
+      "revision": "e973d515aef90c467da2289144df737a3bd03859",
+      "license": "MIT",
+      "last_pushed_utc": "2026-10-27",
+      "archived": false,
+      "installation": "Node >=18.17; npm install; Playwright Chromium and FFmpeg for its renderer.",
+      "dependencies": [
+        "googleapis",
+        "Playwright",
+        "SQLite",
+        "Express",
+        "optional ffmpeg-static",
+        "optional provider SDKs"
+      ],
+      "source_inspected": [
+        "package.json",
+        "agents/seo-optimizer-agent.js",
+        "utils/youtube-metadata-validator.js",
+        "utils/credential-manager.js",
+        "schedules/daily-automation.js"
+      ],
+      "capabilities": "Seven Node workflows, SEO/metadata validation, local scheduling and credential handling.",
+      "decision": "Only the dependency-free metadata validator is vendored. Upstream truncates and normalizes input, so ViMax validates first and shows a non-publishing preview. The full server and scheduler are not installed."
+    },
+    {
+      "id": "gyoridavid--short-video-maker",
+      "name": "gyoridavid/short-video-maker",
+      "url": "https://github.com/gyoridavid/short-video-maker",
+      "revision": "9bb9a212ced86caa7e09099c382da1a44d638760",
+      "license": "MIT",
+      "last_pushed_utc": "2025-06-21",
+      "archived": false,
+      "installation": "Docker recommended; alternatively Node/npm, FFmpeg, Chromium and whisper.cpp build dependencies.",
+      "dependencies": [
+        "Remotion",
+        "Kokoro JS",
+        "whisper.cpp",
+        "Pexels",
+        "Express/MCP",
+        "FFmpeg"
+      ],
+      "source_inspected": [
+        "package.json",
+        "src/short-creator/ShortCreator.ts",
+        "src/short-creator/libraries/Pexels.ts",
+        "src/short-creator/libraries/Kokoro.ts",
+        "src/short-creator/libraries/Whisper.ts",
+        "src/server/routers/rest.ts",
+        "main.Dockerfile"
+      ],
+      "capabilities": "Shorts queue combining stock footage, TTS, transcription and Remotion rendering.",
+      "decision": "Not installed: large separate media stack, third-party models and Pexels access; duplicates parts of the local renderer. Windows support is not established by upstream."
+    },
+    {
+      "id": "adityaarsharma--youtube-marketing-skills",
+      "name": "adityaarsharma/youtube-marketing-skills",
+      "url": "https://github.com/adityaarsharma/youtube-marketing-skills",
+      "revision": "e9136cb39379a82801ee5ae542ff53a1d1109bd2",
+      "license": "MIT",
+      "last_pushed_utc": "2026-10-10",
+      "archived": false,
+      "installation": "Node/npm plus Google OAuth and MCP-compatible host; follow INSTALL.md.",
+      "dependencies": [
+        "googleapis",
+        "MCP SDK",
+        "Express",
+        "OAuth local callback"
+      ],
+      "source_inspected": [
+        "package.json",
+        "server.js",
+        "auth.js",
+        "skills/youtube-marketing/SKILL.md",
+        "INSTALL.md"
+      ],
+      "capabilities": "YouTube data, analytics, thumbnail, video, comment and playlist operations via MCP.",
+      "decision": "Not installed: local plaintext token persistence and broad write scopes do not match ViMax owner-isolated OAuth and explicit approval. ViMax already has a separate private-upload path."
+    },
+    {
+      "id": "ahmedsakri--youtube-agent-pro",
+      "name": "ahmedsakri/youtube-agent-pro",
+      "url": "https://github.com/ahmedsakri/youtube-agent-pro",
+      "revision": "45e8e2603d4bf8e17c1147ba870a4ea00eaecbc5",
+      "license": "MIT",
+      "last_pushed_utc": "2026-10-09",
+      "archived": false,
+      "installation": "Python 3; selected heuristics use only the standard library; prompt packs require a compatible agent host.",
+      "dependencies": [
+        "Python standard library for selected scripts",
+        "optional agent host"
+      ],
+      "source_inspected": [
+        "skills/yt-idea/ideascore.py",
+        "skills/yt-analytics/funnel.py",
+        "skills/yt-chapters/chapters.py",
+        "skills/yt-retention/retention.py",
+        "skills/yt-edit/deadair.py",
+        "skills/yt-thumbnail/thumblint.py"
+      ],
+      "capabilities": "Deterministic idea, funnel, chapter, retention and editing heuristics; not live analytics or forecasting.",
+      "decision": "Idea scorer was already integrated; funnel analysis is newly integrated for supplied metrics. Other overlapping/prompt-only scripts are not installed."
+    },
+    {
+      "id": "salimzaks--youtube-content-creation-agent",
+      "name": "Salimzaks/Youtube-content-creation-agent",
+      "url": "https://github.com/Salimzaks/Youtube-content-creation-agent",
+      "revision": "018deb20b141a4290716682a3b587de7acf31315",
+      "license": "Unverified: no license file at inspected commit",
+      "last_pushed_utc": "2026-03-15",
+      "archived": false,
+      "installation": "Python 3.10+, pip install requirements.txt; search, YouTube and model credentials depend on selected features.",
+      "dependencies": [
+        "LangGraph",
+        "LangChain",
+        "Streamlit",
+        "pandas",
+        "Brave/Tavily/YouTube and model APIs"
+      ],
+      "source_inspected": [
+        "requirements.txt",
+        "agents/modular_langgraph_research_agent.py",
+        "tools/brave_search.py",
+        "tools/youtube.py",
+        "utils/deepseek_client.py"
+      ],
+      "capabilities": "Multi-model research pipeline with search and YouTube integrations; source also contains demo/fallback pathways.",
+      "decision": "Not installed: README links an MIT badge but the inspected tree contains no LICENSE file; clarify rights and remove demo-as-real risk before integration."
+    },
+    {
+      "id": "sergebulaev--youtube-skills",
+      "name": "sergebulaev/youtube-skills",
+      "url": "https://github.com/sergebulaev/youtube-skills",
+      "revision": "73cd16a05b589d755bf2eef3e4ee9db9e2df5494",
+      "license": "MIT",
+      "last_pushed_utc": "2026-10-27",
+      "archived": false,
+      "installation": "Python, requests and python-dotenv for clients; plugin instructions target agent hosts.",
+      "dependencies": [
+        "requests",
+        "python-dotenv",
+        "optional YouTube Data API",
+        "optional Publora/Pixfaro"
+      ],
+      "source_inspected": [
+        "requirements.txt",
+        "lib/url_parser.py",
+        "lib/youtube_client.py",
+        "lib/approval.py",
+        "lib/backend_selector.py"
+      ],
+      "capabilities": "YouTube URL parsing, API data retrieval, draft skills and optional publishing/image-provider clients.",
+      "decision": "Only the dependency-free URL parser is vendored with strict host/path validation. Publishing and network clients are not installed."
+    },
+    {
+      "id": "realjaymes--marketingagentskills",
+      "name": "realjaymes/marketingagentskills",
+      "url": "https://github.com/realjaymes/marketingagentskills",
+      "revision": "4e02d518f11fedd2f3ad0af3adedef8a576c96e5",
+      "license": "MIT",
+      "last_pushed_utc": "2026-10-23",
+      "archived": false,
+      "installation": "Agent-host skill documents; package.json lists optional pptxgenjs; domain utilities have separate runtime needs.",
+      "dependencies": [
+        "agent-host instructions",
+        "optional pptxgenjs",
+        "Python network tools"
+      ],
+      "source_inspected": [
+        "package.json",
+        "skills/ai-content-generation/SKILL.md",
+        "skills/domain-health/scripts/domain_health.py"
+      ],
+      "capabilities": "Marketing prompt playbooks and standalone network-oriented scripts.",
+      "decision": "Not installed: mostly prompts; overlaps creator planning, and executing networking/scraping would need separate egress and consent review."
+    },
+    {
+      "id": "calesthio--openmontage",
+      "name": "calesthio/OpenMontage",
+      "url": "https://github.com/calesthio/OpenMontage",
+      "revision": "e01dbf433f46eeb91d39bf905e194162921019a3",
+      "license": "AGPL-3.0",
+      "last_pushed_utc": "2026-10-24",
+      "archived": false,
+      "installation": "Python >=3.10, FFmpeg and npm/Remotion; optional media/model providers.",
+      "dependencies": [
+        "Python",
+        "FastAPI",
+        "Remotion",
+        "FFmpeg",
+        "optional Gemini/OpenAI/other paid providers"
+      ],
+      "source_inspected": [
+        "requirements.txt",
+        "lib/config_model.py",
+        "lib/paths.py",
+        "lib/asset_cache.py",
+        "lib/slideshow_risk.py"
+      ],
+      "capabilities": "Local creative pipeline with media cache, storyboard, scoring, rendering and optional providers.",
+      "decision": "Not installed: AGPL distribution/service obligations, large runtime and external-cost/egress controls need legal and security review."
+    },
+    {
+      "id": "krillinai--opencreator",
+      "name": "krillinai/OpenCreator",
+      "url": "https://github.com/krillinai/OpenCreator",
+      "revision": "d17bdc16d431db7a45b138c3180bdae533df003a",
+      "license": "Apache-2.0",
+      "last_pushed_utc": "2026-10-26",
+      "archived": false,
+      "installation": "pnpm workspace with desktop/daemon dependencies and an agent/model runtime.",
+      "dependencies": [
+        "Node/pnpm",
+        "desktop/daemon",
+        "Codex runtime",
+        "optional media providers"
+      ],
+      "source_inspected": [
+        "package.json",
+        "pnpm-workspace.yaml",
+        "apps/daemon/package.json",
+        "apps/daemon/src/agent-tools/creator-tools.ts",
+        "apps/daemon/src/agent-tools/capability-token.ts",
+        "apps/daemon/src/api/routes.approvals.ts"
+      ],
+      "capabilities": "Desktop daemon with capability tokens, approvals, tasks and media tools.",
+      "decision": "Not installed: separate desktop/daemon trust model, large workspace and process capabilities are incompatible with a drop-in Vercel function."
+    },
+    {
+      "id": "vincentwei1021--video-shotcraft",
+      "name": "Vincentwei1021/video-shotcraft",
+      "url": "https://github.com/Vincentwei1021/video-shotcraft",
+      "revision": "43bd349a136651865ecfa6ea1cf012f6e957d304",
+      "license": "Apache-2.0",
+      "last_pushed_utc": "2026-10-17",
+      "archived": false,
+      "installation": "Node/npm, Remotion/React, Chromium and FFmpeg for render templates; review bundled asset terms.",
+      "dependencies": [
+        "Remotion",
+        "React",
+        "Vite",
+        "Chromium",
+        "FFmpeg"
+      ],
+      "source_inspected": [
+        "package.json",
+        "template/package.json",
+        "workbench/package.json",
+        "assets/lib/helpers/motion.ts",
+        "assets/audio/ATTRIBUTION.md"
+      ],
+      "capabilities": "Remotion templates, pure motion helpers and a visual workbench.",
+      "decision": "Not installed: a separate rendering stack overlaps current media tools; audio/font assets have separate attribution and rights."
+    },
+    {
+      "id": "ffmpeg--ffmpeg",
+      "name": "FFmpeg/FFmpeg",
+      "url": "https://github.com/FFmpeg/FFmpeg",
+      "revision": "c69954c34522c53234dfd43fa7a0cb3b02f39e47",
+      "license": "LGPL-2.1-or-later or GPL depending on build",
+      "last_pushed_utc": "2026-10-28",
+      "archived": false,
+      "installation": "Install a compatible FFmpeg binary with libx264 and AAC, or use imageio-ffmpeg; verify the exact binary license.",
+      "dependencies": [
+        "FFmpeg executable",
+        "libx264 and AAC for the existing renderer"
+      ],
+      "source_inspected": [
+        "LICENSE.md",
+        "INSTALL.md",
+        "fftools/ffmpeg.c",
+        "configure"
+      ],
+      "capabilities": "Audio/video processing and encoding; local ViMax renderer and bounded scene-clip exporter already call FFmpeg.",
+      "decision": "Existing local integration; not a hosted online video worker. FFmpeg/model/codec licensing depends on each actual build."
+    },
+    {
+      "id": "comfyanonymous--comfyui",
+      "name": "comfyanonymous/ComfyUI",
+      "url": "https://github.com/comfyanonymous/ComfyUI",
+      "revision": "e1df394db644987bfbdd05c887a78b9115d49261",
+      "license": "GPL-3.0",
+      "last_pushed_utc": "2026-10-28",
+      "archived": false,
+      "installation": "Separate ComfyUI runtime, PyTorch and downloaded model weights; GPU strongly recommended for demanding video workflows.",
+      "dependencies": [
+        "Python",
+        "PyTorch",
+        "GPU-specific runtime",
+        "model weights",
+        "custom nodes"
+      ],
+      "source_inspected": [
+        "requirements.txt",
+        "pyproject.toml",
+        "main.py",
+        "server.py",
+        "nodes.py"
+      ],
+      "capabilities": "Node graph for local image/video/model workflows with a separate HTTP server and extensible custom nodes.",
+      "decision": "Not installed: arbitrary custom nodes, network access, model rights, resource isolation and GPL obligations need review. A CPU path exists but may be impractical."
+    },
+    {
+      "id": "hexgrad--kokoro",
+      "name": "hexgrad/kokoro",
+      "url": "https://github.com/hexgrad/kokoro",
+      "revision": "dfb907a02bba8152ca444717ca5d78747ccb4bec",
+      "license": "Apache-2.0",
+      "last_pushed_utc": "2025-08-06",
+      "archived": false,
+      "installation": "Install Python kokoro/misaki with PyTorch and language-specific phonemizers; download compatible model and voice weights.",
+      "dependencies": [
+        "PyTorch",
+        "misaki",
+        "phonemizers/espeak-ng",
+        "model/voice weights"
+      ],
+      "source_inspected": [
+        "pyproject.toml",
+        "kokoro/pipeline.py",
+        "kokoro/model.py",
+        "kokoro.js/package.json"
+      ],
+      "capabilities": "Local text-to-speech pipeline with voice/model loading; model and language support require separate verification.",
+      "decision": "Not installed: duplicates existing Piper path; large weights and language/model licenses need review. Urdu availability is not assumed."
+    },
+    {
+      "id": "systran--faster-whisper",
+      "name": "SYSTRAN/faster-whisper",
+      "url": "https://github.com/SYSTRAN/faster-whisper",
+      "revision": "9e472ae9de8bb374552f531f752654554b76b2d6",
+      "license": "MIT",
+      "last_pushed_utc": "2026-10-25",
+      "archived": false,
+      "installation": "Install faster-whisper/CTranslate2/PyAV and a compatible model; CPU supported, CUDA needs matching runtime.",
+      "dependencies": [
+        "CTranslate2",
+        "PyAV",
+        "tokenizers",
+        "model weights",
+        "optional CUDA/cuDNN"
+      ],
+      "source_inspected": [
+        "requirements.txt",
+        "setup.py",
+        "faster_whisper/transcribe.py",
+        "faster_whisper/audio.py"
+      ],
+      "capabilities": "Speech transcription and timestamps with selectable CPU/GPU inference.",
+      "decision": "Not installed: requires model download, CPU/GPU resources and file-isolated worker; no live transcription was tested."
+    },
+    {
+      "id": "googleapis--google-api-nodejs-client",
+      "name": "googleapis/google-api-nodejs-client",
+      "url": "https://github.com/googleapis/google-api-nodejs-client",
+      "revision": "206bd0334f32aee0fefe02595f88641a5899c2d1",
+      "license": "Apache-2.0",
+      "last_pushed_utc": "2026-10-22",
+      "archived": false,
+      "installation": "Node/npm googleapis client and Google OAuth with only required YouTube scopes.",
+      "dependencies": [
+        "googleapis",
+        "Google OAuth",
+        "YouTube API quota"
+      ],
+      "source_inspected": [
+        "package.json",
+        "src/googleapis.ts",
+        "src/apis/youtube/index.ts",
+        "samples/youtube/upload.js"
+      ],
+      "capabilities": "Official Google API client including YouTube v3 operations and a private upload sample.",
+      "decision": "Client not installed: ViMax already implements official, owner-scoped YouTube REST OAuth/Analytics/private upload; adding a second client would duplicate auth and upload behavior."
+    },
+    {
+      "id": "jakeschincariol--youtube-agent-skill",
+      "name": "Jakeschincariol/youtube-agent-skill",
+      "url": "https://github.com/Jakeschincariol/youtube-agent-skill",
+      "revision": "a2feb2104981a375ffd4f87ee04f4f5344ac43c6",
+      "license": "MIT",
+      "last_pushed_utc": null,
+      "archived": null,
+      "installation": "Existing local Python companion; selected scripts use standard library.",
+      "dependencies": [
+        "Python standard library"
+      ],
+      "source_inspected": [
+        "yt-script/hookscore.py",
+        "yt-package/title.py"
+      ],
+      "capabilities": "Existing hook and title/thumbnail text lint.",
+      "decision": "Previously vendored and retained; no new upstream audit in this increment."
+    },
+    {
+      "id": "breakthrough--pyscenedetect",
+      "name": "Breakthrough/PySceneDetect",
+      "url": "https://github.com/Breakthrough/PySceneDetect",
+      "revision": null,
+      "license": "BSD-3-Clause",
+      "last_pushed_utc": null,
+      "archived": null,
+      "installation": "Existing local companion requirements.",
+      "dependencies": [
+        "PySceneDetect",
+        "OpenCV"
+      ],
+      "source_inspected": [],
+      "capabilities": "Existing local scene-cut detection.",
+      "decision": "Previously integrated; not one of the 15 newly inspected repositories."
+    }
+  ],
+  "skills": [
+    {
+      "id": "metadata_preflight",
+      "name": "YouTube metadata preflight",
+      "agent_assignments": [
+        "SEO specialist",
+        "Publishing reviewer"
+      ],
+      "repository": "https://github.com/darkzOGx/youtube-automation-agent",
+      "revision": "e973d515aef90c467da2289144df737a3bd03859",
+      "license": "MIT",
+      "setup_status": "integrated_hosted",
+      "required_credentials": [],
+      "tool_permissions": [
+        "read_supplied_text",
+        "local_compute"
+      ],
+      "test_results": {
+        "status": "passed",
+        "scope": "Node unit and mocked-auth bridge tests; Chromium exercised the real local adapter with mocked auth (2026-10-28)."
+      },
+      "notes": "Draft preview only; no channel access or publishing. Normalization is shown, never automatically applied."
+    },
+    {
+      "id": "short_video_maker",
+      "name": "Short-video rendering workflow",
+      "agent_assignments": [
+        "Shorts editor",
+        "Video production specialist"
+      ],
+      "repository": "https://github.com/gyoridavid/short-video-maker",
+      "revision": "9bb9a212ced86caa7e09099c382da1a44d638760",
+      "license": "MIT",
+      "setup_status": "not_integrated",
+      "required_credentials": [
+        "PEXELS_API_KEY for stock"
+      ],
+      "tool_permissions": [
+        "not_granted"
+      ],
+      "test_results": {
+        "status": "not_run",
+        "scope": "source review only"
+      },
+      "notes": "Separate worker, model weights, FFmpeg/Chromium and Pexels; not a hosted skill."
+    },
+    {
+      "id": "youtube_marketing_mcp",
+      "name": "YouTube marketing MCP",
+      "agent_assignments": [
+        "Marketing specialist",
+        "Publishing reviewer"
+      ],
+      "repository": "https://github.com/adityaarsharma/youtube-marketing-skills",
+      "revision": "e9136cb39379a82801ee5ae542ff53a1d1109bd2",
+      "license": "MIT",
+      "setup_status": "not_integrated",
+      "required_credentials": [
+        "Google OAuth for channel operations"
+      ],
+      "tool_permissions": [
+        "not_granted"
+      ],
+      "test_results": {
+        "status": "not_run",
+        "scope": "source review only"
+      },
+      "notes": "Broad scopes and local token files; existing ViMax YouTube path is separate."
+    },
+    {
+      "id": "idea_heuristic",
+      "name": "English idea phrasing heuristic",
+      "agent_assignments": [
+        "Content strategist"
+      ],
+      "repository": "https://github.com/ahmedsakri/youtube-agent-pro",
+      "revision": "45e8e2603d4bf8e17c1147ba870a4ea00eaecbc5",
+      "license": "MIT",
+      "setup_status": "integrated_local",
+      "required_credentials": [],
+      "tool_permissions": [
+        "read_supplied_text",
+        "local_compute"
+      ],
+      "test_results": {
+        "status": "passed",
+        "scope": "Existing local Python deterministic tests (2026-10-28); no live provider."
+      },
+      "notes": "Existing local tool; heuristic only, not research or a views prediction."
+    },
+    {
+      "id": "funnel_heuristic",
+      "name": "Supplied video funnel review",
+      "agent_assignments": [
+        "Audience analytics specialist"
+      ],
+      "repository": "https://github.com/ahmedsakri/youtube-agent-pro",
+      "revision": "45e8e2603d4bf8e17c1147ba870a4ea00eaecbc5",
+      "license": "MIT",
+      "setup_status": "integrated_local",
+      "required_credentials": [],
+      "tool_permissions": [
+        "read_supplied_metrics",
+        "local_compute"
+      ],
+      "test_results": {
+        "status": "passed",
+        "scope": "Python input/Shorts tests, local companion and pinned ViMax ToolRegistry execution (2026-10-28)."
+      },
+      "notes": "Uses user-supplied metrics only; heuristics are not a causal diagnosis or forecast."
+    },
+    {
+      "id": "research_pipeline",
+      "name": "Search and research agent",
+      "agent_assignments": [
+        "Research specialist"
+      ],
+      "repository": "https://github.com/Salimzaks/Youtube-content-creation-agent",
+      "revision": "018deb20b141a4290716682a3b587de7acf31315",
+      "license": "Unverified: no license file at inspected commit",
+      "setup_status": "not_integrated",
+      "required_credentials": [
+        "Search/YouTube and model keys depending on tools"
+      ],
+      "tool_permissions": [
+        "not_granted"
+      ],
+      "test_results": {
+        "status": "not_run",
+        "scope": "source review only"
+      },
+      "notes": "No license file found; demo fallback data must not be presented as verified results."
+    },
+    {
+      "id": "youtube_url_parser",
+      "name": "YouTube reference URL parser",
+      "agent_assignments": [
+        "Research specialist",
+        "Channel specialist"
+      ],
+      "repository": "https://github.com/sergebulaev/youtube-skills",
+      "revision": "73cd16a05b589d755bf2eef3e4ee9db9e2df5494",
+      "license": "MIT",
+      "setup_status": "integrated_local",
+      "required_credentials": [],
+      "tool_permissions": [
+        "read_supplied_text",
+        "local_compute"
+      ],
+      "test_results": {
+        "status": "passed",
+        "scope": "Python canonicalization/spoofing tests, local companion and pinned ViMax ToolRegistry execution (2026-10-28)."
+      },
+      "notes": "Parses references only; never fetches URLs, verifies ownership or publishes."
+    },
+    {
+      "id": "marketing_playbooks",
+      "name": "Marketing prompt playbooks",
+      "agent_assignments": [
+        "Marketing specialist"
+      ],
+      "repository": "https://github.com/realjaymes/marketingagentskills",
+      "revision": "4e02d518f11fedd2f3ad0af3adedef8a576c96e5",
+      "license": "MIT",
+      "setup_status": "not_integrated",
+      "required_credentials": [
+        "Model/agent-host access if used"
+      ],
+      "tool_permissions": [
+        "not_granted"
+      ],
+      "test_results": {
+        "status": "not_run",
+        "scope": "source review only"
+      },
+      "notes": "Prompt documents and network utilities are not executable ViMax skills."
+    },
+    {
+      "id": "openmontage_renderer",
+      "name": "OpenMontage media workflow",
+      "agent_assignments": [
+        "Video production specialist"
+      ],
+      "repository": "https://github.com/calesthio/OpenMontage",
+      "revision": "e01dbf433f46eeb91d39bf905e194162921019a3",
+      "license": "AGPL-3.0",
+      "setup_status": "not_integrated",
+      "required_credentials": [
+        "Optional external provider keys"
+      ],
+      "tool_permissions": [
+        "not_granted"
+      ],
+      "test_results": {
+        "status": "not_run",
+        "scope": "source review only"
+      },
+      "notes": "AGPL review, separate worker and per-provider billing controls needed."
+    },
+    {
+      "id": "opencreator_daemon",
+      "name": "Desktop creator daemon",
+      "agent_assignments": [
+        "Production manager"
+      ],
+      "repository": "https://github.com/krillinai/OpenCreator",
+      "revision": "d17bdc16d431db7a45b138c3180bdae533df003a",
+      "license": "Apache-2.0",
+      "setup_status": "not_integrated",
+      "required_credentials": [
+        "Model credentials depending on backend"
+      ],
+      "tool_permissions": [
+        "not_granted"
+      ],
+      "test_results": {
+        "status": "not_run",
+        "scope": "source review only"
+      },
+      "notes": "Separate desktop runtime and security model; not a hosted ViMax agent."
+    },
+    {
+      "id": "shotcraft_renderer",
+      "name": "Shotcraft animation templates",
+      "agent_assignments": [
+        "Motion designer"
+      ],
+      "repository": "https://github.com/Vincentwei1021/video-shotcraft",
+      "revision": "43bd349a136651865ecfa6ea1cf012f6e957d304",
+      "license": "Apache-2.0",
+      "setup_status": "not_integrated",
+      "required_credentials": [],
+      "tool_permissions": [
+        "not_granted"
+      ],
+      "test_results": {
+        "status": "not_run",
+        "scope": "source review only"
+      },
+      "notes": "Requires Remotion renderer and asset-rights review."
+    },
+    {
+      "id": "ffmpeg_local",
+      "name": "Local FFmpeg rendering and clips",
+      "agent_assignments": [
+        "Video editor"
+      ],
+      "repository": "https://github.com/FFmpeg/FFmpeg",
+      "revision": "c69954c34522c53234dfd43fa7a0cb3b02f39e47",
+      "license": "LGPL-2.1-or-later or GPL depending on build",
+      "setup_status": "integrated_local",
+      "required_credentials": [],
+      "tool_permissions": [
+        "read_local_job_media",
+        "write_local_job_output",
+        "local_process"
+      ],
+      "test_results": {
+        "status": "passed",
+        "scope": "Synthetic local scene clip with imageio-ffmpeg 7.0.2-static; command-bound tests (2026-10-28)."
+      },
+      "notes": "Single-user local only; not hosted or owner-isolated. Executable may differ from audited FFmpeg commit; verify actual binary license and codecs."
+    },
+    {
+      "id": "comfyui_graph",
+      "name": "ComfyUI visual workflow",
+      "agent_assignments": [
+        "Visual production specialist"
+      ],
+      "repository": "https://github.com/comfyanonymous/ComfyUI",
+      "revision": "e1df394db644987bfbdd05c887a78b9115d49261",
+      "license": "GPL-3.0",
+      "setup_status": "not_integrated",
+      "required_credentials": [
+        "Optional cloud-node credentials"
+      ],
+      "tool_permissions": [
+        "not_granted"
+      ],
+      "test_results": {
+        "status": "not_run",
+        "scope": "source review only"
+      },
+      "notes": "Separate compute, model weights and potentially GPU; not installed."
+    },
+    {
+      "id": "kokoro_tts",
+      "name": "Kokoro local TTS",
+      "agent_assignments": [
+        "Voice specialist"
+      ],
+      "repository": "https://github.com/hexgrad/kokoro",
+      "revision": "dfb907a02bba8152ca444717ca5d78747ccb4bec",
+      "license": "Apache-2.0",
+      "setup_status": "not_integrated",
+      "required_credentials": [],
+      "tool_permissions": [
+        "not_granted"
+      ],
+      "test_results": {
+        "status": "not_run",
+        "scope": "source review only"
+      },
+      "notes": "Requires compatible model/voice weights; existing local TTS uses Piper instead."
+    },
+    {
+      "id": "faster_whisper",
+      "name": "Faster Whisper transcription",
+      "agent_assignments": [
+        "Caption specialist"
+      ],
+      "repository": "https://github.com/SYSTRAN/faster-whisper",
+      "revision": "9e472ae9de8bb374552f531f752654554b76b2d6",
+      "license": "MIT",
+      "setup_status": "not_integrated",
+      "required_credentials": [],
+      "tool_permissions": [
+        "not_granted"
+      ],
+      "test_results": {
+        "status": "not_run",
+        "scope": "source review only"
+      },
+      "notes": "Requires model weights and a separate CPU/GPU worker; not verified."
+    },
+    {
+      "id": "googleapis_client",
+      "name": "Google API Node client",
+      "agent_assignments": [
+        "Channel specialist"
+      ],
+      "repository": "https://github.com/googleapis/google-api-nodejs-client",
+      "revision": "206bd0334f32aee0fefe02595f88641a5899c2d1",
+      "license": "Apache-2.0",
+      "setup_status": "not_integrated",
+      "required_credentials": [
+        "Google OAuth and approved YouTube scopes"
+      ],
+      "tool_permissions": [
+        "not_granted"
+      ],
+      "test_results": {
+        "status": "not_run",
+        "scope": "source review only"
+      },
+      "notes": "Not installed; existing separate ViMax REST integration already handles private upload and optional Analytics."
+    },
+    {
+      "id": "hook_heuristic",
+      "name": "English hook phrasing heuristic",
+      "agent_assignments": [
+        "Script specialist"
+      ],
+      "repository": "https://github.com/Jakeschincariol/youtube-agent-skill",
+      "revision": "a2feb2104981a375ffd4f87ee04f4f5344ac43c6",
+      "license": "MIT",
+      "setup_status": "integrated_local",
+      "required_credentials": [],
+      "tool_permissions": [
+        "read_supplied_text",
+        "local_compute"
+      ],
+      "test_results": {
+        "status": "passed",
+        "scope": "Existing local Python deterministic tests (2026-10-28); no live provider."
+      },
+      "notes": "Existing local-only heuristic; not a performance forecast."
+    },
+    {
+      "id": "title_lint",
+      "name": "Title and thumbnail-text lint",
+      "agent_assignments": [
+        "Packaging specialist"
+      ],
+      "repository": "https://github.com/Jakeschincariol/youtube-agent-skill",
+      "revision": "a2feb2104981a375ffd4f87ee04f4f5344ac43c6",
+      "license": "MIT",
+      "setup_status": "integrated_local",
+      "required_credentials": [],
+      "tool_permissions": [
+        "read_supplied_text",
+        "local_compute"
+      ],
+      "test_results": {
+        "status": "passed",
+        "scope": "Existing local Python deterministic tests (2026-10-28); no live provider."
+      },
+      "notes": "Existing English text lint; not image inspection."
+    },
+    {
+      "id": "scene_cuts",
+      "name": "Local scene-cut estimation",
+      "agent_assignments": [
+        "Video editor"
+      ],
+      "repository": "https://github.com/Breakthrough/PySceneDetect",
+      "revision": null,
+      "license": "BSD-3-Clause",
+      "setup_status": "integrated_local",
+      "required_credentials": [],
+      "tool_permissions": [
+        "read_local_job_media",
+        "write_local_job_output",
+        "local_compute"
+      ],
+      "test_results": {
+        "status": "passed",
+        "scope": "Synthetic local frames, API and pinned ViMax ToolRegistry with PySceneDetect/OpenCV (2026-10-28)."
+      },
+      "notes": "Single-user local only; needs local OpenCV/PySceneDetect and an existing ViMax job video. Cuts are estimates, not semantic understanding."
+    }
+  ],
+  "workforce_plan": {
+    "target_slots": 120,
+    "status": "proposed_only",
+    "notice": "Illustrative role allocation, not configured workers or a running scheduler. Uninstalled skills cannot be executed by these roles.",
+    "roles": [
+      {
+        "role": "Content strategist",
+        "proposed_slots": 8
+      },
+      {
+        "role": "SEO specialist",
+        "proposed_slots": 6
+      },
+      {
+        "role": "Publishing reviewer",
+        "proposed_slots": 4
+      },
+      {
+        "role": "Shorts editor",
+        "proposed_slots": 8
+      },
+      {
+        "role": "Video production specialist",
+        "proposed_slots": 10
+      },
+      {
+        "role": "Marketing specialist",
+        "proposed_slots": 6
+      },
+      {
+        "role": "Research specialist",
+        "proposed_slots": 12
+      },
+      {
+        "role": "Audience analytics specialist",
+        "proposed_slots": 6
+      },
+      {
+        "role": "Channel specialist",
+        "proposed_slots": 4
+      },
+      {
+        "role": "Production manager",
+        "proposed_slots": 4
+      },
+      {
+        "role": "Motion designer",
+        "proposed_slots": 6
+      },
+      {
+        "role": "Video editor",
+        "proposed_slots": 8
+      },
+      {
+        "role": "Visual production specialist",
+        "proposed_slots": 8
+      },
+      {
+        "role": "Voice specialist",
+        "proposed_slots": 6
+      },
+      {
+        "role": "Caption specialist",
+        "proposed_slots": 6
+      },
+      {
+        "role": "Script specialist",
+        "proposed_slots": 10
+      },
+      {
+        "role": "Packaging specialist",
+        "proposed_slots": 8
+      }
+    ]
+  }
+}

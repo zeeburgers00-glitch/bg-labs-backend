@@ -4,6 +4,7 @@ import {ProviderError, providerStatus, pexelsStatus, validateSelection, chatComp
 import {YouTubeError, createYouTube, clearYouTubeCookies} from './youtube.mjs';
 import {SocialError, createSocial, clearSocialCookies} from './social.mjs';
 import {GpuError, createGpu} from './gpu.mjs';
+import {workforceRegistry, runHostedSkill, SkillError} from './workforce-skills.mjs';
 import {createHash, randomBytes} from 'node:crypto';
 
 const GOOGLE_PKCE_COOKIE = '__Host-vimax_google_pkce';
@@ -585,6 +586,18 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch, g
         if (!response.ok || !Array.isArray(value)) throw new HttpError(503, 'Chat history is temporarily unavailable.');
         return json({turns:value}, 200, session.updates);
       }
+      if (method === 'GET' && path === '/api/cloud/skills/registry') {
+        const session = await authenticated();
+        return json(workforceRegistry(), 200, session.updates);
+      }
+      if (method === 'POST' && path === '/api/cloud/skills/run') {
+        const session = await authenticated();
+        const input = await body(request);
+        if (!input || typeof input !== 'object' || Array.isArray(input)
+            || Object.keys(input).some(key => !['skill','input'].includes(key))
+            || typeof input.skill !== 'string') throw new HttpError(422, 'Provide a hosted skill and its input.');
+        return json({skill:input.skill, result:runHostedSkill(input.skill, input.input)}, 200, session.updates);
+      }
       if (method === 'GET' && path === '/api/cloud/usage') {
         const session = await authenticated();
         const {response, value} = await supa('/rest/v1/vimax_ai_calls?select=id,feature,provider,model,status,input_tokens,output_tokens,created_at,completed_at&order=created_at.desc&limit=20', {token:session.access});
@@ -650,7 +663,7 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch, g
       if (path.startsWith('/api/')) throw new HttpError(503, AGENT_UNAVAILABLE);
       throw new HttpError(404, 'Not found.');
     } catch (error) {
-      const status = error instanceof HttpError || error instanceof ProviderError || error instanceof YouTubeError || error instanceof SocialError || error instanceof GpuError ? error.status : 500;
+      const status = error instanceof HttpError || error instanceof ProviderError || error instanceof YouTubeError || error instanceof SocialError || error instanceof GpuError || error instanceof SkillError ? error.status : 500;
       return json({error:status === 500 ? 'The request could not be completed.' : error.message}, status, sessionUpdates);
     }
   }

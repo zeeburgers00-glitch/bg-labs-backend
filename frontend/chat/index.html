@@ -24,6 +24,7 @@
         <span id="google-signin-status" class="signin-status" role="status">Checking Google sign-in…</span>
       </div>
       <button id="account-button" class="account-button" type="button">Sign in</button>
+      <button id="workforce-open" class="account-button" type="button" hidden>Creator tools</button>
     </header>
 
     <main class="chat-layout">
@@ -109,6 +110,27 @@
     <div class="dialog-divider"></div>
     <div class="dialog-actions"><button class="secondary-button" id="toggle-pause" type="button" disabled>Pause chat</button><button class="text-button danger" id="clear-history" type="button" disabled>Delete chat history</button></div>
     <p id="settings-message" class="hint" role="status"></p>
+  </dialog>
+
+  <dialog id="workforce-dialog" class="dialog workforce-dialog" aria-labelledby="workforce-title">
+    <div class="dialog-heading"><div><p class="eyebrow">CREATOR TOOLKIT</p><h2 id="workforce-title">Skills &amp; roles</h2></div><button class="icon-button close-dialog" type="button" data-close="workforce-dialog" aria-label="Close">×</button></div>
+    <p class="dialog-intro">Role assignments are a plan, not 120 running agents. Only the metadata preview runs here; local and uninstalled skills are labeled below. Nothing in this tool publishes or accesses a channel.</p>
+    <section aria-labelledby="preflight-title">
+      <h3 id="preflight-title">YouTube metadata preview</h3>
+      <p class="hint">Check your own draft without an AI provider or YouTube connection. Results are not saved or sent to YouTube. Review the normalized preview before using it elsewhere.</p>
+      <form id="preflight-form">
+        <label>Title<input id="preflight-title-input" maxlength="100" required></label>
+        <label>Description<textarea id="preflight-description" maxlength="5000" rows="4"></textarea></label>
+        <label>Tags, comma separated<input id="preflight-tags" maxlength="450" placeholder="e.g. home gardening, herbs"></label>
+        <div class="settings-grid"><label>YouTube category ID<input id="preflight-category" value="22" maxlength="3" inputmode="numeric" required></label><label>Language tag<input id="preflight-language" value="en" maxlength="35" placeholder="en or ur-PK" required></label></div>
+        <button id="preflight-submit" class="primary-button" type="submit">Preview metadata</button>
+      </form>
+      <p id="preflight-status" class="hint" role="status" aria-live="polite"></p>
+      <p id="preflight-error" class="error" role="alert"></p>
+      <div id="preflight-result" class="preflight-result" hidden><p id="preflight-notice" class="hint"></p><ul id="preflight-notes"></ul><pre id="preflight-preview"></pre></div>
+    </section>
+    <div class="dialog-divider"></div>
+    <section aria-labelledby="registry-title"><h3 id="registry-title">Unified skill registry</h3><p class="hint">Open a skill for its source, license, proposed specialist, permissions, setup and tests. Source review is not the same as installation.</p><p id="registry-status" class="hint" role="status"></p><details class="role-plan"><summary>Proposed 120-slot role plan — not running</summary><p class="hint">These are illustrative assignments, not configured agents or permissions. Uninstalled skills cannot be used.</p><ul id="role-plan-list"></ul></details><div id="registry-list" class="registry-list"></div></section>
   </dialog>
 
   <dialog id="channel-dialog" class="dialog" aria-labelledby="channel-title">

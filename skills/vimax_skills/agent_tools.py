@@ -7,6 +7,7 @@ from pathlib import Path
 
 from .analyzers import lint_title, score_hook, score_idea
 from .scene_analysis import detect_scenes, generated_video
+from .workforce import analyze_funnel, parse_youtube_reference
 
 
 def build_skill_specs():
@@ -49,6 +50,20 @@ def build_skill_specs():
             description="Lint an English video title and optional thumbnail text locally. This does not publish or guarantee engagement.",
             handler=wrap("yt_title_thumbnail_lint", lambda a: lint_title(a["title"], a.get("thumbnail", ""))),
             schema={"title": ToolArgumentSchema(str, required=True), "thumbnail": ToolArgumentSchema(str, default="")},
+            permission_mode="read-only", concurrency_safe=True,
+        ),
+        ToolSpec(
+            name="youtube_reference_parse",
+            description="Parse a supplied YouTube reference locally. Does not fetch a URL or verify ownership.",
+            handler=wrap("youtube_reference_parse", lambda a: parse_youtube_reference(a["reference"])),
+            schema={"reference": ToolArgumentSchema(str, required=True)},
+            permission_mode="read-only", concurrency_safe=True,
+        ),
+        ToolSpec(
+            name="youtube_funnel_review",
+            description="Review supplied numeric video metrics with simple heuristics; does not fetch Analytics, diagnose causes, or forecast performance.",
+            handler=wrap("youtube_funnel_review", lambda a: analyze_funnel(a["input"])),
+            schema={"input": ToolArgumentSchema(dict, required=True)},
             permission_mode="read-only", concurrency_safe=True,
         ),
         ToolSpec(

@@ -8,6 +8,7 @@
     chat:{providers:[], allowed:false, paused:false, settingsReady:false, historyReady:false, busy:false, usageLoading:false, turns:[], pending:null, note:'', error:''},
     channel:{ready:false, configured:false, allowed:false, analyticsConfigured:false, analyticsConnected:false, busy:false, connected:null, connectionId:null, saved:[], autoAttempted:false, sequence:0, notice:'', error:''},
     facebook:{ready:false, configured:false, allowed:false, busy:false, saved:[], verified:null, autoAttempted:false, sequence:0, notice:'', error:''},
+    workforce:{loaded:false, loading:false, busy:false},
   };
   let autoConnectAfterLogin = false;
   const isCurrent = version => Boolean(state.user && state.version === version);
@@ -273,6 +274,7 @@
     $('account-title').textContent = loggedIn ? 'Your ViMax account' : 'Sign in to ViMax';
     $('account-identity').textContent = loggedIn ? state.user.email : '';
     $('account-id').textContent = loggedIn ? `Account ID: ${state.user.id}` : '';
+    $('workforce-open').hidden = !loggedIn;
     updateGoogleControls();
   }
   function closeDialog(id) { const dialog = $(id); if (dialog.open) dialog.close(); }
@@ -290,10 +292,15 @@
     state.chat = {providers:[], allowed:false, paused:false, settingsReady:false, historyReady:false, busy:false, usageLoading:false, turns:[], pending:null, note:'', error:''};
     state.channel = {ready:false, configured:false, allowed:false, analyticsConfigured:false, analyticsConnected:false, busy:false, connected:null, connectionId:null, saved:[], autoAttempted:false, sequence:0, notice:'', error:''};
     state.facebook = {ready:false, configured:false, allowed:false, busy:false, saved:[], verified:null, autoAttempted:false, sequence:0, notice:'', error:''};
+    state.workforce = {loaded:false, loading:false, busy:false};
+    $('preflight-form').reset(); for (const field of $('preflight-form').elements) field.disabled = false;
+    $('preflight-status').textContent = ''; $('preflight-error').textContent = ''; $('preflight-notice').textContent = '';
+    $('preflight-result').hidden = true; $('preflight-notes').replaceChildren(); $('preflight-preview').textContent = '';
+    $('registry-status').textContent = ''; $('registry-list').replaceChildren(); $('role-plan-list').replaceChildren(); document.querySelector('.role-plan').open = false;
     $('chat-prompt').value = ''; $('account-password').value = ''; $('speak-replies').checked = false;
     $('settings-message').textContent = ''; $('account-error').textContent = ''; $('account-message').textContent = '';
     $('usage-message').textContent = ''; $('usage-list').replaceChildren();
-    closeDialog('channel-dialog'); closeDialog('facebook-dialog'); closeDialog('settings-dialog');
+    closeDialog('channel-dialog'); closeDialog('facebook-dialog'); closeDialog('settings-dialog'); closeDialog('workforce-dialog');
     renderMessages(); renderProviders(); renderChannelList(); renderFacebookList(); updateAccount(); updateChannelControls(); updateFacebookControls(); updateChatControls();
     return state.version;
   }
@@ -473,6 +480,84 @@
       if (sequence === state.sessionSequence) state.google.error = error.message;
     } finally { state.authBusy = false; updateGoogleControls(); }
   });
+  function renderWorkforceRegistry(data) {
+    if (!Array.isArray(data?.skills) || data.skills.length > 100) throw new Error('The skill registry response is invalid.');
+    const list = $('registry-list'); list.replaceChildren();
+    const roles = $('role-plan-list'); roles.replaceChildren();
+    if (Array.isArray(data.workforce_plan?.roles) && data.workforce_plan.roles.length <= 100) {
+      for (const item of data.workforce_plan.roles) {
+        if (typeof item?.role === 'string' && Number.isInteger(item.proposed_slots) && item.proposed_slots > 0) {
+          roles.append(element('li', `${item.role}: ${item.proposed_slots} proposed slots`));
+        }
+      }
+    }
+    const labels = {integrated_hosted:'Hosted preview', integrated_local:'Local setup required', not_integrated:'Not installed'};
+    for (const skill of data.skills) {
+      if (!skill || typeof skill.name !== 'string' || typeof skill.setup_status !== 'string') continue;
+      const details = element('details'), summary = element('summary', `${skill.name} · ${labels[skill.setup_status] || 'Unknown'}`);
+      details.append(summary);
+      const line = (label, value) => details.append(element('p', `${label}: ${value}`));
+      const entries = value => Array.isArray(value) && value.length ? value.filter(x => typeof x === 'string').join(', ') : 'None';
+      line('Proposed roles', entries(skill.agent_assignments));
+      line('License', typeof skill.license === 'string' ? skill.license : 'Unknown');
+      line('Credentials', entries(skill.required_credentials));
+      line('Tool permissions', entries(skill.tool_permissions));
+      line('Tests', `${skill.test_results?.status || 'unknown'} · ${skill.test_results?.scope || 'No test details'}`);
+      if (typeof skill.notes === 'string') line('Notes', skill.notes);
+      if (typeof skill.revision === 'string') line('Pinned revision', skill.revision);
+      try {
+        const url = new URL(skill.repository);
+        if (url.origin === 'https://github.com' && !url.username && !url.password) {
+          const source = element('a', 'View source'); source.href = url.href; source.target = '_blank'; source.rel = 'noopener noreferrer'; details.append(source);
+        }
+      } catch { /* Invalid source links are not clickable. */ }
+      list.append(details);
+    }
+  }
+  async function loadWorkforceRegistry(version) {
+    if (!isCurrent(version) || state.workforce.loaded || state.workforce.loading) return;
+    state.workforce.loading = true; $('registry-status').textContent = 'Loading registry…';
+    try {
+      const data = await sessionApi('/api/cloud/skills/registry');
+      if (!isCurrent(version)) return;
+      renderWorkforceRegistry(data); state.workforce.loaded = true;
+      $('registry-status').textContent = `${data.skills.length} reviewed entries. Assignments do not start agents.`;
+    } catch (error) {
+      if (isCurrent(version) && error.name !== 'AbortError') $('registry-status').textContent = `${error.message} Close and reopen to retry.`;
+    } finally { if (isCurrent(version)) state.workforce.loading = false; }
+  }
+  $('workforce-open').addEventListener('click', () => {
+    if (!state.user) return;
+    showDialog('workforce-dialog'); void loadWorkforceRegistry(state.version);
+  });
+  $('preflight-form').addEventListener('submit', async event => {
+    event.preventDefault();
+    if (!state.user || state.workforce.busy) return;
+    const version = state.version;
+    const input = {title:$('preflight-title-input').value, description:$('preflight-description').value,
+      tags:$('preflight-tags').value, categoryId:$('preflight-category').value, defaultLanguage:$('preflight-language').value};
+    state.workforce.busy = true; for (const field of $('preflight-form').elements) field.disabled = true;
+    $('preflight-status').textContent = 'Checking draft…'; $('preflight-error').textContent = ''; $('preflight-result').hidden = true;
+    try {
+      const data = await post('/api/cloud/skills/run', {skill:'metadata_preflight', input});
+      if (!isCurrent(version)) return;
+      const result = data?.result;
+      if (!result || typeof result.valid !== 'boolean' || !result.preview || typeof result.preview !== 'object') throw new Error('The preview response is invalid.');
+      $('preflight-status').textContent = result.valid ? 'Preview ready. Review warnings and normalized values.' : 'Draft needs changes before use.';
+      $('preflight-notice').textContent = typeof result.notice === 'string' ? result.notice : '';
+      const notes = $('preflight-notes'); notes.replaceChildren();
+      for (const [prefix, values] of [['Error',result.errors],['Warning',result.warnings],['Change',result.changes]]) {
+        if (Array.isArray(values)) for (const value of values) if (typeof value === 'string') notes.append(element('li', `${prefix}: ${value}`));
+      }
+      $('preflight-preview').textContent = JSON.stringify(result.preview, null, 2);
+      $('preflight-result').hidden = false;
+    } catch (error) {
+      if (isCurrent(version) && error.name !== 'AbortError') { $('preflight-status').textContent = ''; $('preflight-error').textContent = error.message; }
+    } finally {
+      if (isCurrent(version)) { state.workforce.busy = false; for (const field of $('preflight-form').elements) field.disabled = false; }
+    }
+  });
+
   $('account-button').addEventListener('click', () => showDialog('account-dialog'));
   $('chat-settings').addEventListener('click', () => showDialog('settings-dialog'));
   $('channel-manage').addEventListener('click', () => { if (state.user) { closeDialog('account-dialog'); showDialog('channel-dialog'); } });
