@@ -150,6 +150,10 @@
         .command-result i { width:26px;text-align:center;color:#67e8f9; }
         #toastContainer > div { max-width:min(420px,calc(100vw - 32px));border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(12px); }
         @media (max-width: 960px) { #mainApp > aside { width:236px; } #contentArea { padding:18px; } }
+        #mainApp > aside { transition:width .22s ease,transform .22s ease,opacity .18s ease; }
+        #mainApp.sidebar-collapsed > aside { width:0 !important; min-width:0 !important; opacity:0; overflow:hidden; border-right:0 !important; padding:0 !important; }
+        #mainApp.sidebar-collapsed > aside > * { opacity:0; pointer-events:none; }
+
         @media (max-width: 760px) {
             #mainApp { position:relative; }
             #mainApp > aside { position:absolute; inset:0 auto 0 0; width:min(288px,88vw); transform:translateX(-105%); transition:transform .24s ease; z-index:40; box-shadow:20px 0 70px rgba(0,0,0,.45); }
@@ -448,7 +452,7 @@
             document.getElementById('adminLink').classList.remove('hidden');
         }
 
-        navigate(window.location.search.indexOf('yt=') !== -1 ? 'youtube' : 'hub');
+        navigate(window.location.search.indexOf('yt=') !== -1 ? 'youtube' : 'dashboard');
         handleYouTubeReturn();
     }
 
@@ -2645,14 +2649,24 @@
     // UTILS
     // ============================================================================
     function toggleSidebar() {
-        sidebarOpen = !sidebarOpen;
-        const sidebar = document.querySelector('aside');
-        if (sidebarOpen) {
-            sidebar.classList.remove('translate-x-[-100%]');
+        const app = document.getElementById('mainApp');
+        const sidebar = document.querySelector('#mainApp > aside');
+        if (!app || !sidebar) return;
+        if (window.innerWidth <= 760) {
+            sidebar.classList.toggle('mobile-open');
         } else {
-            sidebar.classList.add('translate-x-[-100%]');
+            app.classList.toggle('sidebar-collapsed');
         }
     }
+
+    // Keep the sidebar state sensible when moving between mobile and desktop widths.
+    window.addEventListener('resize', () => {
+        const app = document.getElementById('mainApp');
+        const sidebar = document.querySelector('#mainApp > aside');
+        if (!app || !sidebar) return;
+        if (window.innerWidth > 760) sidebar.classList.remove('mobile-open');
+        else app.classList.remove('sidebar-collapsed');
+    });
 
     // Make sidebar mobile-toggleable
     window.addEventListener('resize', () => {
