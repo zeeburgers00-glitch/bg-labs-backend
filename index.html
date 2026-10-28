@@ -31,6 +31,87 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: #1f1f1f; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #6366f1; }
+
+        /* JARVIS cinematic depth system */
+        :root { color-scheme: dark; --jarvis-cyan: #67e8f9; --jarvis-blue: #6366f1; --jarvis-violet: #a78bfa; }
+        body {
+            background:
+                radial-gradient(ellipse at 12% 0%, rgba(49, 46, 129, .34), transparent 36%),
+                radial-gradient(ellipse at 88% 12%, rgba(8, 145, 178, .16), transparent 30%),
+                #070b17 !important;
+            background-attachment: fixed !important;
+        }
+        body::before {
+            content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: .2;
+            background-image: linear-gradient(rgba(125,211,252,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(125,211,252,.045) 1px, transparent 1px);
+            background-size: 48px 48px; mask-image: linear-gradient(to bottom, black, transparent 78%);
+        }
+        #mainApp, #authOverlay, #toastContainer { position: relative; z-index: 1; }
+        .glass-panel {
+            background: linear-gradient(145deg, rgba(20, 29, 52, .82), rgba(8, 13, 27, .86)) !important;
+            border: 1px solid rgba(148, 163, 184, .14) !important;
+            box-shadow: 0 16px 48px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.045);
+            backdrop-filter: blur(18px);
+        }
+        .card-hover { transform-style: preserve-3d; transition: transform .32s cubic-bezier(.2,.8,.2,1), border-color .32s, box-shadow .32s; }
+        .card-hover:hover { transform: translateY(-5px) perspective(1000px) rotateX(1deg); border-color: rgba(103,232,249,.32) !important; box-shadow: 0 20px 55px rgba(8,145,178,.09); }
+        .btn-primary { background: linear-gradient(115deg, #4f46e5, #7c3aed 56%, #0891b2); box-shadow: 0 8px 24px rgba(79,70,229,.18); }
+        .sidebar-item.active { background: linear-gradient(100deg, rgba(99,102,241,.22), rgba(8,145,178,.08)); border-right: 3px solid #67e8f9; color: #a5f3fc; }
+        .jarvis-hero {
+            position: relative; isolation: isolate; overflow: hidden; min-height: 270px;
+            display: grid; grid-template-columns: minmax(0,1.15fr) minmax(220px,.85fr);
+            align-items: center; gap: 1.25rem; padding: clamp(1.4rem,3vw,2.8rem);
+            border: 1px solid rgba(103,232,249,.22); border-radius: 24px;
+            background: radial-gradient(ellipse at 78% 47%, rgba(67,56,202,.24), transparent 38%), linear-gradient(120deg, rgba(13,22,43,.98), rgba(12,16,39,.92) 56%, rgba(8,35,55,.92));
+            box-shadow: 0 22px 70px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.07);
+            perspective: 1100px;
+        }
+        .jarvis-hero::before {
+            content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: .55;
+            background: linear-gradient(110deg, transparent 10%, rgba(103,232,249,.09) 48%, transparent 72%);
+            transform: translateX(-100%); animation: jarvis-sweep 8s ease-in-out infinite;
+        }
+        .jarvis-hero::after {
+            content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+            background-image: radial-gradient(rgba(165,243,252,.35) .75px, transparent .75px);
+            background-size: 18px 18px; opacity: .12; mask-image: linear-gradient(90deg, transparent, black);
+        }
+        .jarvis-kicker { color: #67e8f9; font-size: .7rem; letter-spacing: .28em; font-weight: 700; text-transform: uppercase; }
+        .jarvis-headline { font-size: clamp(2rem,4vw,3.45rem); line-height: 1.04; font-weight: 750; letter-spacing: -.055em; text-wrap: balance; }
+        .jarvis-gradient-text { background: linear-gradient(90deg,#f8fafc 8%,#a5f3fc 48%,#c4b5fd 90%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .jarvis-hero-copy { position: relative; z-index: 2; max-width: 640px; }
+        .jarvis-hero-orbspace { position: relative; min-height: 235px; display: grid; place-items: center; transform-style: preserve-3d; }
+        .jarvis-orb-halo { position: absolute; width: min(78%,250px); aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle, rgba(34,211,238,.18), rgba(99,102,241,.12) 42%, transparent 70%); filter: blur(13px); animation: jarvis-breathe 4.8s ease-in-out infinite; }
+        .jarvis-orb { position: relative; width: clamp(118px,16vw,170px); aspect-ratio: 1; border-radius: 50%; display:grid; place-items:center; transform-style:preserve-3d; animation: jarvis-float 6s ease-in-out infinite; }
+        .jarvis-orb-core { position:absolute; inset:19%; border-radius:50%; background: radial-gradient(circle at 33% 25%, #e0f2fe 0%, #67e8f9 8%, #6366f1 32%, #312e81 62%, #050816 100%); box-shadow: 0 0 16px rgba(103,232,249,.95), 0 0 44px rgba(99,102,241,.8), inset -12px -14px 25px rgba(0,0,0,.65), inset 5px 5px 13px rgba(255,255,255,.75); }
+        .jarvis-orb-core::before { content:""; position:absolute; inset:7%; border:1px solid rgba(224,242,254,.6); border-radius:50%; box-shadow: inset 0 0 18px rgba(103,232,249,.55); }
+        .jarvis-orbit { position:absolute; width:100%; aspect-ratio:1; border-radius:50%; border:1px solid rgba(103,232,249,.62); box-shadow:0 0 18px rgba(34,211,238,.08); transform:rotateX(68deg) rotateZ(-24deg); animation: jarvis-orbit 12s linear infinite; }
+        .jarvis-orbit.orbit-two { width:116%; border-color:rgba(167,139,250,.62); transform:rotateX(74deg) rotateY(32deg) rotateZ(32deg); animation-duration:17s; animation-direction:reverse; }
+        .jarvis-orbit.orbit-three { width:88%; border-style:dashed; border-color:rgba(165,243,252,.42); transform:rotateY(70deg) rotateZ(12deg); animation-duration:22s; }
+        .jarvis-orbit-dot { position:absolute; top:10%; right:15%; width:8px; height:8px; border-radius:50%; background:#a5f3fc; box-shadow:0 0 13px #67e8f9; }
+        .jarvis-orb-caption { position:absolute; bottom:2px; left:0; right:0; text-align:center; font-size:.62rem; color:rgba(165,243,252,.78); letter-spacing:.3em; text-transform:uppercase; }
+        .jarvis-eq { display:flex; align-items:center; justify-content:center; gap:4px; height:22px; }
+        .jarvis-eq i { display:block; width:3px; height:8px; border-radius:8px; background:linear-gradient(to top,#6366f1,#67e8f9); animation: jarvis-eq 1s ease-in-out infinite alternate; }
+        .jarvis-eq i:nth-child(2n) { animation-delay:-.4s; animation-duration:.75s; }
+        .jarvis-eq i:nth-child(3n) { animation-delay:-.7s; animation-duration:1.2s; }
+        .jarvis-status-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:#67e8f9; box-shadow:0 0 12px #67e8f9; margin-right:8px; }
+        .jarvis-stat { border:1px solid rgba(148,163,184,.12); background:linear-gradient(150deg,rgba(30,41,70,.68),rgba(12,18,34,.82)); box-shadow:inset 0 1px 0 rgba(255,255,255,.035); }
+        .jarvis-chat-panel { border-color:rgba(103,232,249,.19) !important; }
+        .jarvis-chat-panel #hubInput:focus { box-shadow:0 0 0 3px rgba(103,232,249,.08); }
+        @keyframes jarvis-orbit { to { transform:rotateX(68deg) rotateZ(336deg); } }
+        @keyframes jarvis-breathe { 0%,100% { opacity:.62; transform:scale(.92); } 50% { opacity:1; transform:scale(1.08); } }
+        @keyframes jarvis-float { 0%,100% { transform:translateY(0) rotateY(-5deg); } 50% { transform:translateY(-9px) rotateY(7deg); } }
+        @keyframes jarvis-sweep { 0%,28% { transform:translateX(-100%); } 65%,100% { transform:translateX(100%); } }
+        @keyframes jarvis-eq { from { height:4px; opacity:.48; } to { height:18px; opacity:1; } }
+        @media (max-width: 760px) {
+            .jarvis-hero { grid-template-columns:1fr; padding:1.4rem; }
+            .jarvis-hero-orbspace { min-height:190px; }
+            .jarvis-orb { width:120px; }
+            .jarvis-orb-caption { bottom:-2px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { scroll-behavior:auto !important; animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-white min-h-screen selection:bg-indigo-500">
@@ -1445,17 +1526,38 @@
             const configured = providers.filter(p => p.configured).length;
             content.innerHTML = `
                 <div class="fade-in space-y-6">
+                    <section class="jarvis-hero">
+                        <div class="jarvis-hero-copy">
+                            <div class="flex items-center gap-2 mb-5"><span class="jarvis-status-dot"></span><span class="jarvis-kicker">J.A.R.V.I.S. / system online</span></div>
+                            <h2 class="jarvis-headline mb-4"><span class="jarvis-gradient-text">Your AI.</span><br><span class="jarvis-gradient-text">Your command.</span></h2>
+                            <p class="text-slate-300 max-w-lg leading-relaxed mb-6">One intelligent workspace for voice, automation, creative tools and your connected skills. Ready status is shown honestly—no fake live indicators.</p>
+                            <div class="flex flex-wrap items-center gap-3">
+                                <button onclick="document.getElementById('hubInput')?.focus();document.getElementById('hubInput')?.scrollIntoView({behavior:'smooth',block:'center'})" class="btn-primary px-5 py-3 rounded-xl font-semibold text-white"><i class="fa-solid fa-bolt mr-2"></i>Talk to JARVIS</button>
+                                <span class="flex items-center gap-2 text-xs text-slate-400"><span class="jarvis-eq"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span> Neural interface</span>
+                            </div>
+                        </div>
+                        <div class="jarvis-hero-orbspace" aria-label="Animated JARVIS energy orb" role="img">
+                            <div class="jarvis-orb-halo"></div>
+                            <div class="jarvis-orb">
+                                <div class="jarvis-orbit"><span class="jarvis-orbit-dot"></span></div>
+                                <div class="jarvis-orbit orbit-two"><span class="jarvis-orbit-dot"></span></div>
+                                <div class="jarvis-orbit orbit-three"></div>
+                                <div class="jarvis-orb-core"></div>
+                            </div>
+                            <div class="jarvis-orb-caption">AI CORE · 3D INTERFACE</div>
+                        </div>
+                    </section>
                     <div class="flex flex-wrap items-end justify-between gap-4">
                         <div><div class="text-indigo-300 text-xs uppercase tracking-widest mb-2">Unified assistant</div><h2 class="text-3xl font-bold mb-2">JARVIS Integration Hub</h2><p class="text-gray-400">Central chat and status panel for the assistant's connected systems.</p></div>
                         <button onclick="renderHub()" class="px-4 py-2 rounded-lg border border-gray-700 hover:bg-gray-800"><i class="fa-solid fa-rotate mr-2"></i>Refresh</button>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="glass-panel rounded-xl p-5"><div class="text-gray-400 text-sm">Modules</div><div class="text-3xl font-bold mt-2">${modules.length}</div></div>
-                        <div class="glass-panel rounded-xl p-5"><div class="text-gray-400 text-sm">Hosted AI providers configured</div><div class="text-3xl font-bold mt-2">${configured}</div></div>
-                        <div class="glass-panel rounded-xl p-5"><div class="text-gray-400 text-sm">Windows local agent</div><div class="text-xl font-bold mt-2 ${aRes.connected ? 'text-green-300' : 'text-yellow-200'}">${aRes.connected ? 'Connected' : 'Not paired'}</div></div>
+                        <div class="jarvis-stat rounded-xl p-5 card-hover"><div class="text-slate-400 text-sm"><i class="fa-solid fa-cubes-stacked mr-2 text-cyan-300"></i>Modules</div><div class="text-3xl font-bold mt-2">${modules.length}</div><div class="text-xs text-slate-500 mt-1">registered capabilities</div></div>
+                        <div class="jarvis-stat rounded-xl p-5 card-hover"><div class="text-slate-400 text-sm"><i class="fa-solid fa-network-wired mr-2 text-violet-300"></i>AI providers configured</div><div class="text-3xl font-bold mt-2">${configured}</div><div class="text-xs text-slate-500 mt-1">secret keys stay hidden</div></div>
+                        <div class="jarvis-stat rounded-xl p-5 card-hover"><div class="text-slate-400 text-sm"><i class="fa-solid fa-desktop mr-2 text-cyan-300"></i>Windows local agent</div><div class="text-xl font-bold mt-2 ${aRes.connected ? 'text-green-300' : 'text-yellow-200'}">${aRes.connected ? 'Connected' : 'Not paired'}</div><div class="text-xs text-slate-500 mt-1">PC bridge status</div></div>
                     </div>
                     <div class="grid grid-cols-1 xl:grid-cols-5 gap-6">
-                        <section class="xl:col-span-3 glass-panel rounded-xl p-6">
+                        <section class="xl:col-span-3 glass-panel jarvis-chat-panel rounded-xl p-6">
                             <div class="flex justify-between items-center mb-4"><div><h3 class="text-xl font-semibold">Talk to JARVIS</h3><p class="text-sm text-gray-400">Requires a provider key in Vercel settings.</p></div><button onclick="clearHubChat()" class="text-sm text-gray-400 hover:text-white">Clear</button></div>
                             ${configured ? '' : '<div class="mb-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-yellow-100 text-sm">No AI provider key is configured. Add GROQ_API_KEY in Vercel → Project Settings → Environment Variables, then redeploy. Never paste secrets into chat.</div>'}
                             <div id="hubMessages" class="space-y-3 min-h-40 max-h-96 overflow-y-auto mb-4"></div>
