@@ -1,18 +1,38 @@
-fastapi==0.115.0
-uvicorn[standard]==0.30.6
-edge-tts==7.3.1
-python-multipart>=0.0.9
-aiofiles==25.1.0
-PyJWT==2.15.1
-httpx==0.28.1
-asyncpg==0.32.0
-python-dotenv==1.0.1
-sqlalchemy==2.1.6
-pydantic-settings==2.16.2
-passlib[bcrypt]==1.7.4
-stripe==16.0.1
+# BG LABS - runtime dependencies (Vercel / Render / Docker)
+#
+# Deliberately lean: everything here is needed to serve the API, and the whole
+# set stays well under the 50 MB serverless bundle limit.
+# The heavy optional stack (SQLAlchemy routers, XTTS voice cloning, Stripe) lives
+# in requirements-full.txt and is only needed for ENABLE_EXTRA_ROUTERS=1.
+#
+# Versions below are the ones this app is tested against.
+
+# --- web framework ---
+fastapi==0.162.0
+starlette==1.10.0
+uvicorn==0.54.0
+python-multipart==0.0.32
+
+# --- validation / settings ---
+pydantic==2.14.1
+pydantic_core==2.50.1
 email-validator==2.3.0
-dnspython==2.9.0
-torch==2.14.1
-numpy==2.4.6
-greenlet==3.5.6
+
+# --- HTTP client (Pollinations images, cvoice.ai, Supabase REST/Storage) ---
+httpx==0.28.1
+httpcore==1.0.9
+anyio==4.15.1
+
+# --- text to speech (free, keyless) ---
+edge-tts==7.3.1
+aiohttp==3.14.5
+
+# --- auth ---
+PyJWT==2.15.1
+
+# --- database (PostgreSQL backend; optional when Supabase REST is used) ---
+asyncpg==0.32.0
+
+# --- utils ---
+aiofiles==25.1.0
+python-dotenv==1.2.4

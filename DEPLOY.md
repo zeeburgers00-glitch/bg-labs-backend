@@ -30,11 +30,11 @@
 
 Variable 1:
 - Key: `DATABASE_URL`
-- Value: `postgresql://neondb_owner:npg_i8kuvDWocUt5@ep-dark-tree-ax4ktb4c-pooler.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require`
+- Value: `postgresql://USER:PASSWORD@HOST/DBNAME?sslmode=require`  (apna connection string daalein - purani string repo se hata di gayi thi)
 
 Variable 2:
 - Key: `SECRET_KEY`
-- Value: `bglabs-secret-key-2024`
+- Value: (koi bhi lamba random string, e.g. `openssl rand -hex 32`)
 
 Variable 3:
 - Key: `PYTHON_VERSION`

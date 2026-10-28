@@ -41,3 +41,6 @@ docker-compose.override.yml
 # Temp
 *.tmp
 *.temp
+
+# local virtualenv
+.venv/

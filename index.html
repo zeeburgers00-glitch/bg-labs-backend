@@ -204,6 +204,15 @@
     // CONFIG
     // ============================================================================
     const API_BASE = window.location.origin; // Same origin as backend
+
+    // Media can come back as an absolute URL (Supabase Storage), a relative
+    // path (/api/storage/...) or an inline data URI. Resolve all three.
+    function mediaUrl(url, dataUri) {
+        const value = url || dataUri || '';
+        if (!value) return '';
+        if (/^(data:|https?:|blob:)/i.test(value)) return value;
+        return `${API_BASE}${value.startsWith('/') ? '' : '/'}${value}`;
+    }
     let token = localStorage.getItem('bglabs_token') || null;
     let currentUser = null;
     let sidebarOpen = true;
@@ -228,11 +237,21 @@
             const res = await apiGet('/api/auth/me');
             currentUser = res;
             renderApp();
+            checkBackend();
         } catch (e) {
             token = null;
             localStorage.removeItem('bglabs_token');
             location.reload();
         }
+    }
+
+    async function checkBackend() {
+        try {
+            const status = await fetch(`${API_BASE}/api/system/status`).then(r => r.json());
+            if (status && status.persistent === false) {
+                toast('No database configured - data is temporary on this instance', 'warning');
+            }
+        } catch (e) { /* status endpoint is optional */ }
     }
 
     function renderApp() {
@@ -271,6 +290,8 @@
         formData.append('username', username);
         formData.append('full_name', full_name);
         formData.append('password', password);
+        const ref = new URLSearchParams(location.search).get('ref');
+        if (ref) formData.append('referral_code', ref);
         const res = await fetch(`${API_BASE}/api/auth/register`, {
             method: 'POST',
             body: formData
@@ -490,6 +511,32 @@
                 </div>
             </div>
         `;
+
+        loadDashboardStats();
+    }
+
+    async function loadDashboardStats() {
+        try {
+            const res = await apiGet('/api/dashboard/stats');
+            const set = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
+            set('dashCredits', res.credits ?? 0);
+            set('dashProjects', res.projects ?? 0);
+            set('dashAudio', res.audio ?? 0);
+            const activity = document.getElementById('recentActivity');
+            if (activity && Array.isArray(res.recent) && res.recent.length) {
+                activity.innerHTML = res.recent.map(item => `
+                    <div class="flex items-center gap-4 p-3 rounded-lg bg-gray-800/50">
+                        <div class="w-8 h-8 rounded bg-indigo-500/20 flex items-center justify-center text-indigo-400">
+                            <i class="fa-solid ${item.icon || 'fa-circle-check'} text-xs"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm text-white">${(item.title || item.type || '').toString().slice(0, 80)}</p>
+                            <p class="text-xs text-gray-400">${item.meta || ''}</p>
+                        </div>
+                        <span class="text-xs text-gray-500">${item.created_at ? new Date(item.created_at).toLocaleDateString() : ''}</span>
+                    </div>`).join('');
+            }
+        } catch (e) { console.error(e); }
     }
 
     // ============================================================================
@@ -586,6 +633,35 @@
         `;
 
         loadTTSHistory();
+        populateVoiceOptions();
+    }
+
+    async function populateVoiceOptions() {
+        const select = document.getElementById('ttsVoice');
+        if (!select) return;
+        try {
+            const res = await apiGet('/api/voices/builtin');
+            const voices = res.voices || [];
+            if (!voices.length) return;
+            const groups = {};
+            voices.forEach(v => { (groups[v.language] = groups[v.language] || []).push(v); });
+            select.innerHTML = Object.entries(groups).map(([lang, list]) =>
+                `<optgroup label="${lang.toUpperCase()}">` +
+                list.map(v => `<option value="${v.voice_key}">${v.name} &middot; ${v.gender} (${v.accent})</option>`).join('') +
+                `</optgroup>`).join('');
+
+            const langSelect = document.getElementById('ttsLang');
+            if (langSelect) {
+                langSelect.innerHTML = Object.keys(groups)
+                    .map(code => `<option value="${code}">${code}</option>`).join('');
+            }
+
+            const custom = await apiGet('/api/voices/custom').catch(() => []);
+            if (Array.isArray(custom) && custom.length) {
+                select.insertAdjacentHTML('beforeend', `<optgroup label="My voices">` +
+                    custom.map(v => `<option value="${v.id}">${v.name} (profile)</option>`).join('') + `</optgroup>`);
+            }
+        } catch (e) { console.error(e); }
     }
 
     function updateCharCount() {
@@ -619,7 +695,7 @@
             });
 
             const audioEl = document.getElementById('ttsAudio');
-            audioEl.src = `${API_BASE}${res.url}`;
+            audioEl.src = mediaUrl(res.url, res.data_uri);
             document.getElementById('audioPlayerContainer').classList.remove('hidden');
 
             btn.innerHTML = originalText;
@@ -649,7 +725,7 @@
             }
             container.innerHTML = res.map(item => `
                 <div class="flex items-center gap-4 p-3 bg-gray-800/30 rounded-lg border border-gray-700/50">
-                    <audio controls class="w-32" src="${API_BASE}${item.url}"></audio>
+                    <audio controls class="w-32" src="${mediaUrl(item.url, item.data_uri)}"></audio>
                     <div class="flex-1">
                         <div class="text-sm font-medium text-white truncate">${item.text_content || 'Audio'}</div>
                         <div class="text-xs text-gray-500">${new Date(item.created_at).toLocaleDateString()}</div>
@@ -945,7 +1021,7 @@
                 n: 1
             });
 
-            document.getElementById('imgResult').src = `${API_BASE}${res.result?.image_url || res.url || ''}`;
+            document.getElementById('imgResult').src = mediaUrl(res.url, res.data_uri) || mediaUrl(res.result?.image_url);
             document.getElementById('imgResultContainer').classList.remove('hidden');
 
             btn.innerHTML = originalText;
@@ -969,7 +1045,7 @@
                 const images = (proj.settings && proj.settings.images) || [];
                 return images.map(img => `
                     <div class="group relative rounded-xl overflow-hidden border border-gray-700/50 bg-gray-800/30">
-                        <img src="${img.url}" class="w-full h-48 object-cover" alt="Generated">
+                        <img src="${mediaUrl(img.url, img.data_uri)}" class="w-full h-48 object-cover" alt="Generated">
                         <div class="absolute inset-0 bg-black/50 group-hover:opacity-100 transition opacity-0 flex flex-col items-center justify-center p-4">
                             <div class="text-white text-sm font-medium mb-1">${proj.name}</div>
                             <div class="text-xs text-gray-400">${img.prompt?.slice(0, 50)}...</div>
@@ -993,7 +1069,7 @@
 
     function downloadImageUrl(url) {
         const a = document.createElement('a');
-        a.href = `${API_BASE}${url}`;
+        a.href = mediaUrl(url);
         a.download = 'image.png';
         a.click();
     }
@@ -1298,8 +1374,6 @@
                 'social_media': 'gradient'
             };
 
-            const res = await apiPostForm('/api/avatar/create', Object.fromEntries(new FormData()));
-            // Use FormData properly
             const fd = new FormData();
             fd.append('name', name);
             fd.append('description', `Avatar project using ${avatarType} template`);

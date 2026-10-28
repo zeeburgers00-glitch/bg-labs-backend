@@ -1,21 +1,49 @@
+"""Local XTTS voice-cloning service.
+
+``torch``, ``numpy`` and ``TTS`` are imported lazily: they are hundreds of
+megabytes and are *not* installed for the serverless (Vercel) build, where Edge-TTS
+does the synthesis instead. Importing this module must therefore stay cheap.
+"""
 import os
 import io
-import torch
-import numpy as np
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from pathlib import Path
 
 # Global TTS model
 _tts_model = None
-_device = "cuda" if torch.cuda.is_available() else "cpu"
+_device: Optional[str] = None
 
 
-def get_tts_model():
+def get_device() -> str:
+    """Resolve the torch device on first use (never at import time)."""
+    global _device
+    if _device is None:
+        try:
+            import torch
+
+            _device = "cuda" if torch.cuda.is_available() else "cpu"
+        except ImportError:
+            _device = "cpu"
+    return _device
+
+
+def xtts_available() -> bool:
+    try:
+        import TTS.api  # noqa: F401
+        import torch  # noqa: F401
+    except ImportError:
+        return False
+    return True
+
+
+def get_tts_model() -> Any:
     global _tts_model
     if _tts_model is None:
         from TTS.api import TTS
-        print(f"Loading XTTS v2 model on {_device}...")
-        _tts_model = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(_device)
+
+        device = get_device()
+        print(f"Loading XTTS v2 model on {device}...")
+        _tts_model = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
         print("XTTS v2 model loaded!")
     return _tts_model
 
@@ -286,6 +314,8 @@ class TTSService:
         # Convert to bytes
         import soundfile as sf
         import io
+
+        import numpy as np
 
         wav_array = np.array(wav_outputs)
         buffer = io.BytesIO()

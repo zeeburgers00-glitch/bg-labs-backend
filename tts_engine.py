@@ -8,7 +8,7 @@ import json
 import time
 import asyncio
 import logging
-from typing import Optional, Tuple, List, Dict
+from typing import Any, Optional, Tuple, List, Dict
 
 import httpx
 import edge_tts
@@ -175,3 +175,74 @@ def get_edge_voices() -> List[Dict]:
             "color": info["color"],
         })
     return voices
+
+
+# ============================================================
+# VOICE RESOLUTION HELPERS
+# ============================================================
+DEFAULT_VOICE = "en-US-AriaNeural"
+
+# "aria" -> "en-US-AriaNeural"
+VOICE_BY_NAME: Dict[str, str] = {info["name"].lower(): key for key, info in EDGE_VOICES.items()}
+VOICE_BY_KEY: Dict[str, str] = {key.lower(): key for key in EDGE_VOICES}
+VOICE_BY_SHORT_KEY: Dict[str, str] = {key.lower().replace("neural", ""): key for key in EDGE_VOICES}
+
+
+def voices_for_language(language: str) -> List[str]:
+    """Voice keys whose language code starts with ``language`` (``en`` -> en-US/en-GB/...)."""
+    lang = (language or "").strip().lower()
+    if not lang:
+        return []
+    return [key for key, info in EDGE_VOICES.items() if str(info.get("lang", "")).lower() == lang]
+
+
+def resolve_voice_key(value: Optional[str] = None, language: Optional[str] = None) -> str:
+    """Best-effort mapping of whatever the client sent onto a real Edge-TTS voice.
+
+    Accepts a full key (``en-US-AriaNeural``), a friendly name (``Aria``), a
+    short form (``en-US-Aria``, ``aria``) or nothing at all - in which case the
+    first voice for ``language`` (or the default voice) is used.
+    """
+    candidate = (value or "").strip()
+    if candidate:
+        if candidate in EDGE_VOICES:
+            return candidate
+        lowered = candidate.lower()
+        for table in (VOICE_BY_KEY, VOICE_BY_NAME, VOICE_BY_SHORT_KEY):
+            if lowered in table:
+                return table[lowered]
+        matches = [key for key in EDGE_VOICES if key.lower().startswith(lowered)]
+        if matches:
+            return matches[0]
+        matches = [key for key in EDGE_VOICES if lowered in key.lower()]
+        if matches:
+            return matches[0]
+
+    for key in voices_for_language(language or ""):
+        return key
+    return DEFAULT_VOICE
+
+
+def speed_to_rate(speed: Any = None, rate: Optional[str] = None) -> str:
+    """Convert a UI speed multiplier (0.5-2.0) into an Edge-TTS rate string."""
+    if rate:
+        return str(rate)
+    try:
+        value = float(speed)
+    except (TypeError, ValueError):
+        return "+0%"
+    value = max(0.5, min(2.0, value))
+    percent = int(round((value - 1.0) * 100))
+    return f"{percent:+d}%"
+
+
+def pitch_to_offset(pitch: Any = None) -> str:
+    """Normalise pitch into Edge-TTS' ``+0Hz`` form."""
+    if isinstance(pitch, str) and pitch.strip().lower().endswith("hz"):
+        return pitch.strip()
+    try:
+        value = int(round(float(pitch)))
+    except (TypeError, ValueError):
+        return "+0Hz"
+    value = max(-50, min(50, value))
+    return f"{value:+d}Hz"
