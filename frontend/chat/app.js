@@ -650,7 +650,61 @@
       if (isCurrent(version) && error.name !== 'AbortError') $('public-research-setup').textContent = `${error.message} Close and reopen to retry.`;
     } finally { if (isCurrent(version)) state.workforce.researchLoading = false; }
   }
-  $('workforce-open').addEventListener('click', () => {
+  const integrationCatalog = [
+    {name:'Pexels Video API',category:'Video production',status:'Credential required',detail:'Search licensed stock footage and use moving clips, not still-image-only results.',url:'https://www.pexels.com/api/'},
+    {name:'FFmpeg',category:'Video production',status:'Local pipeline',detail:'Encode, combine clips, add transitions, captions, audio and final renders on a worker/desktop.',url:'https://ffmpeg.org/'},
+    {name:'Whisper speech recognition',category:'Voice & speech',status:'Setup required',detail:'Speech-to-text for voice commands and transcription; local or hosted deployment choices.',url:'https://github.com/openai/whisper'},
+    {name:'Piper TTS',category:'Voice & speech',status:'Setup required',detail:'Local text-to-speech option for spoken assistant replies.',url:'https://github.com/rhasspy/piper'},
+    {name:'Kokoro TTS',category:'Voice & speech',status:'Setup required',detail:'Alternative lightweight voice synthesis; select a supported voice and verify its license.',url:'https://github.com/hexgrad/kokoro'},
+    {name:'Ollama + Qwen / Gemma',category:'AI models',status:'Local PC setup',detail:'Local-model runtime and smaller models suited to constrained hardware; model performance depends on RAM.',url:'https://ollama.com/'},
+    {name:'OpenAI API',category:'AI models',status:'Credential required',detail:'Hosted generation for scripts, planning, coding and chat; usage can incur charges.',url:'https://platform.openai.com/docs'},
+    {name:'Groq API',category:'AI models',status:'Credential required',detail:'Fast hosted inference and the requested Groq bot integration.',url:'https://console.groq.com/docs'},
+    {name:'Google Gemini API',category:'AI models',status:'Credential required',detail:'Optional model provider; configure server-side credentials and allowed models.',url:'https://ai.google.dev/'},
+    {name:'Anthropic Claude API',category:'AI models',status:'Optional provider',detail:'Optional model provider; credentials and billing are separate.',url:'https://docs.anthropic.com/'},
+    {name:'xAI / Grok API',category:'AI models',status:'Optional provider',detail:'Optional model provider, subject to account access and API credentials.',url:'https://docs.x.ai/'},
+    {name:'OpenRouter',category:'AI models',status:'Optional provider',detail:'Multi-provider model routing; review the selected upstream provider’s data and billing terms.',url:'https://openrouter.ai/docs'},
+    {name:'OpenClaw agent runtime',category:'Agents & automation',status:'Desktop integration required',detail:'Agent actions, scheduled work and messaging integrations need a trusted local runtime and scoped permissions.',url:'https://github.com/openclaw/openclaw'},
+    {name:'OpenDots',category:'Agents & automation',status:'Integration required',detail:'Requested agent/task orchestration reference; adapt to ViMax architecture and review repository requirements.',url:'https://github.com/CopilotKit/OpenDots'},
+    {name:'Rakazo',category:'Agents & automation',status:'Integration required',detail:'Requested Groq bot-related project; review compatibility before connecting it.',url:'https://github.com/elie222/rakazo'},
+    {name:'Composio / MCP tools',category:'Agents & automation',status:'Connectors required',detail:'Tool and app integrations through scoped OAuth/MCP actions; authorize each service separately.',url:'https://github.com/ComposioHQ/composio'},
+    {name:'Aider coding assistant',category:'Coding workspace',status:'Local setup required',detail:'Open-source AI coding workflow that can complement a Cursor-inspired code workspace.',url:'https://github.com/Aider-AI/aider'},
+    {name:'GitHub API',category:'Coding workspace',status:'Connected; scopes vary',detail:'Repository, branch, issue and pull-request actions depend on granted write permissions.',url:'https://docs.github.com/en/rest'},
+    {name:'Playwright browser automation',category:'PC & browser control',status:'Runtime required',detail:'Browser automation for approved workflows; isolate sessions and require confirmation for consequential actions.',url:'https://playwright.dev/'},
+    {name:'Windows desktop control',category:'PC & browser control',status:'Desktop app required',detail:'Window/app control, typing, clicking, files and shell commands belong in a permissioned Windows desktop agent—not this hosted website.',url:'https://learn.microsoft.com/en-us/windows/'},
+    {name:'Screen vision / OCR',category:'PC & browser control',status:'Implementation required',detail:'Screen understanding needs a local capture/OCR pipeline and explicit privacy controls.',url:'https://github.com/JaidedAI/EasyOCR'},
+    {name:'Google Sign-In / OAuth',category:'Accounts & integrations',status:'Deployment configuration',detail:'Account identity and app authorization are distinct. Configure allowed redirect URLs and secrets privately.',url:'https://developers.google.com/identity'},
+    {name:'YouTube Data API',category:'Creator & social',status:'OAuth / quota required',detail:'Channel metadata and authorized uploads depend on enabled API scopes, consent and quota.',url:'https://developers.google.com/youtube/v3'},
+    {name:'YouTube Analytics API',category:'Creator & social',status:'Read-only OAuth required',detail:'Analytics reports need separate authorized scopes; this is not a publishing permission.',url:'https://developers.google.com/youtube/analytics'},
+    {name:'Gmail API',category:'Accounts & integrations',status:'OAuth required',detail:'Email reading/sending is not enabled by merely linking Google sign-in; request minimal scopes.',url:'https://developers.google.com/gmail/api'},
+    {name:'Facebook Pages API',category:'Creator & social',status:'App review required',detail:'Page listing and publishing require Facebook app setup, Page permissions and approval.',url:'https://developers.facebook.com/docs/pages-api/'},
+    {name:'WhatsApp / Telegram / Discord / Slack',category:'Messaging & automation',status:'Per-service setup',detail:'Each bot/app needs its own credentials, permissions and delivery tests.',url:'https://core.telegram.org/bots/api'},
+    {name:'GitHub + Gmail workflows',category:'Accounts & integrations',status:'Scoped integration',detail:'Cross-app automations must use explicit authorization, audit logs and least-privilege access.',url:'https://github.com/'},
+    {name:'Skills catalog (162+ entries)',category:'Skills & agents',status:'Catalog exists',detail:'Browse existing skill metadata. A listed skill is not installed or executable until reviewed and wired.',url:'https://github.com/'},
+    {name:'Multi-agent departments (120-slot plan)',category:'Skills & agents',status:'Partially wired',detail:'Role definitions and registry are not the same as 120 running agents; only enabled roles can execute.',url:'https://github.com/'},
+    {name:'Wake word “Hey Jarvis”',category:'Voice & speech',status:'Not yet wired here',detail:'Requires a local wake-word engine, microphone permissions and background service.',url:'https://github.com/dscripka/openWakeWord'},
+    {name:'Memory & scheduled tasks',category:'Agents & automation',status:'Backend work required',detail:'Persistent memory and reliable schedules need storage, retention controls and a worker.',url:'https://github.com/'},
+    {name:'World Monitor / system status',category:'PC & browser control',status:'Integration required',detail:'Dashboard for task status, machine health, logs, pause/stop controls and live progress.',url:'https://github.com/'}
+  ];
+  function renderIntegrationCatalog() {
+    const query = $('integration-search').value.trim().toLowerCase(), category = $('integration-category').value;
+    const visible = integrationCatalog.filter(item => (category === 'all' || item.category === category)
+      && (!query || [item.name,item.category,item.status,item.detail].join(' ').toLowerCase().includes(query)));
+    const container = $('integration-catalog'); container.replaceChildren();
+    $('integration-count').textContent = visible.length + ' of ' + integrationCatalog.length + ' tool entries · catalog links are not proof of connection.';
+    if (!visible.length) { const empty = element('p','No tools match this search.','integration-empty'); container.append(empty); return; }
+    for (const item of visible) {
+      const card = element('article',null,'integration-card');
+      card.append(element('div',item.category,'integration-category'), element('h4',item.name), element('span',item.status,'integration-state'), element('p',item.detail));
+      const link = element('a','Official docs / source ↗'); link.href = item.url; link.target = '_blank'; link.rel = 'noopener noreferrer'; card.append(link);
+      container.append(card);
+    }
+  }
+  const integrationCategories = [...new Set(integrationCatalog.map(item => item.category))].sort();
+  for (const category of integrationCategories) { const option = element('option',category); option.value = category; $('integration-category').append(option); }
+  $('integration-search').addEventListener('input', renderIntegrationCatalog);
+  $('integration-category').addEventListener('change', renderIntegrationCatalog);
+  renderIntegrationCatalog();
+\n  $('workforce-open').addEventListener('click', () => {
     if (!state.user) return;
     showDialog('workforce-dialog'); void loadWorkforceRegistry(state.version); void loadAgentRegistry(state.version); void loadPublicResearchStatus(state.version);
   });
