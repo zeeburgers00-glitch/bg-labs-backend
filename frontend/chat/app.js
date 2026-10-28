@@ -754,14 +754,20 @@
   document.querySelectorAll('[data-workspace-action]').forEach(button => button.addEventListener('click', () => {
     const action = button.dataset.workspaceAction;
     if (action === 'video-plan') {
-      $('chat-prompt').value = 'Help me produce a complete video plan. Ask for the topic if missing, then prepare an original hook, script, scene-by-scene visual plan, voiceover notes, captions plan, title, description and thumbnail text. Clearly distinguish text planning from actual rendering or publishing.';
+      $('chat-prompt').value = 'Act as my video production factory. Ask for the topic, audience and platform if missing. Then create an original hook, structured script, scene-by-scene visual plan, voiceover notes, captions plan, title options, description, tags and thumbnail brief. Show which stages are plans versus actions that need a configured local renderer or connected account.';
+      $('chat-prompt').focus(); updateChatControls(); $('chat-prompt').scrollIntoView({behavior:'smooth',block:'center'}); return;
+    }
+    if (action === 'automation') {
+      $('chat-prompt').value = 'Help me design a safe, repeatable automation workflow. Ask what outcome I want, then give numbered steps, required tools/credentials, inputs/outputs, retry and failure handling, a dry-run, and approval checkpoints before external actions. Do not claim a workflow is running unless an available connected tool confirms it.';
       $('chat-prompt').focus(); updateChatControls(); $('chat-prompt').scrollIntoView({behavior:'smooth',block:'center'}); return;
     }
     if (action === 'voice') { showDialog('settings-dialog'); $('speak-replies').focus(); return; }
     if (action === 'usage') { showDialog('settings-dialog'); if (state.user && !state.chat.usageLoading) $('usage-refresh').click(); return; }
-    if (action === 'creator' || action === 'integrations') {
-      if (!state.user) { $('account-message').textContent = 'Sign in to open your private creator workspace.'; showDialog('account-dialog'); return; }
-      showDialog('workforce-dialog'); return;
+    if (action === 'creator' || action === 'integrations' || action === 'agent-factory') {
+      if (!state.user) { $('account-message').textContent = 'Sign in to open your private creator and agent workspace.'; showDialog('account-dialog'); return; }
+      showDialog('workforce-dialog');
+      void loadWorkforceRegistry(state.version); void loadAgentRegistry(state.version); void loadPublicResearchStatus(state.version);
+      return;
     }
     if (action === 'youtube') {
       if (!state.user) { $('account-message').textContent = 'Sign in first. YouTube access needs separate Google consent.'; showDialog('account-dialog'); return; }
