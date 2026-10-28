@@ -875,7 +875,24 @@
       if (isCurrent(version)) { state.chat.busy = false; state.chat.testing = false; renderProviders(); updateChatControls(); }
     }
   });
-  document.querySelectorAll('.quick-prompt').forEach(button => button.addEventListener('click', () => {
+  document.querySelectorAll('[data-workspace-action]').forEach(button => button.addEventListener('click', () => {
+    const action = button.dataset.workspaceAction;
+    if (action === 'video-plan') {
+      $('chat-prompt').value = 'Help me produce a complete video plan. Ask for the topic if missing, then prepare an original hook, script, scene-by-scene visual plan, voiceover notes, captions plan, title, description and thumbnail text. Clearly distinguish text planning from actual rendering or publishing.';
+      $('chat-prompt').focus(); updateChatControls(); $('chat-prompt').scrollIntoView({behavior:'smooth',block:'center'}); return;
+    }
+    if (action === 'voice') { showDialog('settings-dialog'); $('speak-replies').focus(); return; }
+    if (action === 'usage') { showDialog('settings-dialog'); if (state.user && !state.chat.usageLoading) $('usage-refresh').click(); return; }
+    if (action === 'creator' || action === 'integrations') {
+      if (!state.user) { $('account-message').textContent = 'Sign in to open your private creator workspace.'; showDialog('account-dialog'); return; }
+      showDialog('workforce-dialog'); return;
+    }
+    if (action === 'youtube') {
+      if (!state.user) { $('account-message').textContent = 'Sign in first. YouTube access needs separate Google consent.'; showDialog('account-dialog'); return; }
+      showDialog('channel-dialog'); return;
+    }
+  }));
+  document.querySelectorAll('.quick-prompt').forEach(button => button.addEventListener('click', () => {('click', () => {
     if (state.chat.busy) return;
     const prompt = button.dataset.prompt || '';
     $('chat-prompt').value = prompt;
