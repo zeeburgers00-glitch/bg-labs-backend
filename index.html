@@ -662,147 +662,97 @@
     // ============================================================================
     async function renderDashboard() {
         const content = document.getElementById('contentArea');
-        content.innerHTML = `
-            <div class="fade-in">
-                <div class="mb-8">
-                    <h2 class="text-3xl font-bold text-white mb-2">Overview</h2>
-                    <p class="text-gray-400">Welcome back, ${currentUser.full_name || currentUser.username}. Here's what's happening in your workspace.</p>
-                </div>
-
-                <!-- Stats Cards -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <div class="glass-panel p-6 rounded-xl card-hover">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-gray-400 text-sm">Credits</p>
-                                <h3 class="text-2xl font-bold text-white" id="dashCredits">${currentUser.credits}</h3>
-                            </div>
-                            <div class="w-12 h-12 bg-indigo-500/20 rounded-lg flex items-center justify-center text-indigo-400">
-                                <i class="fa-solid fa-coins"></i>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="glass-panel p-6 rounded-lg card-hover">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-gray-400 text-sm">Projects</p>
-                                <h3 class="text-2xl font-bold text-white" id="dashProjects">-</h3>
-                            </div>
-                            <div class="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center text-purple-400">
-                                <i class="fa-solid fa-folder"></i>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="glass-panel p-6 rounded-lg card-hover">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-gray-400 text-sm">Audio Files</p>
-                                <h3 class="text-2xl font-bold text-white" id="dashAudio">-</h3>
-                            </div>
-                            <div class="w-12 h-12 bg-pink-500/20 rounded-lg flex items-center justify-center text-pink-400">
-                                <i class="fa-solid fa-file-audio"></i>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="glass-panel p-6 rounded-lg card-hover">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-gray-400 text-sm">Subscription</p>
-                                <h3 class="text-xl font-bold text-white">${currentUser.subscription_tier || 'free'}</h3>
-                            </div>
-                            <div class="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center text-blue-400">
-                                <i class="fa-solid fa-crown"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Quick Actions -->
-                <div class="glass-panel p-6 rounded-xl mb-8">
-                    <h3 class="text-lg font-semibold text-white mb-6">Quick Actions</h3>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <button onclick="navigate('studio')" class="card-hover p-4 border border-gray-700 rounded-lg hover:border-indigo-500 transition flex items-center gap-3 group">
-                            <div class="w-10 h-10 rounded bg-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white transition">
-                                <i class="fa-solid fa-microphone"></i>
-                            </div>
-                            <div>
-                                <p class="font-medium text-white">Generate Audio</p>
-                                <p class="text-xs text-gray-400">Text-to-Speech</p>
-                            </div>
-                        </button>
-                        <button onclick="navigate('image')" class="card-hover p-4 border border-gray-700 rounded-lg hover:border-indigo-500 transition flex items-center gap-3 group">
-                            <div class="w-10 h-10 rounded bg-purple-500/20 flex items-center justify-center text-purple-400 group-hover:bg-purple-500 group-hover:text-white transition">
-                                <i class="fa-solid fa-image"></i>
-                            </div>
-                            <div>
-                                <p class="font-medium text-white">Create Image</p>
-                                <p class="text-xs text-gray-400">AI Image Gen</p>
-                            </div>
-                        </button>
-                        <button onclick="navigate('script')" class="card-hover p-4 border border-gray-700 rounded-lg hover:border-indigo-500 transition flex items-center gap-3 group">
-                            <div class="w-10 h-10 rounded bg-pink-500/20 flex items-center justify-center text-pink-400 group-hover:bg-pink-500 group-hover:text-white transition">
-                                <i class="fa-solid fa-file-lines"></i>
-                            </div>
-                            <div>
-                                <p class="font-medium text-white">Write Script</p>
-                                <p class="text-xs text-gray-400">Script Generator</p>
-                            </div>
-                        </button>
-                        <button onclick="navigate('avatar')" class="card-hover p-4 border border-gray-700 rounded-lg hover:border-indigo-500 transition flex items-center gap-3 group">
-                            <div class="w-10 h-10 rounded bg-blue-500/20 flex items-center justify-center text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition">
-                                <i class="fa-solid fa-user-tie"></i>
-                            </div>
-                            <div>
-                                <p class="font-medium text-white">Avatar Video</p>
-                                <p class="text-xs text-gray-400">Talking Head</p>
-                            </div>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Recent Activity -->
-                <div class="glass-panel p-6 rounded-xl">
-                    <h3 class="text-lg font-semibold text-white mb-6">Recent Activity</h3>
-                    <div class="space-y-4" id="recentActivity">
-                        <div class="flex items-center gap-4 p-3 rounded-lg bg-gray-800/50">
-                            <div class="w-8 h-8 rounded bg-indigo-500/20 flex items-center justify-center text-indigo-400">
-                                <i class="fa-solid fa-circle-check text-xs"></i>
-                            </div>
-                            <div class="flex-1">
-                                <p class="text-sm text-white">Account connected</p>
-                                <p class="text-xs text-gray-400">Just now</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-
+        const name = hubEscape(currentUser?.full_name || currentUser?.username || 'Creator');
+        content.innerHTML = '<div class="max-w-7xl mx-auto space-y-6 fade-in">' +
+            '<section class="creator-hero"><div class="relative z-10 grid lg:grid-cols-[1.3fr_.7fr] gap-8 items-center">' +
+            '<div><div class="creator-eyebrow mb-4">JARVIS COMMAND CENTER</div><h2 class="creator-title text-white mb-4">Good to see you,<br><span class="jarvis-gradient-text">' + name + '.</span></h2>' +
+            '<p class="creator-subtitle mb-6">Your creator workspace is ready. Turn course knowledge into a content strategy, run AI tools, and manage channel actions from one place.</p>' +
+            '<div class="flex flex-wrap gap-3"><button onclick="navigate(\'course-ai\')" class="btn-primary px-5 py-3 rounded-xl text-sm font-semibold"><i class="fa-solid fa-graduation-cap mr-2"></i>Train with course</button>' +
+            '<button onclick="navigate(\'planner\')" class="px-5 py-3 rounded-xl text-sm font-semibold border border-slate-600/70 bg-slate-900/60 hover:border-cyan-300/50"><i class="fa-solid fa-calendar-days mr-2 text-cyan-200"></i>Build content plan</button></div>' +
+            '<div class="flex flex-wrap gap-2 mt-5"><span class="creator-pill"><i class="fa-regular fa-clock"></i><span id="commandLocalClock">Your workspace</span></span><span class="creator-pill"><i class="fa-solid fa-database"></i><span id="commandStoreStatus">Checking persistence…</span></span></div></div>' +
+            '<div class="relative flex items-center justify-center min-h-[210px]"><div class="jarvis-orb-halo"></div><div class="jarvis-orb"><div class="jarvis-orbit"><span class="jarvis-orbit-dot"></span></div><div class="jarvis-orbit orbit-two"><span class="jarvis-orbit-dot"></span></div><div class="jarvis-orbit orbit-three"></div><div class="jarvis-orb-core"></div></div><div class="absolute bottom-0 text-[10px] tracking-[.28em] text-cyan-200/70 uppercase">Assistant core / live status checks</div></div></div></section>' +
+            '<div class="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">' +
+            '<div class="creator-stat"><div class="flex justify-between items-center gap-2"><span class="stat-label">Credits available</span><span class="stat-icon"><i class="fa-solid fa-coins"></i></span></div><div id="dashCredits" class="stat-value">' + Number(currentUser?.credits || 0) + '</div><div class="text-[11px] text-slate-500 mt-1">Account balance</div></div>' +
+            '<div class="creator-stat"><div class="flex justify-between items-center gap-2"><span class="stat-label">Saved projects</span><span class="stat-icon"><i class="fa-solid fa-folder-open"></i></span></div><div id="dashProjects" class="stat-value">—</div><div class="text-[11px] text-slate-500 mt-1">Stored in workspace</div></div>' +
+            '<div class="creator-stat"><div class="flex justify-between items-center gap-2"><span class="stat-label">Audio generations</span><span class="stat-icon"><i class="fa-solid fa-wave-square"></i></span></div><div id="dashAudio" class="stat-value">—</div><div class="text-[11px] text-slate-500 mt-1">Your voice work</div></div>' +
+            '<div class="creator-stat"><div class="flex justify-between items-center gap-2"><span class="stat-label">Course knowledge</span><span class="stat-icon"><i class="fa-solid fa-book-open"></i></span></div><div id="dashCourseDocs" class="stat-value">—</div><div id="dashCourseHint" class="text-[11px] text-slate-500 mt-1">Checking imported lessons</div></div></div>' +
+            '<section><div class="flex items-end justify-between gap-4 mb-4"><div><div class="creator-eyebrow mb-2">WORKSPACE SHORTCUTS</div><h3 class="creator-section-title text-lg">What would you like to do?</h3><p class="creator-section-note mt-1">Open a tool directly or use Ctrl+K to jump anywhere.</p></div><button onclick="openCommandPalette()" class="hidden sm:block text-xs text-cyan-200 hover:text-white">Open command palette <i class="fa-solid fa-arrow-up-right-from-square ml-1"></i></button></div>' +
+            '<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">' +
+            '<button onclick="navigate(\'course-ai\')" class="creator-action"><span class="action-icon"><i class="fa-solid fa-graduation-cap"></i></span><span class="font-semibold text-sm">Learn the course</span><span class="text-xs text-slate-500">Import Drive materials and ask questions</span></button>' +
+            '<button onclick="navigate(\'planner\')" class="creator-action"><span class="action-icon"><i class="fa-solid fa-calendar-days"></i></span><span class="font-semibold text-sm">Plan content</span><span class="text-xs text-slate-500">Generate a saved 7–30 day calendar</span></button>' +
+            '<button onclick="navigate(\'youtube\')" class="creator-action"><span class="action-icon"><i class="fa-brands fa-youtube"></i></span><span class="font-semibold text-sm">Manage YouTube</span><span class="text-xs text-slate-500">Connect channels, read stats, publish with approval</span></button>' +
+            '<button onclick="navigate(\'agents\')" class="creator-action"><span class="action-icon"><i class="fa-solid fa-robot"></i></span><span class="font-semibold text-sm">Run AI agents</span><span class="text-xs text-slate-500">Use specialist workflows and view results</span></button>' +
+            '<button onclick="navigate(\'skills\')" class="creator-action"><span class="action-icon"><i class="fa-solid fa-magnifying-glass-chart"></i></span><span class="font-semibold text-sm">Research a topic</span><span class="text-xs text-slate-500">Find sources and creator insights</span></button>' +
+            '<button onclick="navigate(\'vimax\')" class="creator-action"><span class="action-icon"><i class="fa-solid fa-film"></i></span><span class="font-semibold text-sm">Build a video</span><span class="text-xs text-slate-500">Storyboard and video generation</span></button>' +
+            '<button onclick="navigate(\'models\')" class="creator-action"><span class="action-icon"><i class="fa-solid fa-cubes"></i></span><span class="font-semibold text-sm">Configure AI</span><span class="text-xs text-slate-500">Providers, models and secret keys</span></button>' +
+            '<button onclick="navigate(\'studio\')" class="creator-action"><span class="action-icon"><i class="fa-solid fa-microphone-lines"></i></span><span class="font-semibold text-sm">Create voiceover</span><span class="text-xs text-slate-500">Generate narration and speech</span></button></div></section>' +
+            '<div class="grid lg:grid-cols-2 gap-4">' +
+            '<section class="glass-panel rounded-2xl p-5"><div class="flex items-center justify-between gap-3"><div><div class="creator-eyebrow mb-2">SYSTEM HEALTH</div><h3 class="creator-section-title">Live connections</h3></div><span class="creator-pill"><i class="fa-solid fa-rotate"></i>Checked on open</span></div><div id="commandHealthList" class="mt-4 space-y-1"><div class="text-xs text-slate-500 py-5">Checking backend and connected services…</div></div></section>' +
+            '<section class="glass-panel rounded-2xl p-5"><div class="flex items-center justify-between gap-3"><div><div class="creator-eyebrow mb-2">RECENT WORK</div><h3 class="creator-section-title">Latest activity</h3></div><button onclick="navigate(\'planner\')" class="text-xs text-cyan-200">Open calendar</button></div><div id="recentActivity" class="mt-3"><div class="text-xs text-slate-500 py-5">Loading your workspace history…</div></div></section>' +
+            '</div><p class="text-[11px] text-slate-600 text-center pb-2">Sensitive provider credentials remain server-side. Publishing and account changes should be reviewed before applying.</p></div>';
+        const clock = document.getElementById('commandLocalClock');
+        if (clock) clock.textContent = new Date().toLocaleString(undefined,{weekday:'short',month:'short',day:'numeric'});
         loadDashboardStats();
+        loadCommandCenterHealth();
     }
 
     async function loadDashboardStats() {
         try {
             const res = await apiGet('/api/dashboard/stats');
-            const set = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
-            set('dashCredits', res.credits ?? 0);
-            set('dashProjects', res.projects ?? 0);
-            set('dashAudio', res.audio ?? 0);
-            const activity = document.getElementById('recentActivity');
-            if (activity && Array.isArray(res.recent) && res.recent.length) {
-                activity.innerHTML = res.recent.map(item => `
-                    <div class="flex items-center gap-4 p-3 rounded-lg bg-gray-800/50">
-                        <div class="w-8 h-8 rounded bg-indigo-500/20 flex items-center justify-center text-indigo-400">
-                            <i class="fa-solid ${item.icon || 'fa-circle-check'} text-xs"></i>
-                        </div>
-                        <div class="flex-1">
-                            <p class="text-sm text-white">${(item.title || item.type || '').toString().slice(0, 80)}</p>
-                            <p class="text-xs text-gray-400">${item.meta || ''}</p>
-                        </div>
-                        <span class="text-xs text-gray-500">${item.created_at ? new Date(item.created_at).toLocaleDateString() : ''}</span>
-                    </div>`).join('');
+            const set = (id,value) => { const el=document.getElementById(id); if(el) el.textContent=value; };
+            set('dashCredits',res.credits ?? 0);
+            set('dashProjects',res.projects ?? 0);
+            set('dashAudio',res.audio ?? 0);
+            const activity=document.getElementById('recentActivity');
+            if(activity && Array.isArray(res.recent) && res.recent.length) {
+                activity.innerHTML=res.recent.map(item =>
+                    '<div class="creator-list-row"><span class="creator-step"><i class="fa-solid '+hubEscape(item.icon||'fa-circle-check')+'"></i></span>' +
+                    '<div class="flex-1 min-w-0"><p class="text-sm text-slate-200">'+hubEscape((item.title||item.type||'').toString().slice(0,80))+'</p>' +
+                    '<p class="text-xs text-slate-500 mt-1">'+hubEscape(item.meta||'')+'</p></div><span class="text-[10px] text-slate-600">'+
+                    (item.created_at?hubEscape(new Date(item.created_at).toLocaleDateString()):'')+'</span></div>').join('');
+            } else if(activity) {
+                activity.innerHTML='<div class="text-sm text-slate-500 py-6 text-center">No recent activity yet. Start by importing the course or generating a content plan.</div>';
             }
-        } catch (e) { console.error(e); }
+        } catch (e) {
+            const activity=document.getElementById('recentActivity');
+            if(activity) activity.innerHTML='<div class="text-sm text-slate-500 py-6">Activity is temporarily unavailable.</div>';
+        }
+    }
+
+    async function loadCommandCenterHealth() {
+        const checks=[];
+        const safeCheck=async(label,path,pick)=>{
+            try {
+                const headers=token?{'Authorization':'Bearer '+token}:{};
+                const r=await fetch(API_BASE+path,{headers});
+                if(!r.ok) throw new Error('HTTP '+r.status);
+                const data=await r.json();
+                const entry=pick(data);
+                checks.push({label:label,ok:!!entry.ok,detail:entry.detail});
+                return data;
+            } catch(error) {
+                checks.push({label:label,ok:false,detail:'Unavailable or not configured'});
+                return null;
+            }
+        };
+        const results=await Promise.all([
+            safeCheck('Backend API','/api/system/status',d=>({ok:d.status==='running',detail:d.status==='running'?'API responding':'API not running'})),
+            safeCheck('AI providers','/api/hub/providers',d=>({ok:(d.providers||[]).some(p=>p.configured),detail:(d.providers||[]).filter(p=>p.configured).length+' provider(s) configured'})),
+            safeCheck('Course library','/api/course-ai/status',d=>({ok:!!d.course_ready,detail:d.course_ready?d.documents+' documents indexed':'Course not imported yet'})),
+            safeCheck('Windows agent','/api/hub/local-agent/status',d=>({ok:!!d.connected,detail:d.connected?'PC agent connected':'PC agent not paired'}))
+        ]);
+        const store=document.getElementById('commandStoreStatus');
+        const health=results[0];
+        if(store) store.textContent=health?.store?.backend?(health.store.backend==='supabase'?'Supabase connected':health.store.backend+' storage'):'Storage status unavailable';
+        const docs=document.getElementById('dashCourseDocs'), hint=document.getElementById('dashCourseHint'), course=results[2];
+        if(docs) docs.textContent=course?.documents ?? '—';
+        if(hint) hint.textContent=course?.course_ready?course.chunks+' course passages indexed':'Import the shared Drive course';
+        const box=document.getElementById('commandHealthList');
+        if(!box) return;
+        box.innerHTML=checks.map(s=>
+            '<div class="creator-list-row"><span class="creator-step"><i class="fa-solid '+(s.ok?'fa-circle-check':'fa-circle-exclamation')+'"></i></span>' +
+            '<div class="flex-1 min-w-0"><p class="text-sm text-slate-200">'+hubEscape(s.label)+'</p><p class="text-xs text-slate-500 mt-1">'+hubEscape(s.detail)+'</p></div>' +
+            '<span class="creator-pill '+(s.ok?'good':'warn')+'">'+(s.ok?'Ready':'Needs setup')+'</span></div>').join('');
     }
 
     // ============================================================================
