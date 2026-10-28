@@ -855,9 +855,8 @@
       const data = await post('/api/cloud/providers/test', {provider, model});
       if (!isCurrent(version)) return;
       if (data?.ok !== true || data.provider !== provider || data.model !== model) throw new Error('The provider test returned an invalid result.');
-      const remaining = ' ViMax daily attempt caps are disabled; provider quotas and billing still apply.';
       const warning = data.audit_saved === true ? '' : ' Warning: the usage result could not be saved.';
-      state.chat.tests.set(key, {summary:`${model} responded once`, detail:`${model} responded successfully in this browser session.${remaining}${warning} Future availability is not guaranteed.`});
+      state.chat.tests.set(key, {summary:`${model} responded once`, detail:`${model} responded successfully in this browser session.${warning} Provider quotas and billing still apply; future availability is not guaranteed.`});
     } catch (error) {
       if (isCurrent(version)) state.chat.tests.set(key, {summary:`Last test failed for ${model}`, detail:`Test failed: ${error.message}`});
     } finally {
