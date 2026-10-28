@@ -21,7 +21,10 @@ test('hosted root and callback path use chat while prior interfaces remain intac
     assert.match(main, /id="chat-form"/);
     assert.match(main, /Continue with Google/);
     assert.match(main, /\/skills\/auth-clean\.js/);
-    assert.doesNotMatch(main, /<(?:video|iframe)\b|href="\/(?:workspace\.html|skills\/full\.html)/i);
+    assert.doesNotMatch(main, /<(?:video|iframe)\b/i);
+    assert.match(main, /href="\/skills\/full\.html#mission"/);
+    assert.match(main, /href="\/skills\/full\.html#youtube"/);
+    assert.match(main, /text-only queue/); assert.match(main, /manual private upload/);
     assert.match(await readFile(path.join(root, 'chat', 'app.js'), 'utf8'), /\/api\/cloud\/youtube\/oauth\/start/);
   } finally { await rm(root, {recursive:true, force:true}); }
 });

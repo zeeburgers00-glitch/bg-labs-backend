@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "assessed_at": "2026-10-28",
-  "workforce_notice": "Assignments are proposed specialist roles, not running agents. No 120-agent orchestration, automatic tool invocation, or publishing is provided by this registry. Permissions describe the listed adapter, not a general authorization engine.",
+  "workforce_notice": "Assignments are proposed specialist roles, not running agents. No 120-agent runtime or automatic publishing is provided. The fixed creator review runs only bounded, read-only hosted checks; permissions in this registry are descriptive, not a general authorization engine.",
   "repositories": [
     {
       "id": "darkzogx--youtube-automation-agent",
@@ -354,7 +354,7 @@
         "faster_whisper/audio.py"
       ],
       "capabilities": "Speech transcription and timestamps with selectable CPU/GPU inference.",
-      "decision": "Not installed: requires model download, CPU/GPU resources and file-isolated worker; no live transcription was tested."
+      "decision": "Not integrated: requires reviewed model weights, CPU/GPU resources and a file-isolated worker. An isolated CPU sample with a third-party model package was not usable."
     },
     {
       "id": "googleapis--google-api-nodejs-client",
@@ -494,7 +494,7 @@
       "repository": "https://github.com/ahmedsakri/youtube-agent-pro",
       "revision": "45e8e2603d4bf8e17c1147ba870a4ea00eaecbc5",
       "license": "MIT",
-      "setup_status": "integrated_local",
+      "setup_status": "integrated_hosted",
       "required_credentials": [],
       "tool_permissions": [
         "read_supplied_text",
@@ -502,9 +502,9 @@
       ],
       "test_results": {
         "status": "passed",
-        "scope": "Existing local Python deterministic tests (2026-10-28); no live provider."
+        "scope": "Node hosted adaptation and Python deterministic tests (2026-10-28); no live provider."
       },
-      "notes": "Existing local tool; heuristic only, not research or a views prediction."
+      "notes": "Hosted and local English text heuristic only; not research or a views prediction."
     },
     {
       "id": "funnel_heuristic",
@@ -515,7 +515,7 @@
       "repository": "https://github.com/ahmedsakri/youtube-agent-pro",
       "revision": "45e8e2603d4bf8e17c1147ba870a4ea00eaecbc5",
       "license": "MIT",
-      "setup_status": "integrated_local",
+      "setup_status": "integrated_hosted",
       "required_credentials": [],
       "tool_permissions": [
         "read_supplied_metrics",
@@ -523,9 +523,9 @@
       ],
       "test_results": {
         "status": "passed",
-        "scope": "Python input/Shorts tests, local companion and pinned ViMax ToolRegistry execution (2026-10-28)."
+        "scope": "Node hosted adaptation plus Python input/Shorts and pinned ViMax ToolRegistry tests (2026-10-28)."
       },
-      "notes": "Uses user-supplied metrics only; heuristics are not a causal diagnosis or forecast."
+      "notes": "Hosted and local review of user-supplied metrics only; heuristics are not a causal diagnosis or forecast."
     },
     {
       "id": "research_pipeline",
@@ -559,7 +559,7 @@
       "repository": "https://github.com/sergebulaev/youtube-skills",
       "revision": "73cd16a05b589d755bf2eef3e4ee9db9e2df5494",
       "license": "MIT",
-      "setup_status": "integrated_local",
+      "setup_status": "integrated_hosted",
       "required_credentials": [],
       "tool_permissions": [
         "read_supplied_text",
@@ -567,9 +567,9 @@
       ],
       "test_results": {
         "status": "passed",
-        "scope": "Python canonicalization/spoofing tests, local companion and pinned ViMax ToolRegistry execution (2026-10-28)."
+        "scope": "Node hosted adaptation plus Python canonicalization/spoofing and ViMax ToolRegistry tests (2026-10-28)."
       },
-      "notes": "Parses references only; never fetches URLs, verifies ownership or publishes."
+      "notes": "Hosted and local parsing only; never fetches URLs, verifies ownership or publishes."
     },
     {
       "id": "marketing_playbooks",
@@ -737,9 +737,9 @@
       ],
       "test_results": {
         "status": "not_run",
-        "scope": "source review only"
+        "scope": "No integration test: isolated faster-whisper 1.2.1 CPU sample with a third-party Whisper-small int8 package was low-confidence and unusable (2026-10-28)."
       },
-      "notes": "Requires model weights and a separate CPU/GPU worker; not verified."
+      "notes": "Not integrated. Requires independently reviewed model weights, reliable transcription and a separate CPU/GPU worker."
     },
     {
       "id": "googleapis_client",
@@ -772,7 +772,7 @@
       "repository": "https://github.com/Jakeschincariol/youtube-agent-skill",
       "revision": "a2feb2104981a375ffd4f87ee04f4f5344ac43c6",
       "license": "MIT",
-      "setup_status": "integrated_local",
+      "setup_status": "integrated_hosted",
       "required_credentials": [],
       "tool_permissions": [
         "read_supplied_text",
@@ -780,9 +780,9 @@
       ],
       "test_results": {
         "status": "passed",
-        "scope": "Existing local Python deterministic tests (2026-10-28); no live provider."
+        "scope": "Node hosted adaptation and Python deterministic tests (2026-10-28); no live provider."
       },
-      "notes": "Existing local-only heuristic; not a performance forecast."
+      "notes": "Hosted and local English text heuristic only; not a performance forecast."
     },
     {
       "id": "title_lint",
@@ -793,7 +793,7 @@
       "repository": "https://github.com/Jakeschincariol/youtube-agent-skill",
       "revision": "a2feb2104981a375ffd4f87ee04f4f5344ac43c6",
       "license": "MIT",
-      "setup_status": "integrated_local",
+      "setup_status": "integrated_hosted",
       "required_credentials": [],
       "tool_permissions": [
         "read_supplied_text",
@@ -801,9 +801,9 @@
       ],
       "test_results": {
         "status": "passed",
-        "scope": "Existing local Python deterministic tests (2026-10-28); no live provider."
+        "scope": "Node hosted adaptation and Python deterministic tests (2026-10-28); no live provider."
       },
-      "notes": "Existing English text lint; not image inspection."
+      "notes": "Hosted and local English text lint; not image inspection or a performance forecast."
     },
     {
       "id": "scene_cuts",

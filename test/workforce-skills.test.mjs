@@ -25,7 +25,7 @@ test('registry covers each pinned requested source and is descriptive, not an ex
   const roles = new Set(registry.workforce_plan.roles.map(item => item.role));
   assert.equal(roles.size, registry.workforce_plan.roles.length);
   assert.ok(registry.skills.every(skill => skill.agent_assignments.every(role => roles.has(role))));
-  assert.equal(registry.skills.filter(skill => skill.setup_status === 'integrated_hosted').length, 1);
+  assert.equal(registry.skills.filter(skill => skill.setup_status === 'integrated_hosted').length, 6);
   assert.ok(registry.skills.every(skill => skill.agent_assignments.length && Array.isArray(skill.required_credentials)
     && Array.isArray(skill.tool_permissions) && skill.test_results.scope));
   registry.skills.length = 0;
@@ -60,7 +60,7 @@ test('strict wrapper rejects invalid fields before the upstream truncation logic
   reject({title:'Good', extra:true});
   reject(null);
   assert.equal(metadataPreflight({title:'x'.repeat(100), description:'x'.repeat(5000)}).preview.description.length, 5000);
-  assert.throws(() => runHostedSkill('youtube_url_parser', {}), error => error.status === 404);
+  assert.throws(() => runHostedSkill('youtube_url_parser', {}), error => error.status === 422);
   assert.throws(() => runHostedSkill('../../anything', {}), error => error.status === 404);
 });
 
@@ -90,7 +90,7 @@ test('hosted routes require an authenticated session, same-origin POST and only 
   response = await bridge.fetch(req('/api/cloud/skills/run', {cookie, method:'POST',payload:{skill:'metadata_preflight',input:{title:'Valid'}}}));
   assert.equal(response.status,200); assert.equal((await response.json()).result.preview.title,'Valid');
   response = await bridge.fetch(req('/api/cloud/skills/run', {cookie, method:'POST',payload:{skill:'funnel_heuristic',input:{}}}));
-  assert.equal(response.status,404);
+  assert.equal(response.status,422);
   response = await bridge.fetch(req('/api/cloud/skills/run', {cookie, method:'POST',payload:{skill:'metadata_preflight',input:{title:'x'.repeat(101)}}}));
   assert.equal(response.status,422);
   response = await bridge.fetch(req('/api/cloud/skills/run', {cookie, method:'POST',payload:{skill:'metadata_preflight',input:{title:'ok'},extra:1}}));

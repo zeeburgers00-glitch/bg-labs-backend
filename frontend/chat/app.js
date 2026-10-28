@@ -5,10 +5,10 @@
     user:null, session:'loading', sessionSequence:0, version:0, controllers:new Set(), authBusy:false,
     deployment:{chat:'checking', youtube:'checking'},
     google:{status:'checking', busy:false, error:''},
-    chat:{providers:[], allowed:false, paused:false, settingsReady:false, historyReady:false, busy:false, usageLoading:false, turns:[], pending:null, note:'', error:''},
+    chat:{providers:[], pexels:'unknown', allowed:false, paused:false, settingsReady:false, historyReady:false, busy:false, usageLoading:false, turns:[], pending:null, note:'', error:''},
     channel:{ready:false, configured:false, allowed:false, analyticsConfigured:false, analyticsConnected:false, busy:false, connected:null, connectionId:null, saved:[], autoAttempted:false, sequence:0, notice:'', error:''},
     facebook:{ready:false, configured:false, allowed:false, busy:false, saved:[], verified:null, autoAttempted:false, sequence:0, notice:'', error:''},
-    workforce:{loaded:false, loading:false, busy:false},
+    workforce:{loaded:false, loading:false, busy:false, agentsLoaded:false, agentsLoading:false, reviewBusy:false, researchLoaded:false, researchLoading:false, researchReady:false, researchBusy:false},
   };
   let autoConnectAfterLogin = false;
   const isCurrent = version => Boolean(state.user && state.version === version);
@@ -63,6 +63,18 @@
     fallback.replaceChildren(); makeOption(fallback, '', 'No fallback');
     for (const provider of providers) for (const model of provider.models) makeOption(fallback, `${provider.id}|${model}`, `${provider.label} · ${model}`);
     if (Array.from(fallback.options).some(option => option.value === previous)) fallback.value = previous;
+    const status = $('provider-status-list'); status.replaceChildren();
+    if (!state.user || !state.chat.settingsReady) status.append(element('li', state.user ? 'Checking configuration…' : 'Sign in to view configuration status.'));
+    else {
+      const names = {groq:'GROQ_API_KEY',gemini:'GEMINI_API_KEY',mistral:'MISTRAL_API_KEY',zai:'ZAI_API_KEY',openrouter:'OPENROUTER_API_KEY',huggingface:'HF_TOKEN',opencode:'OPENCODE_API_KEY',openai:'OPENAI_API_KEY',vercel:'VIMAX_GATEWAY_FREE_ENABLED'};
+      const states = {not_configured:'Not configured',configured_unverified:'Configured, not verified',invalid_configuration:'Invalid configuration',model_required:'Model list required',unknown:'Unknown'};
+      for (const provider of state.chat.providers) {
+        if (!provider || typeof provider.label !== 'string' || typeof provider.id !== 'string') continue;
+        status.append(element('li', `${provider.label}: ${states[provider.state] || 'Unknown'}${names[provider.id] ? ` · ${names[provider.id]}` : ''}`));
+      }
+      status.append(element('li', `Pexels stock: ${states[state.chat.pexels] || 'Unknown'} · PEXELS_API_KEY`));
+      status.append(element('li', 'Hacker AI: Not implemented'));
+    }
     updateModels();
   }
   function isAnalyticsRequest(text) {
@@ -289,14 +301,22 @@
     voiceDisclosureAccepted = false;
     state.user = user && typeof user.id === 'string' ? {id:user.id, email:typeof user.email === 'string' ? user.email : ''} : null;
     state.session = state.user ? 'signed-in' : sessionState;
-    state.chat = {providers:[], allowed:false, paused:false, settingsReady:false, historyReady:false, busy:false, usageLoading:false, turns:[], pending:null, note:'', error:''};
+    state.chat = {providers:[], pexels:'unknown', allowed:false, paused:false, settingsReady:false, historyReady:false, busy:false, usageLoading:false, turns:[], pending:null, note:'', error:''};
     state.channel = {ready:false, configured:false, allowed:false, analyticsConfigured:false, analyticsConnected:false, busy:false, connected:null, connectionId:null, saved:[], autoAttempted:false, sequence:0, notice:'', error:''};
     state.facebook = {ready:false, configured:false, allowed:false, busy:false, saved:[], verified:null, autoAttempted:false, sequence:0, notice:'', error:''};
-    state.workforce = {loaded:false, loading:false, busy:false};
+    state.workforce = {loaded:false, loading:false, busy:false, agentsLoaded:false, agentsLoading:false, reviewBusy:false, researchLoaded:false, researchLoading:false, researchReady:false, researchBusy:false};
+    $('public-research-form').reset(); for (const field of $('public-research-form').elements) field.disabled = false;
+    $('public-research-submit').disabled = true; $('public-research-setup').textContent = 'Checking setup…';
+    $('public-research-status').textContent = ''; $('public-research-error').textContent = ''; $('public-research-notice').textContent = '';
+    $('public-research-result').hidden = true; $('public-research-data').replaceChildren();
+    $('creator-review-form').reset(); for (const field of $('creator-review-form').elements) field.disabled = false;
+    $('creator-review-status').textContent = ''; $('creator-review-error').textContent = ''; $('creator-review-notice').textContent = '';
+    $('creator-review-result').hidden = true; $('creator-review-steps').replaceChildren(); $('creator-metrics-options').open = false;
+    $('agent-registry-status').textContent = ''; $('agent-departments').replaceChildren();
     $('preflight-form').reset(); for (const field of $('preflight-form').elements) field.disabled = false;
     $('preflight-status').textContent = ''; $('preflight-error').textContent = ''; $('preflight-notice').textContent = '';
     $('preflight-result').hidden = true; $('preflight-notes').replaceChildren(); $('preflight-preview').textContent = '';
-    $('registry-status').textContent = ''; $('registry-list').replaceChildren(); $('role-plan-list').replaceChildren(); document.querySelector('.role-plan').open = false;
+    $('registry-status').textContent = ''; $('registry-list').replaceChildren(); $('role-plan-list').replaceChildren(); document.querySelector('.slot-plan').open = false;
     $('chat-prompt').value = ''; $('account-password').value = ''; $('speak-replies').checked = false;
     $('settings-message').textContent = ''; $('account-error').textContent = ''; $('account-message').textContent = '';
     $('usage-message').textContent = ''; $('usage-list').replaceChildren();
@@ -309,6 +329,7 @@
       const data = await sessionApi('/api/cloud/providers');
       if (!isCurrent(version)) return;
       state.chat.providers = Array.isArray(data.providers) ? data.providers : [];
+      state.chat.pexels = typeof data.pexels === 'string' ? data.pexels : 'unknown';
       state.chat.allowed = data.allowed === true; state.chat.paused = data.paused === true; state.chat.settingsReady = true;
       renderProviders(); updateChatControls();
     } catch (error) {
@@ -526,9 +547,132 @@
       if (isCurrent(version) && error.name !== 'AbortError') $('registry-status').textContent = `${error.message} Close and reopen to retry.`;
     } finally { if (isCurrent(version)) state.workforce.loading = false; }
   }
+  function renderAgentRegistry(data) {
+    if (!Array.isArray(data?.departments) || data.departments.length > 20 || !Array.isArray(data.roles) || data.roles.length > 200) throw new Error('The role registry response is invalid.');
+    const container = $('agent-departments'); container.replaceChildren();
+    const ready = data.roles.filter(role => role?.execution_status === 'implemented_read_only').length;
+    const planned = data.roles.length - ready;
+    $('agent-registry-status').textContent = `${data.roles.length} role specifications · ${ready} read-only roles tested locally · ${planned} awaiting integration. No role is a running worker.`;
+    for (const name of data.departments) {
+      if (typeof name !== 'string') continue;
+      const members = data.roles.filter(role => role?.department === name && typeof role.name === 'string');
+      const group = element('details', null, 'agent-department');
+      group.append(element('summary', `${name} · ${members.length} roles`));
+      for (const role of members) {
+        const item = element('details', null, 'agent-role');
+        const available = role.execution_status === 'implemented_read_only';
+        item.append(element('summary', `${role.name} · ${available ? 'Read-only check available' : 'Awaiting integration'}`));
+        const line = (label, value) => item.append(element('p', `${label}: ${value}`));
+        const entries = values => Array.isArray(values) && values.length ? values.filter(x => typeof x === 'string').join(', ') : 'None';
+        line('Responsibility', typeof role.responsibility === 'string' ? role.responsibility : 'Not specified');
+        line('Assigned tool', entries(role.assigned_tools)); line('Required capability', entries(role.required_capabilities));
+        line('Dependencies', entries(role.dependencies)); line('Tests', typeof role.test_status === 'string' ? role.test_status : 'unknown');
+        line('Error handling', typeof role.error_handling === 'string' ? role.error_handling : 'Not specified');
+        line('Success criteria', typeof role.success_criteria === 'string' ? role.success_criteria : 'Not specified');
+        const schema = element('details', null, 'role-schema'); schema.append(element('summary', 'Input and output schemas'));
+        schema.append(element('pre', JSON.stringify({input:role.input_schema, output:role.output_schema}, null, 2))); item.append(schema);
+        group.append(item);
+      }
+      container.append(group);
+    }
+  }
+  async function loadAgentRegistry(version) {
+    if (!isCurrent(version) || state.workforce.agentsLoaded || state.workforce.agentsLoading) return;
+    state.workforce.agentsLoading = true; $('agent-registry-status').textContent = 'Loading role specifications…';
+    try {
+      const data = await sessionApi('/api/cloud/agents');
+      if (!isCurrent(version)) return;
+      renderAgentRegistry(data); state.workforce.agentsLoaded = true;
+    } catch (error) {
+      if (isCurrent(version) && error.name !== 'AbortError') $('agent-registry-status').textContent = `${error.message} Close and reopen to retry.`;
+    } finally { if (isCurrent(version)) state.workforce.agentsLoading = false; }
+  }
+  async function loadPublicResearchStatus(version) {
+    if (!isCurrent(version) || state.workforce.researchLoaded || state.workforce.researchLoading) return;
+    state.workforce.researchLoading = true; $('public-research-setup').textContent = 'Checking setup…';
+    try {
+      const data = await sessionApi('/api/cloud/youtube-public/status');
+      if (!isCurrent(version)) return;
+      state.workforce.researchReady = data?.allowed === true && data?.state === 'configured_unverified';
+      state.workforce.researchLoaded = true;
+      $('public-research-submit').disabled = !state.workforce.researchReady;
+      $('public-research-setup').textContent = state.workforce.researchReady ? 'Configured, not yet verified. A lookup will use Google quota.'
+        : data?.allowed !== true ? 'This account is not enabled for public lookups.'
+        : 'Public research is not enabled and configured on this deployment.';
+    } catch (error) {
+      if (isCurrent(version) && error.name !== 'AbortError') $('public-research-setup').textContent = `${error.message} Close and reopen to retry.`;
+    } finally { if (isCurrent(version)) state.workforce.researchLoading = false; }
+  }
   $('workforce-open').addEventListener('click', () => {
     if (!state.user) return;
-    showDialog('workforce-dialog'); void loadWorkforceRegistry(state.version);
+    showDialog('workforce-dialog'); void loadWorkforceRegistry(state.version); void loadAgentRegistry(state.version); void loadPublicResearchStatus(state.version);
+  });
+  $('public-research-form').addEventListener('submit', async event => {
+    event.preventDefault();
+    if (!state.user || !state.workforce.researchReady || state.workforce.researchBusy || !$('public-research-confirm').checked) return;
+    const version = state.version, input = {reference:$('public-research-reference').value,confirm_quota:true};
+    state.workforce.researchBusy = true; for (const field of $('public-research-form').elements) field.disabled = true;
+    $('public-research-status').textContent = 'Requesting a public metadata sample…'; $('public-research-error').textContent = ''; $('public-research-result').hidden = true;
+    try {
+      const data = await post('/api/cloud/youtube-public/sample', input);
+      if (!isCurrent(version)) return;
+      const sample = data?.sample;
+      if (!sample?.channel || typeof sample.channel.title !== 'string' || !Array.isArray(sample.videos) || sample.videos.length > 10) throw new Error('The public sample response is invalid.');
+      const omitted = Number.isInteger(sample.missing_videos) && sample.missing_videos > 0 ? ` ${sample.missing_videos} unavailable video record(s) omitted.` : '';
+      $('public-research-status').textContent = (data.audit_saved ? 'Public metadata sample ready.' : 'Sample ready, but the attempt audit could not be finalized.') + omitted;
+      $('public-research-notice').textContent = typeof sample.notice === 'string' ? sample.notice : '';
+      const target = $('public-research-data'); target.replaceChildren();
+      target.append(element('h4', sample.channel.title), element('p', `Channel: ${sample.channel.id}`),
+        element('p', `Subscribers: ${sample.channel.subscribers ?? 'unavailable'} · Total views: ${sample.channel.total_views ?? 'unavailable'} · Videos: ${sample.channel.video_count ?? 'unavailable'}`),
+        element('p', sample.channel.description || 'No public description returned.'));
+      if (!sample.videos.length) target.append(element('p', 'No public video details were returned.'));
+      for (const video of sample.videos) {
+        if (!video || typeof video.title !== 'string') continue;
+        const item = element('details'); item.append(element('summary', video.title || 'Untitled video'));
+        item.append(element('p', `Published: ${video.published_at || 'unavailable'} · Duration: ${video.duration_iso || 'unavailable'} · Views: ${video.views ?? 'unavailable'} · Likes: ${video.likes ?? 'unavailable'} · Comments: ${video.comments ?? 'unavailable'}`));
+        item.append(element('p', typeof video.url === 'string' ? video.url : '')); target.append(item);
+      }
+      $('public-research-result').hidden = false;
+    } catch (error) {
+      if (isCurrent(version) && error.name !== 'AbortError') { $('public-research-status').textContent = ''; $('public-research-error').textContent = error.message; }
+    } finally {
+      if (isCurrent(version)) { state.workforce.researchBusy = false; for (const field of $('public-research-form').elements) field.disabled = false; $('public-research-submit').disabled = !state.workforce.researchReady; }
+    }
+  });
+  $('creator-review-form').addEventListener('submit', async event => {
+    event.preventDefault();
+    if (!state.user || state.workforce.reviewBusy) return;
+    const version = state.version, input = {metadata:{title:$('creator-title').value}};
+    for (const [key, field] of [['reference','creator-reference'],['idea','creator-idea'],['hook','creator-hook'],['thumbnail','creator-thumbnail']]) {
+      const value = $(field).value.trim(); if (value) input[key] = value;
+    }
+    const metrics = {};
+    for (const [key, field] of [['impressions','creator-impressions'],['views','creator-views'],['ctr','creator-ctr'],['avd_seconds','creator-avd'],['length_seconds','creator-length']]) {
+      if ($(field).value !== '') metrics[key] = Number($(field).value);
+    }
+    if (Object.keys(metrics).length) input.funnel = {format:$('creator-format').value, metrics};
+    state.workforce.reviewBusy = true; for (const field of $('creator-review-form').elements) field.disabled = true;
+    $('creator-review-status').textContent = 'Reviewing supplied draft…'; $('creator-review-error').textContent = ''; $('creator-review-result').hidden = true;
+    try {
+      const data = await post('/api/cloud/agents/run', {agent:'studio_manager', input});
+      if (!isCurrent(version)) return;
+      const result = data?.result;
+      if (!result || !Array.isArray(result.steps) || result.steps.length < 2 || result.steps.length > 6) throw new Error('The review response is invalid.');
+      $('creator-review-status').textContent = result.status === 'review_ready' ? 'Read-only review ready. Review every result before use.' : 'The metadata draft needs changes.';
+      $('creator-review-notice').textContent = typeof result.notice === 'string' ? result.notice : '';
+      const steps = $('creator-review-steps'); steps.replaceChildren();
+      const labels = {metadata_preflight:'Metadata preview',title_lint:'Title and thumbnail text',youtube_url_parser:'YouTube reference',idea_heuristic:'Idea wording',hook_heuristic:'Hook wording',funnel_heuristic:'Supplied metrics'};
+      for (const step of result.steps) {
+        if (!step || typeof step.skill !== 'string' || !step.result || typeof step.result !== 'object') continue;
+        const item = element('details'); item.open = step.skill === 'metadata_preflight'; item.append(element('summary', labels[step.skill] || 'Read-only check'));
+        item.append(element('pre', JSON.stringify(step.result, null, 2))); steps.append(item);
+      }
+      $('creator-review-result').hidden = false;
+    } catch (error) {
+      if (isCurrent(version) && error.name !== 'AbortError') { $('creator-review-status').textContent = ''; $('creator-review-error').textContent = error.message; }
+    } finally {
+      if (isCurrent(version)) { state.workforce.reviewBusy = false; for (const field of $('creator-review-form').elements) field.disabled = false; }
+    }
   });
   $('preflight-form').addEventListener('submit', async event => {
     event.preventDefault();

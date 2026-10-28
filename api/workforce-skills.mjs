@@ -2,10 +2,9 @@
 // downloads code, opens files supplied by a user, publishes, or calls a provider.
 import registry from '../catalog/workforce-skills.json' with {type:'json'};
 import metadata from '../vendor/youtube-automation-agent/youtube-metadata-validator.cjs';
-
-export class SkillError extends Error {
-  constructor(status, message) { super(message); this.status = status; }
-}
+import {SkillError} from './skill-error.mjs';
+import {youtubeReference, funnelReview, ideaReview, hookReview, titleReview} from './creator-skills.mjs';
+export {SkillError} from './skill-error.mjs';
 
 export function workforceRegistry() {
   // Do not let a caller mutate the shared module cache between requests.
@@ -48,9 +47,36 @@ export function metadataPreflight(input) {
     notice:'Advisory preview only. Nothing was saved, sent to YouTube or published; review the final metadata separately.'};
 }
 
+// A small, synchronous composition of actual read-only tools. It never fetches
+// a competitor, executes agent-provided code, calls an LLM, saves or publishes.
+export function creatorReview(input) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)
+      || Object.keys(input).some(key => !['metadata','reference','idea','hook','thumbnail','funnel'].includes(key))
+      || !input.metadata) throw new SkillError(422, 'Provide metadata and only supported review fields.');
+  const metadataResult = metadataPreflight(input.metadata);
+  const steps = [
+    {skill:'metadata_preflight', result:metadataResult},
+    {skill:'title_lint', result:titleReview({title:input.metadata.title, thumbnail:input.thumbnail ?? ''})},
+  ];
+  if (input.reference !== undefined) steps.push({skill:'youtube_url_parser', result:youtubeReference({reference:input.reference})});
+  if (input.idea !== undefined) steps.push({skill:'idea_heuristic', result:ideaReview({idea:input.idea})});
+  if (input.hook !== undefined) steps.push({skill:'hook_heuristic', result:hookReview({hook:input.hook})});
+  if (input.funnel !== undefined) steps.push({skill:'funnel_heuristic', result:funnelReview(input.funnel)});
+  return {status:metadataResult.valid ? 'review_ready' : 'metadata_needs_changes', steps,
+    notice:'Read-only checks of supplied text and numbers. No competitor or channel was fetched, no prediction or publishing approval was made, and nothing was saved or uploaded.'};
+}
+
 // Exact server-owned allowlist: registry descriptions never grant permissions
 // and cannot cause arbitrary repository code, commands or URLs to be executed.
 export function runHostedSkill(id, input) {
-  if (id !== 'metadata_preflight') throw new SkillError(404, 'That skill is not available in the hosted app.');
-  return metadataPreflight(input);
+  switch (id) {
+    case 'metadata_preflight': return metadataPreflight(input);
+    case 'youtube_url_parser': return youtubeReference(input);
+    case 'funnel_heuristic': return funnelReview(input);
+    case 'idea_heuristic': return ideaReview(input);
+    case 'hook_heuristic': return hookReview(input);
+    case 'title_lint': return titleReview(input);
+    case 'creator_review': return creatorReview(input);
+    default: throw new SkillError(404, 'That skill is not available in the hosted app.');
+  }
 }

@@ -1,6 +1,7 @@
 // The hosted default is a focused chat surface. Preserve the previously built
-// upstream workspace and skills page at unlinked paths rather than deleting
-// their code or changing the local companion build.
+// upstream workspace and skills page at their own paths rather than deleting
+// their code or changing the local companion build. Creator tools links to the
+// preserved skills page; its own auth and feature gates remain in force.
 import {copyFile, cp, mkdir} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';

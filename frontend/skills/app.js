@@ -84,7 +84,10 @@ async function loadSystem() {
       $('hardware').textContent = system.warnings.join(' ');
       setupVoices(system); renderCatalog();
       try { await loadAccount(); }
-      finally { if (window.location.hash === '#youtube') requestAnimationFrame(() => $('youtube').scrollIntoView()); }
+      finally {
+        if (window.location.hash === '#youtube') requestAnimationFrame(() => $('youtube').scrollIntoView());
+        else if (window.location.hash === '#mission') requestAnimationFrame(() => ($('mission').hidden ? $('account') : $('mission')).scrollIntoView());
+      }
       return;
     }
     $('connection').textContent = 'Local companion connected';

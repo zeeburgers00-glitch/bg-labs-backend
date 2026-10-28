@@ -98,6 +98,11 @@
       <label>Optional fallback<select id="fallback"><option value="">No fallback</option></select></label>
     </div>
     <p class="hint">Prompts and replies are saved to your account until deleted. The selected provider receives the current prompt and up to three previous turns. A fallback may send them to another provider. Calls may cost money; 10 attempts per account and 50 shared attempts per UTC day are limits, not spending caps.</p>
+    <details class="role-plan"><summary>Provider setup status</summary>
+      <p class="hint">Configuration checks never reveal or test credentials. Configured does not mean verified or free. Rotate keys exposed in chat and add replacements privately in the deployment's Sensitive environment variables; never paste them here.</p>
+      <ul id="provider-status-list" aria-label="Provider configuration status"></ul>
+      <p class="hint">OpenCode also requires an approved OPENCODE_MODELS list. Pexels is for stock search, not chat. Hacker AI is not implemented.</p>
+    </details>
     <button class="text-button" id="usage-refresh" type="button" disabled>Show recent usage</button>
     <p class="hint">Up to 20 recorded attempts. Token counts are provider-reported when available; prices are not calculated. Failed calls may still be billed. Check provider billing for actual cost.</p>
     <p id="usage-message" class="hint" role="status"></p>
@@ -114,7 +119,43 @@
 
   <dialog id="workforce-dialog" class="dialog workforce-dialog" aria-labelledby="workforce-title">
     <div class="dialog-heading"><div><p class="eyebrow">CREATOR TOOLKIT</p><h2 id="workforce-title">Skills &amp; roles</h2></div><button class="icon-button close-dialog" type="button" data-close="workforce-dialog" aria-label="Close">×</button></div>
-    <p class="dialog-intro">Role assignments are a plan, not 120 running agents. Only the metadata preview runs here; local and uninstalled skills are labeled below. Nothing in this tool publishes or accesses a channel.</p>
+    <p class="dialog-intro">Seven specialist roles can run read-only checks here; other role specifications await integration. The 120-slot plan is not 120 running agents. Nothing in this toolkit publishes or grants access to a channel.</p>
+    <p class="hint">The preserved advanced workspace has <a href="/skills/full.html#mission">channel profiles and a text-only queue</a> and a separate <a href="/skills/full.html#youtube">manual private upload</a>. The queue needs a worker; upload needs YouTube setup and consent. Neither generates a full video.</p>
+    <section aria-labelledby="public-research-title">
+      <h3 id="public-research-title">Public channel sample</h3>
+      <p class="hint">Optional official YouTube Data API lookup: up to ten recent public video titles, dates, durations and visible counts. It does not watch videos, inspect scripts or verify style, access private Analytics, or authorize a channel. Requires server setup and sends up to three API requests; each uses one Google quota unit. One shared lookup attempt is also reserved.</p>
+      <p id="public-research-setup" class="hint" role="status" aria-live="polite">Checking setup…</p>
+      <form id="public-research-form">
+        <label>YouTube channel handle or channel ID URL<input id="public-research-reference" maxlength="2048" placeholder="https://www.youtube.com/@channel" required></label>
+        <label class="check-label"><input id="public-research-confirm" type="checkbox" required> I understand this sends public lookup requests and uses quota.</label>
+        <button id="public-research-submit" class="primary-button" type="submit" disabled>Sample public channel</button>
+      </form>
+      <p id="public-research-status" class="hint" role="status" aria-live="polite"></p><p id="public-research-error" class="error" role="alert"></p>
+      <div id="public-research-result" class="preflight-result" hidden><p id="public-research-notice" class="hint"></p><div id="public-research-data" class="registry-list"></div></div>
+    </section>
+    <div class="dialog-divider"></div>
+    <section aria-labelledby="creator-review-title">
+      <h3 id="creator-review-title">Creator draft review</h3>
+      <p class="hint">Combine the available checks on your own text and optional numbers. The English wording scores are heuristics, not research or forecasts. A reference is parsed only: its channel and videos are not fetched.</p>
+      <form id="creator-review-form">
+        <label>Draft title<input id="creator-title" maxlength="100" required></label>
+        <label>Thumbnail text, optional<input id="creator-thumbnail" maxlength="400"></label>
+        <label>Video idea, optional<input id="creator-idea" maxlength="400"></label>
+        <label>Opening hook, optional<textarea id="creator-hook" maxlength="400" rows="2"></textarea></label>
+        <label>YouTube reference, optional<input id="creator-reference" maxlength="2048" placeholder="https://www.youtube.com/@channel"></label>
+        <details id="creator-metrics-options" class="role-plan"><summary>Optional manually supplied metrics</summary>
+          <p class="hint">These are your numbers, not verified YouTube Analytics. Long-form CTR bands do not apply to Shorts.</p>
+          <label>Format<select id="creator-format"><option value="long">Long-form</option><option value="shorts">Shorts</option></select></label>
+          <div class="settings-grid"><label>Impressions<input id="creator-impressions" type="number" min="0" max="1000000000000" step="1"></label><label>Views<input id="creator-views" type="number" min="0" max="1000000000000" step="1"></label></div>
+          <div class="settings-grid"><label>CTR percentage<input id="creator-ctr" type="number" min="0" max="100" step="any"></label><label>Average view duration, seconds<input id="creator-avd" type="number" min="0" max="86400" step="any"></label></div>
+          <label>Video duration, seconds<input id="creator-length" type="number" min="0.001" max="86400" step="any"></label>
+        </details>
+        <button class="primary-button" id="creator-review-submit" type="submit">Run read-only review</button>
+      </form>
+      <p id="creator-review-status" class="hint" role="status" aria-live="polite"></p><p id="creator-review-error" class="error" role="alert"></p>
+      <div id="creator-review-result" class="preflight-result" hidden><p id="creator-review-notice" class="hint"></p><div id="creator-review-steps" class="registry-list"></div></div>
+    </section>
+    <div class="dialog-divider"></div>
     <section aria-labelledby="preflight-title">
       <h3 id="preflight-title">YouTube metadata preview</h3>
       <p class="hint">Check your own draft without an AI provider or YouTube connection. Results are not saved or sent to YouTube. Review the normalized preview before using it elsewhere.</p>
@@ -130,7 +171,12 @@
       <div id="preflight-result" class="preflight-result" hidden><p id="preflight-notice" class="hint"></p><ul id="preflight-notes"></ul><pre id="preflight-preview"></pre></div>
     </section>
     <div class="dialog-divider"></div>
-    <section aria-labelledby="registry-title"><h3 id="registry-title">Unified skill registry</h3><p class="hint">Open a skill for its source, license, proposed specialist, permissions, setup and tests. Source review is not the same as installation.</p><p id="registry-status" class="hint" role="status"></p><details class="role-plan"><summary>Proposed 120-slot role plan — not running</summary><p class="hint">These are illustrative assignments, not configured agents or permissions. Uninstalled skills cannot be used.</p><ul id="role-plan-list"></ul></details><div id="registry-list" class="registry-list"></div></section>
+    <section aria-labelledby="agent-registry-title"><h3 id="agent-registry-title">Specialist role specifications</h3>
+      <p class="hint">Role definitions are not running agents. Seven are fixed, read-only checks; all others are blocked until their tools and permissions are implemented and tested.</p>
+      <p id="agent-registry-status" class="hint" role="status"></p><div id="agent-departments" class="agent-departments"></div>
+    </section>
+    <div class="dialog-divider"></div>
+    <section aria-labelledby="registry-title"><h3 id="registry-title">Unified skill registry</h3><p class="hint">Open a skill for its source, license, proposed specialist, permissions, setup and tests. Source review is not the same as installation.</p><p id="registry-status" class="hint" role="status"></p><details class="role-plan slot-plan"><summary>Proposed 120-slot role plan — not running</summary><p class="hint">These are illustrative assignments, not configured agents or permissions. Uninstalled skills cannot be used.</p><ul id="role-plan-list"></ul></details><div id="registry-list" class="registry-list"></div></section>
   </dialog>
 
   <dialog id="channel-dialog" class="dialog" aria-labelledby="channel-title">

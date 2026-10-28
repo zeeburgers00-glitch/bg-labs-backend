@@ -5,6 +5,8 @@ import {YouTubeError, createYouTube, clearYouTubeCookies} from './youtube.mjs';
 import {SocialError, createSocial, clearSocialCookies} from './social.mjs';
 import {GpuError, createGpu} from './gpu.mjs';
 import {workforceRegistry, runHostedSkill, SkillError} from './workforce-skills.mjs';
+import {creatorAgentRegistry, runCreatorAgent} from './creator-agents.mjs';
+import {youtubePublicStatus, youtubeResearchInput, samplePublicChannel} from './youtube-public-research.mjs';
 import {createHash, randomBytes} from 'node:crypto';
 
 const GOOGLE_PKCE_COOKIE = '__Host-vimax_google_pkce';
@@ -586,6 +588,18 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch, g
         if (!response.ok || !Array.isArray(value)) throw new HttpError(503, 'Chat history is temporarily unavailable.');
         return json({turns:value}, 200, session.updates);
       }
+      if (method === 'GET' && path === '/api/cloud/agents') {
+        const session = await authenticated();
+        return json(creatorAgentRegistry(), 200, session.updates);
+      }
+      if (method === 'POST' && path === '/api/cloud/agents/run') {
+        const session = await authenticated();
+        const input = await body(request);
+        if (!input || typeof input !== 'object' || Array.isArray(input)
+            || Object.keys(input).some(key => !['agent','input'].includes(key))
+            || typeof input.agent !== 'string') throw new HttpError(422, 'Provide a creator role and its input.');
+        return json({agent:input.agent, result:runCreatorAgent(input.agent, input.input)}, 200, session.updates);
+      }
       if (method === 'GET' && path === '/api/cloud/skills/registry') {
         const session = await authenticated();
         return json(workforceRegistry(), 200, session.updates);
@@ -644,6 +658,22 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch, g
         return json({reply, provider:selection.provider, model:selection.model, used_fallback:usedFallback, truncated:completed.result.truncated,
           history_saved:saved, audit_saved:completed.auditSaved, remaining_user:completed.remaining,
           usage:{input_tokens:completed.result.inputTokens, output_tokens:completed.result.outputTokens}}, 200, session.updates);
+      }
+      if (method === 'GET' && path === '/api/cloud/youtube-public/status') {
+        const session = await authenticated();
+        return json({state:youtubePublicStatus(env), allowed:aiAllowed(session)}, 200, session.updates);
+      }
+      if (method === 'POST' && path === '/api/cloud/youtube-public/sample') {
+        const session = await authenticated(); requireAiAccess(session);
+        const input = await body(request); youtubeResearchInput(input);
+        if (youtubePublicStatus(env) !== 'configured_unverified') throw new HttpError(503, 'Public YouTube research is not enabled and configured on this deployment.');
+        // One workflow reservation shares the existing account pause/daily limit.
+        // The current ledger calls public lookups 'stock_search'; provider=youtube
+        // distinguishes this workflow. It makes at most three API calls, never
+        // retries automatically, and does not establish channel ownership.
+        const completed = await attempt(session, 'stock_search', {provider:'youtube',model:''},
+          () => samplePublicChannel({env,fetchImpl,input}));
+        return json({sample:completed.result,remaining_user:completed.remaining,audit_saved:completed.auditSaved}, 200, session.updates);
       }
       if (method === 'POST' && path === '/api/cloud/github/repository') {
         const session = await authenticated(); requireAiAccess(session);

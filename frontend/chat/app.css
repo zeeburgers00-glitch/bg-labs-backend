@@ -112,6 +112,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .workforce-dialog { width: min(660px, calc(100% - 32px)); }
 .workforce-dialog h3 { margin: 6px 0 8px; font-size: 15px; }
 .workforce-dialog textarea { resize: vertical; line-height: 1.5; }
+.workforce-dialog a { color: #c9bdff; }
 .preflight-result { margin-top: 14px; padding: 12px; border: 1px solid #49445c; border-radius: 10px; background: #171821; }
 .preflight-result ul { margin: 8px 0; padding-left: 18px; color: #ded8f0; font-size: 11px; line-height: 1.6; }
 .preflight-result pre { max-height: 250px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; color: #eeeaf8; font-size: 11px; line-height: 1.55; }
@@ -122,6 +123,11 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .registry-list summary { cursor: pointer; font-weight: 650; line-height: 1.5; }
 .registry-list p { margin: 7px 0; color: #a9a4b9; line-height: 1.6; overflow-wrap: anywhere; }
 .registry-list a { color: #c9bdff; }
+.agent-department { border-top: 1px solid #383744; padding: 10px 0; font-size: 12px; }
+.agent-department > summary, .agent-role > summary, .role-schema > summary { cursor: pointer; font-weight: 650; line-height: 1.5; }
+.agent-role { margin: 8px 0 0 12px; padding: 8px 0 0; border-top: 1px solid #34323f; }
+.agent-role p { margin: 7px 0; color: #a9a4b9; line-height: 1.6; overflow-wrap: anywhere; }
+.role-schema pre { max-height: 240px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; color: #e7e2f5; font-size: 10px; line-height: 1.5; }
 .dialog-divider { height: 1px; margin: 18px 0; background: #383744; }
 .dialog .check-label { display: flex; flex-direction: row; align-items: center; gap: 9px; margin-bottom: 15px; }
 .check-label input { accent-color: #a68cf8; }

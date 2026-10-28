@@ -108,7 +108,12 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   assert.equal(posts.includes('/api/cloud/youtube/oauth/start'),false);
   assert.equal(requests.some(p=>p==='/api/cloud/youtube/status'||p==='/api/cloud/youtube/uploads'),false);
   // A signed-in owner cannot start OAuth while setup is missing or access is denied.
-  signedIn=true;await page.reload({waitUntil:'domcontentloaded'});
+  signedIn=true;
+  await page.goto(`${skills}#mission`,{waitUntil:'domcontentloaded'});
+  await page.reload({waitUntil:'domcontentloaded'});
+  await page.waitForSelector('#mission:not([hidden])');
+  await page.waitForFunction(()=>Math.abs(document.getElementById('mission').getBoundingClientRect().top)<20);
+  await page.goto(`${skills}#youtube`,{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>document.getElementById('yt-connection').textContent.includes('not configured'));
   assert.equal(await page.locator('#yt-connect').isDisabled(),true);
   assert.equal(await page.locator('#yt-login-prompt').isHidden(),true);
