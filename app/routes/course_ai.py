@@ -266,6 +266,33 @@ async def chat(body: CourseChatRequest, request: Request):
     user=await get_current_user(request); rows=await _rows(await get_store(),user["id"])
     if not rows: raise HTTPException(409,"Import the course folder first from the Course AI page.")
     lower=body.message.lower()
+    calendar_intent = bool(re.search(
+        r"\b(content calendar|content plan|publishing plan|video ideas|schedule ideas|plan (?:my )?(?:next )?(?:[0-9]+ )?(?:days|weeks|month)|[0-9]+[ -]day content plan)\b",
+        lower))
+    if calendar_intent:
+        day_match = re.search(r"\b(\d{1,2})\s*(?:day|days|din)\b", lower)
+        if "month" in lower or "30-day" in lower or "30 day" in lower:
+            days = 30
+        elif "two weeks" in lower or "14-day" in lower or "14 day" in lower:
+            days = 14
+        elif day_match:
+            days = min(30, max(7, int(day_match.group(1))))
+        else:
+            days = 7
+        result = await generate_content_plan(
+            ContentPlanRequest(days=days, goal=body.message, provider=body.provider), request
+        )
+        plan = result.get("plan") or {}
+        return {
+            "reply": f"I generated and saved a {days}-day course-grounded content plan. Open the Creator Calendar to review or approve the draft; nothing has been scheduled or published.",
+            "tool_calls": [
+                {"tool": "course.retrieve_relevant_passages", "status": "completed",
+                 "sources": len(plan.get("course_sources") or [])},
+                {"tool": "creator_calendar.generate_plan", "status": "completed"},
+                {"tool": "supabase.save_plan", "status": "completed", "plan_id": plan.get("id")}
+            ],
+            "plan": plan, "sources": plan.get("course_sources") or [], "course_grounded": True
+        }
     plan_intent = bool(re.search(
         r"\b(customi[sz]e|branding|optimi[sz]e|set\s*up|setup|improve|update)\b.{0,60}\b(channel|youtube)\b"
         r"|\b(channel|youtube)\b.{0,60}\b(customi[sz]e|branding|optimi[sz]e|set\s*up|setup|improve|description|keywords)\b"
