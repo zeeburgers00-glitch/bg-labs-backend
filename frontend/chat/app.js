@@ -753,6 +753,16 @@
   $('chat-settings').addEventListener('click', () => showDialog('settings-dialog'));
   document.querySelectorAll('[data-workspace-action]').forEach(button => button.addEventListener('click', () => {
     const action = button.dataset.workspaceAction;
+    const skillPrompts = {
+      research: 'Act as my research agent. First clarify the decision or question if needed. Build a concise research brief with key findings, evidence to verify, source links when available, disagreements, confidence levels and next steps. Do not invent sources or claim live browsing if it is unavailable.',
+      coding: 'Act as my senior coding agent. Ask for the repository, files or error details if missing. Diagnose before proposing changes, give a minimal implementation plan, include tests and edge cases, and clearly distinguish code you actually changed from code you are only suggesting.',
+      social: 'Act as my social content studio. Ask for the brand, audience, platform and goal if missing. Create 5 original content angles, captions in the right tone, hooks, CTA options and a 7-day publishing calendar. Do not claim anything was posted or scheduled unless a connected publishing tool confirms it.',
+      documents: 'Act as my document assistant. Ask what the document is for and who will read it if unclear. Produce a polished structure, draft, action items and a short summary. Preserve facts from my input and mark assumptions instead of inventing details.'
+    };
+    if (skillPrompts[action]) {
+      $('chat-prompt').value = skillPrompts[action];
+      $('chat-prompt').focus(); updateChatControls(); $('chat-prompt').scrollIntoView({behavior:'smooth',block:'center'}); return;
+    }
     if (action === 'video-plan') {
       $('chat-prompt').value = 'Act as my video production factory. Ask for the topic, audience and platform if missing. Then create an original hook, structured script, scene-by-scene visual plan, voiceover notes, captions plan, title options, description, tags and thumbnail brief. Show which stages are plans versus actions that need a configured local renderer or connected account.';
       $('chat-prompt').focus(); updateChatControls(); $('chat-prompt').scrollIntoView({behavior:'smooth',block:'center'}); return;
