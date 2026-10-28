@@ -28,7 +28,7 @@ OpenRouter may route prompts to other providers. The NVIDIA free endpoint's publ
 
 - **No provider in the selector:** check Provider setup status, the production environment, owner allowlist and whether AI calls are paused. Deployment configuration only reports that a plausible server-side key and allowed model exist.
 - **Credentials or permissions rejected:** privately rotate/check the provider key and its project, account, scopes and model access. Google OAuth credentials are not Gemini API keys, and a ChatGPT subscription is not an OpenAI API key.
-- **Rate limit / quota:** check provider quotas and ViMax's 10 user / 50 shared daily attempt limits. These are attempts, not spending limits. A free model is neither unlimited nor guaranteed to be available.
+- **Rate limit / quota:** check provider quotas and ViMax's former 10 user / 50 shared daily attempt caps (removed by migration 202610280001). Provider quotas and billing still apply; no app-level daily attempt ceiling means no guarantee of unlimited provider access. A free model is neither unlimited nor guaranteed to be available.
 - **HTTP 400/404/422 or no visible text:** verify the configured model ID and account access, and try another explicitly approved model. Reasoning, provider deprecation or small response limits can also prevent visible text. Do not enable an automatic paid fallback.
 - **HTTP 402:** check the provider account balance and billing; do not add funds or run a paid model without the owner's informed approval.
 - **Timeout / 5xx:** the request may have been processed and billed; ViMax does not automatically retry or switch provider in that ambiguous case.
