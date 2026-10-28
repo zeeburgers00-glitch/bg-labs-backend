@@ -295,12 +295,12 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch, g
       data:{p_feature:feature, p_provider:provider, p_model:model}});
     if (!response.ok || !value || typeof value !== 'object') throw new HttpError(503, 'AI safety limits are unavailable. No provider request was sent.');
     if (value.allowed !== true) {
-      const reasons = {paused:'AI calls are paused for your account. Resume them to make another request.', in_flight:'Another request is in progress; wait up to a minute and try again.', user_daily_limit:'Your daily provider-request limit was reached (UTC).', global_daily_limit:'The shared daily provider-request limit was reached (UTC).', history_limit:'Chat history is full. Delete it before generating more replies.'};
+      const reasons = {paused:'AI calls are paused for your account. Resume them to make another request.', in_flight:'Another request is in progress; wait up to a minute and try again.', history_limit:'Chat history is full. Delete it before generating more replies.'};
       const known = typeof value.reason === 'string' && Object.hasOwn(reasons, value.reason);
       const message = known ? reasons[value.reason] : 'AI safety limits are unavailable. No provider request was sent.';
       throw new HttpError(['history_limit', 'paused'].includes(value.reason) ? 409 : known ? 429 : 503, message);
     }
-    if (typeof value.id !== 'string' || !UUID.test(value.id) || typeof value.finish_secret !== 'string' || !UUID.test(value.finish_secret) || !Number.isInteger(value.remaining_user) || value.remaining_user < 0 || value.remaining_user > 9) {
+    if (typeof value.id !== 'string' || !UUID.test(value.id) || typeof value.finish_secret !== 'string' || !UUID.test(value.finish_secret) || !(value.remaining_user === null || (Number.isSafeInteger(value.remaining_user) && value.remaining_user >= 0))) {
       throw new HttpError(503, 'AI safety limits returned an invalid response. No provider request was sent.');
     }
     // Never return this random capability to the browser or log it.
