@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="referrer" content="no-referrer">
+<title>ViMax · Tool & Integration Catalog</title>
+<style>
+:root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:#f1f0f7;background:#11121a;color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% 0,#201a35 0,#11121a 45%);min-height:100vh}a{color:#c9bbff;overflow-wrap:anywhere}a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #b7a5ff;outline-offset:3px}.wrap{width:min(1180px,100%);margin:auto;padding:28px 22px 64px}.top{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}.brand{font-weight:800;color:#fff;text-decoration:none;font-size:20px}.back{border:1px solid #414052;border-radius:10px;padding:10px 13px;text-decoration:none;background:#22212f}.eyebrow{color:#b8a5ff;letter-spacing:.15em;font-size:11px;font-weight:800;margin:26px 0 8px}h1{font-size:clamp(28px,4vw,44px);letter-spacing:-.04em;margin:0 0 10px}.intro{color:#b7b3c7;max-width:760px;line-height:1.65}.notice{padding:13px 15px;border:1px solid #5c4b88;background:#29223b;border-radius:12px;line-height:1.55;margin:20px 0}.filters{display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:12px;margin:22px 0}.filters input,.filters select{width:100%;padding:13px;border-radius:10px;border:1px solid #414052;background:#1b1b27;color:#fff}.meta{display:flex;justify-content:space-between;gap:12px;color:#a9a5ba;font-size:12px;margin:10px 0}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:13px}.tool{border:1px solid #343342;border-radius:14px;background:#191923;padding:16px;min-width:0}.tool h2{font-size:16px;margin:0 0 7px}.tool p{color:#b5b1c4;font-size:13px;line-height:1.5;margin:0 0 12px}.tool a{font-size:13px;font-weight:650}.tag{display:inline-block;border:1px solid #4a4561;border-radius:99px;padding:4px 8px;color:#d1c5ff;font-size:10px;margin:0 5px 9px 0}.empty{padding:25px;color:#b5b1c4;border:1px dashed #454254;border-radius:12px}@media(max-width:650px){.filters{grid-template-columns:1fr}.wrap{padding:20px 14px 40px}}
+</style>
+</head>
+<body><main class="wrap">
+<div class="top"><a class="brand" href="/">✦ ViMax</a><a class="back" href="/chat/">← Back to chat</a></div>
+<p class="eyebrow">VIMAX WORKSPACE · TOOL CATALOG</p>
+<h1>Tools, APIs & integrations</h1>
+<p class="intro">A searchable directory of the providers, repositories, APIs and services collected for ViMax. Open a link to inspect its official setup instructions.</p>
+<div class="notice"><strong>Important:</strong> Adding a link to this catalog does not install or connect that service. Actual integration may require code, a compatible license, API credentials, consent, local software, and testing. Never paste API keys into chat or commit them to GitHub.</div>
+<div class="filters"><input id="search" type="search" placeholder="Search tools, providers, voice, YouTube…" aria-label="Search tools"><select id="category" aria-label="Filter category"><option value="">All categories</option></select></div>
+<div class="meta"><span id="count" role="status">Loading catalog…</span><span>External links open in a new tab</span></div>
+<div id="tools" class="grid"></div>
+</main>
+<script>
+'use strict';
+const catalog = [
+["ViMax project","https://github.com/zeeburgers00-glitch/bg-labs-backend","Project","Current ViMax application repository."],
+["ViMax upstream","https://github.com/HKUDS/ViMax","Project","Upstream ViMax project."],
+["OpenDots","https://github.com/CopilotKit/OpenDots","Agent / desktop","Open-source agent project previously requested."],
+["Rakazo","https://github.com/elie222/rakazo","Agent / bot","Bot and agent framework."],
+["Open Dots candidate","https://github.com/Anil-matcha/open-dots","Agent / desktop","Additional repository link; verify its identity and current status before use."],
+["OpenDots candidate","https://github.com/diggerhq/opendots","Agent / desktop","Additional repository link; verify its identity and current status before use."],
+["Open Duet candidate","https://github.com/Anil-matcha/open-duet","Agent / desktop","Self-hosted assistant candidate; verify platform support."],
+["OpenClaw","https://github.com/openclaw/openclaw","Agent / desktop","Personal AI assistant."],
+["OpenAI Agents SDK","https://github.com/openai/openai-agents-python","Agent framework","Official Python agent SDK."],
+["LangGraph","https://github.com/langchain-ai/langgraph","Agent framework","Stateful agent workflows."],
+["CrewAI","https://github.com/crewAIInc/crewAI","Agent framework","Multi-agent orchestration."],
+["Microsoft AutoGen","https://github.com/microsoft/autogen","Agent framework","Multi-agent applications."],
+["Agno","https://github.com/agno-agi/agno","Agent framework","Agent framework."],
+["Pydantic AI","https://github.com/pydantic/pydantic-ai","Agent framework","Typed AI applications and agents."],
+["smolagents","https://github.com/huggingface/smolagents","Agent framework","Lightweight agents."],
+["Mastra","https://github.com/mastra-ai/mastra","Agent framework","TypeScript agent framework."],
+["Semantic Kernel","https://github.com/microsoft/semantic-kernel","Agent framework","AI orchestration SDK."],
+["Dify","https://github.com/langgenius/dify","Agent framework","LLM application platform."],
+["Flowise","https://github.com/FlowiseAI/Flowise","Agent framework","Visual LLM workflows."],
+["Langflow","https://github.com/langflow-ai/langflow","Agent framework","Visual agent and LLM workflows."],
+["Vercel AI SDK","https://github.com/vercel/ai","Agent framework","TypeScript AI SDK."],
+["LiteLLM","https://github.com/BerriAI/litellm","Model gateway","Unified API gateway for many model providers."],
+["OpenRouter","https://openrouter.ai/","Model provider","Multi-provider model API."],
+["Groq Console","https://console.groq.com/","Model provider","API keys, models and usage."],
+["OpenAI API","https://platform.openai.com/","Model provider","API keys, billing and projects."],
+["OpenAI API docs","https://developers.openai.com/api/docs/","Model provider","Official API documentation."],
+["Google Gemini API","https://ai.google.dev/","Model provider","Gemini API documentation and access."],
+["Anthropic Claude","https://console.anthropic.com/","Model provider","Claude API console."],
+["Mistral AI","https://console.mistral.ai/","Model provider","Mistral API console."],
+["Together AI","https://www.together.ai/","Model provider","Hosted model inference."],
+["Fireworks AI","https://fireworks.ai/","Model provider","Hosted model inference."],
+["Cerebras Cloud","https://cloud.cerebras.ai/","Model provider","Inference API."],
+["Hugging Face","https://huggingface.co/","Model provider","Models, datasets and inference."],
+["NVIDIA NIM","https://build.nvidia.com/","Model provider","Model API catalog."],
+["SambaNova Cloud","https://cloud.sambanova.ai/","Model provider","Hosted model inference."],
+["xAI API","https://console.x.ai/","Model provider","xAI API console."],
+["OpenCode","https://opencode.ai/","Model provider","Coding agent and provider ecosystem; verify current API setup."],
+["Ollama","https://github.com/ollama/ollama","Local models","Run supported models locally."],
+["llama.cpp","https://github.com/ggml-org/llama.cpp","Local models","Local inference runtime."],
+["LM Studio","https://lmstudio.ai/","Local models","Desktop local model runner."],
+["vLLM","https://github.com/vllm-project/vllm","Local models","High-throughput model serving; hardware/platform requirements apply."],
+["Open WebUI","https://github.com/open-webui/open-webui","Local models","Local model web interface."],
+["Transformers","https://github.com/huggingface/transformers","Local models","Model inference and tooling."],
+["llama-cpp-python","https://github.com/abetlen/llama-cpp-python","Local models","Python bindings for llama.cpp."],
+["MLX","https://github.com/ml-explore/mlx","Local models","Apple Silicon ML framework."],
+["Browser Use","https://github.com/browser-use/browser-use","Browser automation","Browser agent automation."],
+["Playwright","https://github.com/microsoft/playwright","Browser automation","Browser automation and testing."],
+["Stagehand","https://github.com/browserbase/stagehand","Browser automation","AI browser automation."],
+["Skyvern","https://github.com/Skyvern-AI/skyvern","Browser automation","Browser workflow automation."],
+["Open Interpreter","https://github.com/OpenInterpreter/open-interpreter","Computer control","Local computer and code execution assistant."],
+["OpenHands","https://github.com/All-Hands-AI/OpenHands","Computer control","Software development agent."],
+["PyAutoGUI","https://github.com/asweigart/pyautogui","Computer control","Python GUI automation."],
+["AutoHotkey","https://www.autohotkey.com/","Computer control","Windows desktop automation."],
+["OpenAI computer-use guide","https://developers.openai.com/api/docs/guides/tools-computer-use","Computer control","Official computer-use tool documentation."],
+["Browserbase","https://www.browserbase.com/","Browser automation","Hosted browser infrastructure."],
+["MCP specification","https://github.com/modelcontextprotocol","MCP / integrations","Model Context Protocol."],
+["MCP servers","https://github.com/modelcontextprotocol/servers","MCP / integrations","Example MCP servers."],
+["Composio","https://github.com/ComposioHQ/composio","MCP / integrations","Tool and app integrations."],
+["n8n","https://github.com/n8n-io/n8n","Automation","Workflow automation."],
+["Activepieces","https://github.com/activepieces/activepieces","Automation","Workflow automation."],
+["Trigger.dev","https://github.com/triggerdotdev/trigger.dev","Automation","Background jobs and workflows."],
+["Inngest","https://github.com/inngest/inngest","Automation","Durable event-driven workflows."],
+["Temporal","https://github.com/temporalio/temporal","Automation","Durable workflow engine."],
+["Zapier","https://zapier.com/","Automation","Hosted app automation."],
+["Make","https://www.make.com/","Automation","Visual workflow automation."],
+["IFTTT","https://ifttt.com/","Automation","Connected-service automation."],
+["Whisper","https://github.com/openai/whisper","Voice","Speech recognition."],
+["Faster Whisper","https://github.com/SYSTRAN/faster-whisper","Voice","Optimized Whisper inference."],
+["Whisper.cpp","https://github.com/ggml-org/whisper.cpp","Voice","Local speech recognition."],
+["Piper TTS","https://github.com/OHF-Voice/piper1-gpl","Voice","Local text-to-speech; check license and voice model terms."],
+["Kokoro","https://github.com/hexgrad/kokoro","Voice","Text-to-speech model."],
+["OpenWakeWord","https://github.com/dscripka/openWakeWord","Voice","Wake-word detection."],
+["LiveKit Agents","https://github.com/livekit/agents","Voice","Realtime voice agent framework."],
+["Pipecat","https://github.com/pipecat-ai/pipecat","Voice","Realtime voice and multimodal pipelines."],
+["Coqui TTS","https://github.com/coqui-ai/TTS","Voice","Text-to-speech toolkit; check repository status and license."],
+["ElevenLabs","https://elevenlabs.io/","Voice","Hosted voice generation."],
+["Deepgram","https://deepgram.com/","Voice","Speech APIs."],
+["Cartesia","https://cartesia.ai/","Voice","Realtime voice APIs."],
+["YouTube automation agent","https://github.com/darkzOGx/youtube-automation-agent","YouTube / video","Community project; verify repository availability and license."],
+["Short video maker","https://github.com/gyoridavid/short-video-maker","YouTube / video","Video generation project."],
+["YouTube marketing skills","https://github.com/adityaarsharma/youtube-marketing-skills","YouTube / video","Community skill repository."],
+["YouTube Agent Pro","https://github.com/ahmedsakri/youtube-agent-pro","YouTube / video","Community agent project; verify before installation."],
+["YouTube content creation agent","https://github.com/Salimzaks/Youtube-content-creation-agent","YouTube / video","Community project; verify before installation."],
+["YouTube skills","https://github.com/sergebulaev/youtube-skills","YouTube / video","Community skill repository."],
+["Marketing agent skills","https://github.com/realjaymes/marketingagentskills","YouTube / video","Community marketing skills."],
+["OpenMontage","https://github.com/calesthio/OpenMontage","YouTube / video","Video montage project; verify current status."],
+["OpenCreator","https://github.com/krillinai/OpenCreator","YouTube / video","Creator/video project; verify current status."],
+["Video Shotcraft","https://github.com/Vincentwei1021/video-shotcraft","YouTube / video","Community video project; verify current status."],
+["FFmpeg","https://github.com/FFmpeg/FFmpeg","YouTube / video","Audio/video processing toolkit."],
+["ComfyUI","https://github.com/comfyanonymous/ComfyUI","Image / video","Node-based generative media workflows."],
+["ComfyUI org","https://github.com/Comfy-Org/ComfyUI","Image / video","ComfyUI organization repository link; verify canonical project."],
+["Stable Diffusion WebUI","https://github.com/AUTOMATIC1111/stable-diffusion-webui","Image / video","Image generation interface."],
+["MoviePy","https://github.com/Zulko/moviepy","YouTube / video","Video editing in Python."],
+["Remotion","https://github.com/remotion-dev/remotion","YouTube / video","Programmatic video with React."],
+["OpenShot","https://github.com/OpenShot/openshot-qt","YouTube / video","Desktop video editor."],
+["YouTube Data API","https://developers.google.com/youtube/v3","YouTube / video","Official YouTube API docs."],
+["Google OAuth docs","https://developers.google.com/identity/protocols/oauth2","Authentication","OAuth setup documentation."],
+["YouTube Studio","https://studio.youtube.com/","YouTube / video","Manage YouTube channels and publishing."],
+["Pexels API","https://www.pexels.com/api/","Image / video","Stock media API."],
+["Unsplash API","https://unsplash.com/developers","Image / video","Image API."],
+["Supabase","https://github.com/supabase/supabase","Database / memory","Database, authentication and storage platform."],
+["Supabase dashboard","https://supabase.com/dashboard","Database / memory","Manage Supabase projects."],
+["PostgreSQL","https://github.com/postgres/postgres","Database / memory","Relational database."],
+["pgvector","https://github.com/pgvector/pgvector","Database / memory","Vector similarity search for Postgres."],
+["Mem0","https://github.com/mem0ai/mem0","Database / memory","AI memory layer."],
+["Qdrant","https://github.com/qdrant/qdrant","Database / memory","Vector database."],
+["Chroma","https://github.com/chroma-core/chroma","Database / memory","Vector database."],
+["Redis","https://github.com/redis/redis","Database / memory","In-memory data store."],
+["Vercel","https://vercel.com/","Hosting / dev","Deployment platform."],
+["Vercel dashboard","https://vercel.com/dashboard","Hosting / dev","Manage deployments and project settings."],
+["GitHub","https://github.com/","Hosting / dev","Source control and repositories."],
+["Docker","https://github.com/moby/moby","Hosting / dev","Container engine source."],
+["OpenAI Agents docs","https://developers.openai.com/api/docs/guides/agents/sdk","Agent framework","Official SDK guide."],
+["Google Cloud Console","https://console.cloud.google.com/","Authentication","OAuth and API configuration."],
+["Gmail API","https://developers.google.com/gmail/api","MCP / integrations","Official Gmail API docs."],
+["Composio website","https://composio.dev/","MCP / integrations","App integration service."],
+["Power Automate","https://www.microsoft.com/en-us/power-platform/products/power-automate","Automation","Microsoft workflow automation."],
+["OpenAI Whisper repository","https://github.com/openai/whisper","Voice","OpenAI speech recognition repository."],
+["Hugging Face model hub","https://huggingface.co/","Local models","Browse models and datasets."],
+["OpenAI platform","https://platform.openai.com/","Model provider","API projects and keys."],
+["Pexels","https://www.pexels.com/api/","Image / video","Stock image/video API."]
+];
+const search=document.querySelector('#search'), category=document.querySelector('#category'), grid=document.querySelector('#tools'), count=document.querySelector('#count');
+const categories=[...new Set(catalog.map(x=>x[2]))].sort();
+for(const c of categories){const o=document.createElement('option');o.value=c;o.textContent=c;category.append(o)}
+function render(){const q=search.value.trim().toLowerCase(),c=category.value;const found=catalog.filter(x=>(!c||x[2]===c)&&x.join(' ').toLowerCase().includes(q));grid.replaceChildren();count.textContent=found.length+' of '+catalog.length+' tools and links';for(const [name,url,group,description] of found){const card=document.createElement('article');card.className='tool';const tag=document.createElement('span');tag.className='tag';tag.textContent=group;const h=document.createElement('h2');h.textContent=name;const p=document.createElement('p');p.textContent=description;const a=document.createElement('a');a.href=url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=url;a.setAttribute('aria-label','Open '+name+' (opens in new tab)');card.append(tag,h,p,a);grid.append(card)}if(!found.length){const p=document.createElement('p');p.className='empty';p.textContent='No matching tools. Try a different search.';grid.append(p)}}
+search.addEventListener('input',render);category.addEventListener('change',render);render();
+</script>
+</body></html>
