@@ -105,7 +105,10 @@ async def run_pipeline(pipeline: str, request: Request):
         raise HTTPException(status_code=404, detail="Pipeline not found")
     if not check_rate_limit(get_client_ip(request), f"vimax:{pipeline}", max(4, RATE_LIMIT_GENERATE // 3), 60):
         raise HTTPException(status_code=429, detail="ViMax rate limit reached")
-    body = await request.json()
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON request body.") from None
     if not isinstance(body, dict):
         raise HTTPException(status_code=400, detail="ViMax request body must be a JSON object.")
     # A full project is expensive; explicit flags control GPU work. Planning,
