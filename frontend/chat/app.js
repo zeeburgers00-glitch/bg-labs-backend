@@ -828,7 +828,7 @@
       const data = await post('/api/cloud/providers/test', {provider, model});
       if (!isCurrent(version)) return;
       if (data?.ok !== true || data.provider !== provider || data.model !== model) throw new Error('The provider test returned an invalid result.');
-      const remaining = Number.isSafeInteger(data.remaining_user) && data.remaining_user >= 0 ? ` ${data.remaining_user} attempt(s) remain today.` : '';
+      const remaining = ' ViMax daily attempt caps are disabled; provider quotas and billing still apply.';
       const warning = data.audit_saved === true ? '' : ' Warning: the usage result could not be saved.';
       state.chat.tests.set(key, {summary:`${model} responded once`, detail:`${model} responded successfully in this browser session.${remaining}${warning} Future availability is not guaranteed.`});
     } catch (error) {
@@ -890,7 +890,7 @@
         if (data.truncated) notices.push('The reply was truncated.');
         if (!data.history_saved) notices.push('This reply could not be saved.');
         if (!data.audit_saved) notices.push('The usage result could not be saved.');
-        if (Number.isInteger(data.remaining_user)) notices.push(`${data.remaining_user} request attempt(s) remain today.`);
+        notices.push('ViMax daily attempt caps are disabled; provider quotas and billing still apply.');
         state.chat.note = notices.join(' ') || 'Reply received.';
         renderMessages(); if ($('speak-replies').checked) speak(data.reply);
       }
