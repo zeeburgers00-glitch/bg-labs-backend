@@ -20,6 +20,7 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   const alice='aaaaaaaa-0000-4000-8000-000000000001',bob='bbbbbbbb-0000-4000-8000-000000000002';
   const channelA='12345678-0000-4000-8000-000000000010',channelB='12345678-0000-4000-8000-000000000011';
   let signedIn=false,current=alice,configured=false,allowed=true,paused=false,googleConfigured=false,googleAllowed=true,appLoginEnabled=false,fbConfigured=false;
+  let googleStatusFailure=false,sessionFailure=false;
   let analyticsEnabled=false,analyticsGranted=false,analyticsMode='ok';
   let authorizationUrl='https://accounts.google.com/o/oauth2/v2/auth?state=mock',appAuthorizationUrl='https://fake.supabase.co/auth/v1/authorize?provider=google',holdChat=false,holdOAuth=false,holdProviders=false,releaseChat,releaseOAuth,releaseProviders,notifyChat,notifyOAuth,notifyProviders;
   const selected={[alice]:null,[bob]:null}, histories={
@@ -38,13 +39,19 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
    const rq=route.request(),p=new URL(rq.url()).pathname,m=rq.method();let data={},body={};try{body=rq.postDataJSON()||{}}catch{}
    requests.push(p);if(m!=='GET')posts.push(p);
    if(p==='/api/health')data={ok:true,text_chat:configured?'configured_unverified':'unconfigured',youtube_upload:googleConfigured?'configured_unverified':'unavailable'};
-   else if(p==='/api/cloud/google/status')data={enabled:appLoginEnabled};
+   else if(p==='/api/cloud/google/status'){
+    if(googleStatusFailure)return route.fulfill({status:503,json:{error:'unavailable'}});
+    data={enabled:appLoginEnabled};
+   }
    else if(p==='/api/cloud/google/start')data={authorization_url:appAuthorizationUrl};
    else if(p==='/api/cloud/social/status')data={providers:{facebook:{configured:fbConfigured,allowed:fbConfigured},tiktok:{configured:false,allowed:false}},connections:pages[current]};
    else if(p==='/api/cloud/social/facebook/select'){facebookSelections.push({owner:current,id:body.id});data={connection:{id:body.id,provider:'facebook'}};}
    else if(p==='/api/cloud/social/facebook/disconnect'){pages[current]=pages[current].filter(item=>item.id!==body.id);data={disconnected:true,revoked:false};}
    else if(p==='/api/cloud/social/facebook/start')data={authorization_url:'https://www.facebook.com/v26.0/dialog/oauth?state=mock'};
-   else if(p==='/api/cloud/session')data={user:signedIn?{id:current,email:current===alice?'alice@example.test':'bob@example.test'}:null};
+   else if(p==='/api/cloud/session'){
+    if(sessionFailure)return route.fulfill({status:503,json:{error:'unavailable'}});
+    data={user:signedIn?{id:current,email:current===alice?'alice@example.test':'bob@example.test'}:null};
+   }
    else if(p==='/api/cloud/login'){loginBodies.push(body);current=body.email.startsWith('bob')?bob:alice;signedIn=true;data={ok:true};}
    else if(p==='/api/cloud/signup')data={message:'Check your email, then sign in.'};
    else if(p==='/api/cloud/resend-confirmation'){resendBodies.push(body);data={message:'If this account needs confirmation, check your inbox.'};}
@@ -97,21 +104,31 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   await page.goto(`${base}/`,{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>document.getElementById('chat-status').textContent.includes('AI provider'));
   assert.equal(await page.getByRole('heading',{name:'What’s on your mind?'}).isVisible(),true);
-  assert.equal(await page.getByRole('button',{name:'Continue with Google'}).isVisible(),true);
-  assert.equal(await page.locator('#google-signin').isDisabled(),true);assert.equal(await page.locator('#chat-send').isDisabled(),true);
-  await page.waitForFunction(()=>document.getElementById('google-signin-status').textContent.includes('setup needed'));
-  assert.match(await page.locator('#google-signin-status').textContent(),/setup needed/);
+  await page.waitForFunction(()=>document.getElementById('google-signin-label').textContent==='Google sign-in help' && !document.getElementById('google-signin').disabled);
+  assert.equal(await page.getByRole('button',{name:'Google sign-in help'}).isVisible(),true);
+  assert.equal(await page.locator('#chat-send').isDisabled(),true);
+  assert.match(await page.locator('#google-signin-status').textContent(),/setup needed.*help/i);
   assert.equal(await page.locator('video, iframe, a[href="/workspace.html"], a[href="/skills/full.html"]').count(),0);
   assert.doesNotMatch(await page.locator('body').innerText(),/video tools|gpu|mission control|upload|catalog/i);
-  await page.locator('#google-signin').dispatchEvent('click');
+  await page.setViewportSize({width:320,height:700});
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'sign-in help mobile overflow');
+  await page.locator('#google-signin').click();
+  assert.equal(await page.locator('#account-dialog').isVisible(),true);
+  assert.match(await page.locator('#account-message').textContent(),/not set up yet.*No password is needed/i);
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'account dialog mobile overflow');
+  await page.setViewportSize({width:1280,height:900});
   assert.equal(posts.includes('/api/cloud/google/start'),false);
   assert.equal(posts.includes('/api/cloud/youtube/oauth/start'),false);
   assert.equal(requests.includes('/api/cloud/youtube/status'),false);
-  // Email confirmation resend only sends the email; the password stays in the form.
-  await page.locator('#account-button').click();await page.locator('#account-email').fill('alice@example.test');
-  await page.locator('#account-password').fill('never-send-on-resend');await page.locator('#resend-confirmation').click();
+  // Resend works without a password and never sends one even when present.
+  await page.locator('#account-email').fill('alice@example.test');
+  assert.equal(await page.locator('#account-password').inputValue(),'');
+  await page.locator('#resend-confirmation').click();
   await page.waitForFunction(()=>document.getElementById('account-message').textContent.includes('check your inbox'));
   assert.deepEqual(resendBodies,[{email:'alice@example.test'}]);
+  await page.locator('#account-password').fill('never-send-on-resend');await page.locator('#resend-confirmation').click();
+  await page.waitForFunction(()=>!document.getElementById('resend-confirmation').disabled);
+  assert.deepEqual(resendBodies,[{email:'alice@example.test'},{email:'alice@example.test'}]);
   // A slow provider/settings check cannot keep the sign-in dialog or logout locked.
   holdProviders=true;const providersReached=new Promise(resolve=>{notifyProviders=resolve;});
   await page.locator('#account-form button[value=login]').click();await providersReached;
@@ -206,6 +223,7 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   // Supabase callback and the first separately-consented channel authorization.
   signedIn=false;await page.goto(`${base}/`,{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>!document.getElementById('google-signin').disabled);
+  assert.equal(await page.getByRole('button',{name:'Continue with Google'}).isVisible(),true);
   assert.equal(await page.locator('#account-button').isHidden(),true);
   appAuthorizationUrl='https://evil.example/steal';await page.locator('#google-signin').click();
   await page.waitForFunction(()=>document.getElementById('google-signin-status').textContent.includes('Invalid Google sign-in URL'));
@@ -256,7 +274,23 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   await page.waitForFunction(()=>document.getElementById('google-signin').offsetParent!==null);
   releaseOAuth();await page.waitForTimeout(100);holdOAuth=false;assert.ok(page.url().startsWith(base));
   assert.equal(await page.locator('.analytics-canvas').count(),0);assert.equal(await page.locator('#messages').textContent(),'');
+  // Failed configuration/account checks offer honest help, not a Google redirect.
+  const starts=posts.filter(value=>value==='/api/cloud/google/start').length;
+  signedIn=false;appLoginEnabled=false;googleStatusFailure=true;
+  await page.goto(`${base}/`,{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>document.getElementById('google-signin-status').textContent.includes('could not be checked') && !document.getElementById('google-signin').disabled);
+  assert.equal(await page.getByRole('button',{name:'Google sign-in help'}).isVisible(),true);
+  await page.locator('#google-signin').click();
+  assert.match(await page.locator('#account-message').textContent(),/could not be checked/i);
+  assert.equal(posts.filter(value=>value==='/api/cloud/google/start').length,starts);
+  googleStatusFailure=false;sessionFailure=true;appLoginEnabled=true;
+  await page.goto(`${base}/`,{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>document.getElementById('google-signin-status').textContent.includes('Account service unavailable') && !document.getElementById('google-signin').disabled);
+  assert.equal(await page.locator('#account-button').isVisible(),true);
+  await page.locator('#google-signin').click();
+  assert.match(await page.locator('#account-message').textContent(),/account service could not be checked/i);
+  assert.equal(posts.filter(value=>value==='/api/cloud/google/start').length,starts);
   assert.deepEqual(errors,[]);
-  console.log('Mocked hosted chat smoke passed: Google app login, channel consent/restore, analytics chart, privacy and mobile.');
+  console.log('Mocked hosted chat smoke passed: Google help/app login, channel consent/restore, analytics chart, privacy and mobile.');
  } finally {await browser?.close();await new Promise(resolve=>server.close(resolve));}
 })().catch(error=>{console.error(error);process.exitCode=1});

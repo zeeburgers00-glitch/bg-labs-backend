@@ -245,12 +245,17 @@
   }
   function updateGoogleControls() {
     $('signin-area').hidden = Boolean(state.user);
-    // Email fallback remains available while Google login is unavailable.
-    $('account-button').hidden = !state.user && state.google.status === 'enabled' && !state.google.error;
-    $('google-signin').disabled = state.google.status !== 'enabled' || state.session !== 'signed-out' || state.authBusy;
-    $('google-signin-status').textContent = state.google.error || (state.google.status === 'checking' ? 'Checking Google sign-in…'
-      : state.google.status === 'unknown' ? 'Google sign-in could not be checked'
-      : state.google.status === 'disabled' ? 'Google sign-in setup needed' : 'Sign in, then allow channel access');
+    // Offer honest help instead of an inert Google button when setup is missing.
+    // Email fallback remains available if either check failed.
+    const help = state.session === 'error' || (state.session === 'signed-out' && ['disabled','unknown'].includes(state.google.status));
+    const ready = state.session === 'signed-out' && state.google.status === 'enabled';
+    $('account-button').hidden = !state.user && state.session !== 'error' && state.google.status === 'enabled' && !state.google.error;
+    $('google-signin-label').textContent = help ? 'Google sign-in help' : 'Continue with Google';
+    $('google-signin').disabled = state.authBusy || !(help || ready);
+    $('google-signin-status').textContent = state.session === 'error' ? 'Account service unavailable. Tap for help.'
+      : state.google.error || (state.google.status === 'checking' ? 'Checking Google sign-in…'
+        : state.google.status === 'unknown' ? 'Google sign-in could not be checked. Tap for help.'
+        : state.google.status === 'disabled' ? 'Google sign-in setup needed. Tap for help.' : 'Sign in, then allow channel access');
   }
   function updateAccount() {
     const loggedIn = Boolean(state.user);
@@ -426,7 +431,19 @@
     updateGoogleControls();
   }
   $('google-signin').addEventListener('click', async () => {
-    if (state.user || state.session !== 'signed-out' || state.google.status !== 'enabled' || state.authBusy) return;
+    if (state.user || state.authBusy) return;
+    if (state.session === 'error' || (state.session === 'signed-out' && ['disabled','unknown'].includes(state.google.status))) {
+      $('account-error').textContent = '';
+      $('account-message').textContent = state.session === 'error'
+        ? 'The account service could not be checked. Refresh and try again, or try email sign-in below.'
+        : state.google.status === 'unknown'
+          ? 'Google sign-in could not be checked. Refresh and try again, or use email sign-in below.'
+          : 'Google sign-in is not set up yet. To confirm your existing account, enter your email and choose Resend confirmation email. No password is needed for that step. The app owner must still complete Google setup.';
+      showDialog('account-dialog');
+      $('account-email').focus();
+      return;
+    }
+    if (state.session !== 'signed-out' || state.google.status !== 'enabled') return;
     state.authBusy = true; state.google.error = '';
     const sequence = ++state.sessionSequence; updateGoogleControls();
     try {

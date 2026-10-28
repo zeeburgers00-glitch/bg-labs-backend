@@ -19,7 +19,7 @@
       </a>
       <div class="signin-area" id="signin-area">
         <button class="google-button" id="google-signin" type="button" aria-describedby="google-signin-status" disabled>
-          <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.5l6.8-6.8C35.8 2.4 30.4 0 24 0 14.6 0 6.5 5.4 2.5 13.3l7.9 6.1C12.3 13.6 17.7 9.5 24 9.5Z"/><path fill="#4285F4" d="M47 24.5c0-1.6-.1-3.2-.4-4.7H24v9h12.9c-.6 2.9-2.2 5.4-4.7 7.1l7.6 5.9C44.3 37.7 47 31.6 47 24.5Z"/><path fill="#FBBC05" d="M10.4 28.6A14.4 14.4 0 0 1 9.6 24c0-1.6.3-3.1.8-4.6l-7.9-6.1A24 24 0 0 0 0 24c0 3.8.9 7.4 2.5 10.7l7.9-6.1Z"/><path fill="#34A853" d="M24 48c6.4 0 11.8-2.1 15.8-5.8l-7.6-5.9c-2.1 1.4-4.8 2.2-8.2 2.2-6.3 0-11.7-4.1-13.6-9.9l-7.9 6.1C6.5 42.6 14.6 48 24 48Z"/></svg><span>Continue with Google</span>
+          <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.5l6.8-6.8C35.8 2.4 30.4 0 24 0 14.6 0 6.5 5.4 2.5 13.3l7.9 6.1C12.3 13.6 17.7 9.5 24 9.5Z"/><path fill="#4285F4" d="M47 24.5c0-1.6-.1-3.2-.4-4.7H24v9h12.9c-.6 2.9-2.2 5.4-4.7 7.1l7.6 5.9C44.3 37.7 47 31.6 47 24.5Z"/><path fill="#FBBC05" d="M10.4 28.6A14.4 14.4 0 0 1 9.6 24c0-1.6.3-3.1.8-4.6l-7.9-6.1A24 24 0 0 0 0 24c0 3.8.9 7.4 2.5 10.7l7.9-6.1Z"/><path fill="#34A853" d="M24 48c6.4 0 11.8-2.1 15.8-5.8l-7.6-5.9c-2.1 1.4-4.8 2.2-8.2 2.2-6.3 0-11.7-4.1-13.6-9.9l-7.9 6.1C6.5 42.6 14.6 48 24 48Z"/></svg><span id="google-signin-label">Continue with Google</span>
         </button>
         <span id="google-signin-status" class="signin-status" role="status">Checking Google sign-in…</span>
       </div>
@@ -68,12 +68,13 @@
   <dialog id="account-dialog" class="dialog" aria-labelledby="account-title">
     <div class="dialog-heading"><div><p class="eyebrow">YOUR ACCOUNT</p><h2 id="account-title">Sign in to ViMax</h2></div><button class="icon-button close-dialog" type="button" data-close="account-dialog" aria-label="Close">×</button></div>
     <p class="dialog-intro">Your ViMax account keeps your chat and connections private. Google sign-in identifies your account; each channel needs separate permission.</p>
+    <p id="account-message" class="hint account-message" role="status"></p>
     <form id="account-form">
       <label>Email<input id="account-email" name="email" type="email" autocomplete="username" maxlength="254" required></label>
       <label>Password<input id="account-password" name="password" type="password" autocomplete="current-password" minlength="6" maxlength="128" required></label>
       <div class="dialog-actions"><button class="primary-button" type="submit" value="login">Sign in</button><button class="secondary-button" type="submit" value="signup">Create account</button></div>
       <button class="text-button" id="resend-confirmation" type="button">Resend confirmation email</button>
-      <p class="hint">New accounts need email confirmation. Delivery may be limited until the deployment owner configures email. Never share passwords or keys in chat.</p>
+      <p class="hint">To resend confirmation, enter only your email; no password is needed. New accounts need email confirmation. Delivery may be limited until the deployment owner configures email. Never share passwords or keys in chat.</p>
     </form>
     <div id="account-signed-in" hidden>
       <p class="account-identity" id="account-identity"></p>
@@ -82,7 +83,7 @@
       <p class="hint">Each service requires its own consent. Connections do not give chat access to other websites.</p>
       <button class="secondary-button" id="logout" type="button">Sign out</button>
     </div>
-    <p id="account-message" class="hint" role="status"></p><p id="account-error" class="error" role="alert"></p>
+    <p id="account-error" class="error" role="alert"></p>
   </dialog>
 
   <dialog id="settings-dialog" class="dialog" aria-labelledby="settings-title">

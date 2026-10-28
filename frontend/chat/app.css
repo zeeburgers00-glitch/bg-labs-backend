@@ -101,6 +101,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .text-button:hover:not(:disabled) { text-decoration: underline; }
 .text-button.danger { color: #f1a6a8; }
 .hint { color: #a49fb1; font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; }
+.account-message:empty { display: none; }
+.account-message:not(:empty) { margin: 0 0 16px; padding: 10px 12px; border: 1px solid #584e7f; border-radius: 8px; background: #29263a; color: #e3dcf4; }
 .account-identity { color: #f0edf8; overflow-wrap: anywhere; font-size: 14px; }
 .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
 .dialog-divider { height: 1px; margin: 18px 0; background: #383744; }
