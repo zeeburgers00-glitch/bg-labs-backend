@@ -1,0 +1,74 @@
+name: Source validation
+
+on:
+  push:
+    branches:
+      - fix/jarvis-vimax-unified
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Parse Python source
+        run: |
+          python - <<'PY'
+          import ast
+          import json
+          from pathlib import Path
+
+          paths = [Path("main.py"), Path("tts_engine.py")]
+          paths.extend(Path("app").rglob("*.py"))
+          parsed = 0
+          for path in paths:
+              if not path.exists():
+                  continue
+              ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+              parsed += 1
+          json.loads(Path("vercel.json").read_text(encoding="utf-8"))
+          assert Path("app/routes/assistant_hub.py").exists()
+          source = Path("main.py").read_text(encoding="utf-8")
+          assert "assistant_hub_router" in source
+          assert "vimax_router" in source
+          vimax = Path("app/routes/vimax_api.py").read_text(encoding="utf-8")
+          assert "Daily ViMax attempt cap reached" in vimax
+          print(f"Parsed {parsed} Python files; Vercel config and required routes validated.")
+          PY
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Check inline JavaScript and required UI hooks
+        run: |
+          node - <<'NODE'
+          const fs = require("node:fs");
+          const html = fs.readFileSync("index.html", "utf8");
+          const scripts = [...html.matchAll(/<script\b(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)];
+          if (!scripts.length) throw new Error("No inline JavaScript found");
+          for (const script of scripts) new Function(script[1]);
+          for (const required of [
+            "jarvis-orb-core",
+            "navigate('hub')",
+            "case 'hub': renderHub(); break;",
+            "daily_attempts",
+            "function renderViMaxStudio"
+          ]) {
+            if (!html.includes(required)) throw new Error("Missing UI hook: " + required);
+          }
+          console.log(`Parsed ${scripts.length} inline script(s); required JARVIS/ViMax UI hooks found.`);
+          NODE
