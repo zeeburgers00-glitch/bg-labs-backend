@@ -571,7 +571,7 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch, g
         }
         return json({providers:providerStatus(await providerEnv()), pexels:pexelsStatus(env), allowed:aiAllowed(session), paused:preferences.value[0]?.paused ?? false,
           hackerai:{state:'unsupported', reason:'Its private API endpoint has not been verified for this deployment.'},
-          limits:{user_daily_attempts:10, global_daily_attempts:50, history_turns:200}}, 200, session.updates);
+          limits:{user_daily_attempts:null, global_daily_attempts:null, history_turns:10000}}, 200, session.updates);
       }
       if (method === 'POST' && path === '/api/cloud/ai/pause') {
         const session = await authenticated();
@@ -681,7 +681,7 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch, g
         const session = await authenticated(); requireAiAccess(session);
         const input = await body(request); youtubeResearchInput(input);
         if (youtubePublicStatus(env) !== 'configured_unverified') throw new HttpError(503, 'Public YouTube research is not enabled and configured on this deployment.');
-        // One workflow reservation shares the existing account pause/daily limit.
+        // One workflow reservation shares account authentication, pause and concurrency safeguards; no app-imposed daily cap is enforced.
         // The current ledger calls public lookups 'stock_search'; provider=youtube
         // distinguishes this workflow. It makes at most three API calls, never
         // retries automatically, and does not establish channel ownership.
@@ -692,7 +692,7 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch, g
       if (method === 'POST' && path === '/api/cloud/github/repository') {
         const session = await authenticated(); requireAiAccess(session);
         const input=githubRepositoryInput((await body(request)).repository);
-        // Shares the existing attempt limit and per-account pause; no GitHub
+        // Shares authentication, pause and concurrency safeguards; no GitHub
         // token or access to private repositories is used.
         const result=await attempt(session,'stock_search',{provider:'github',model:''},()=>getGithubRepository({fetchImpl,...input}));
         return json({repository:result.result,remaining_user:result.remaining,audit_saved:result.auditSaved},200,session.updates);
