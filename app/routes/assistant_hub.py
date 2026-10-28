@@ -11,7 +11,7 @@ import os
 from typing import List, Literal, Optional
 
 import httpx
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Query
 from pydantic import BaseModel, Field
 
 from app.deps import check_rate_limit, get_client_ip, get_current_user
@@ -307,9 +307,9 @@ async def chat(body: ChatRequest, request: Request):
 @router.get("/media/pexels/search")
 async def search_pexels(
     request: Request,
-    query: str = Field(min_length=2, max_length=200),
+    query: str = Query(min_length=2, max_length=200),
     media_type: Literal["photos", "videos"] = "photos",
-    per_page: int = 12,
+    per_page: int = Query(default=12, ge=1, le=30),
 ):
     """Search Pexels for free stock assets. Requires user auth and the free Pexels API key."""
     user = await get_current_user(request)
