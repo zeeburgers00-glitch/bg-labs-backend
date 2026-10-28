@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BG LABS - AI Agent Workspace</title>
+    <title>BG LABS — JARVIS Creator OS</title>
     <script src="https://cdn.tailwindcss.com"></script>
 
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -90,6 +90,76 @@
             *, *::before, *::after { scroll-behavior:auto !important; animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
         }
     
+
+        /* BG LABS Creator OS design system */
+        :root { color-scheme: dark; --bg-deep:#070b14; --panel:rgba(14,22,38,.82); --line:rgba(148,163,184,.16); --cyan:#67e8f9; }
+        html { background:var(--bg-deep); }
+        body { background:radial-gradient(ellipse at 12% 0%,rgba(29,78,216,.12),transparent 32%),radial-gradient(ellipse at 92% 10%,rgba(8,145,178,.11),transparent 28%),var(--bg-deep); color:#e8eef8; }
+        #mainApp { background:linear-gradient(145deg,rgba(6,11,21,.98),rgba(8,14,26,.96)); }
+        #mainApp > aside { background:linear-gradient(180deg,rgba(9,16,29,.98),rgba(8,13,24,.98)); border-color:rgba(148,163,184,.13); width:268px; flex-shrink:0; }
+        #mainApp > aside > div:first-child { justify-content:flex-start; padding:0 22px; border-color:rgba(148,163,184,.12); }
+        #mainApp > aside nav { padding:16px 12px; }
+        #mainApp .sidebar-item { border:1px solid transparent; border-radius:12px; min-height:42px; font-size:13px; margin:2px 0; color:#a9b6ca; }
+        #mainApp .sidebar-item:hover { background:rgba(103,232,249,.07); color:#eafcff; border-color:rgba(103,232,249,.09); }
+        #mainApp .sidebar-item.active { background:linear-gradient(100deg,rgba(99,102,241,.18),rgba(8,145,178,.09)); color:#a5f3fc; border:1px solid rgba(103,232,249,.22); box-shadow:inset 3px 0 0 #67e8f9; }
+        #mainApp .sidebar-item i { color:inherit; opacity:.9; }
+        #mainApp header { height:72px; flex-shrink:0; background:rgba(9,15,27,.83); border-color:rgba(148,163,184,.13); backdrop-filter:blur(22px); }
+        #mainApp header #pageTitle { letter-spacing:-.025em; font-size:17px; }
+        #contentArea { background:transparent; padding:clamp(18px,2.2vw,34px); }
+        .glass { background:rgba(10,16,29,.78); backdrop-filter:blur(18px); }
+        .glass-panel { background:linear-gradient(145deg,rgba(16,25,43,.88),rgba(10,17,30,.90)); border:1px solid var(--line); box-shadow:0 18px 54px rgba(0,0,0,.12),inset 0 1px 0 rgba(255,255,255,.025); }
+        .jarvis-stat { border:1px solid rgba(148,163,184,.14); background:linear-gradient(150deg,rgba(22,33,55,.78),rgba(11,18,31,.9)); }
+        .card-hover { transition:transform .22s ease,border-color .22s ease,background .22s ease,box-shadow .22s ease; }
+        .card-hover:hover { transform:translateY(-3px); border-color:rgba(103,232,249,.25); box-shadow:0 16px 40px rgba(0,0,0,.18); }
+        .btn-primary { background:linear-gradient(110deg,#4f46e5,#0891b2); box-shadow:0 8px 24px rgba(79,70,229,.16); }
+        button,a,select,input,textarea { -webkit-tap-highlight-color:transparent; }
+        button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible { outline:2px solid var(--cyan); outline-offset:3px; }
+        input,textarea,select { border-color:rgba(148,163,184,.20) !important; }
+        input:focus,textarea:focus,select:focus { border-color:rgba(103,232,249,.6) !important; box-shadow:0 0 0 3px rgba(103,232,249,.06); }
+        .creator-eyebrow { display:inline-flex; align-items:center; gap:8px; font-size:10px; font-weight:800; letter-spacing:.2em; text-transform:uppercase; color:#8be9f6; }
+        .creator-eyebrow::before { content:""; width:18px; height:1px; background:#67e8f9; box-shadow:0 0 8px #67e8f9; }
+        .creator-title { letter-spacing:-.055em; line-height:1.02; font-size:clamp(2rem,4vw,3.2rem); font-weight:780; }
+        .creator-subtitle { color:#9aabc1; line-height:1.65; max-width:720px; }
+        .creator-hero { position:relative; overflow:hidden; border:1px solid rgba(103,232,249,.19); border-radius:26px; background:radial-gradient(ellipse at 85% 20%,rgba(8,145,178,.16),transparent 33%),radial-gradient(ellipse at 15% 100%,rgba(99,102,241,.17),transparent 46%),linear-gradient(140deg,rgba(13,23,42,.96),rgba(7,13,25,.97)); padding:clamp(22px,3.5vw,42px); box-shadow:0 28px 80px rgba(0,0,0,.2); }
+        .creator-hero::after { content:""; position:absolute; right:-15%; top:-65%; width:430px; height:430px; border-radius:50%; border:1px solid rgba(103,232,249,.10); box-shadow:0 0 0 38px rgba(103,232,249,.018),0 0 0 82px rgba(103,232,249,.015),0 0 120px rgba(99,102,241,.08); pointer-events:none; }
+        .creator-stat { border:1px solid rgba(148,163,184,.14); border-radius:17px; background:linear-gradient(145deg,rgba(18,29,49,.88),rgba(10,17,30,.94)); padding:18px; min-width:0; }
+        .creator-stat .stat-label { color:#94a3b8; font-size:12px; }
+        .creator-stat .stat-value { color:#f1f5f9; font-size:26px; font-weight:750; letter-spacing:-.04em; margin-top:10px; }
+        .creator-stat .stat-icon { width:38px;height:38px;border-radius:12px;display:grid;place-items:center;border:1px solid rgba(103,232,249,.16);background:rgba(103,232,249,.07);color:#8be9f6; }
+        .creator-action { display:flex; flex-direction:column; gap:12px; align-items:flex-start; text-align:left; padding:18px; min-height:126px; border:1px solid rgba(148,163,184,.15); border-radius:16px; background:rgba(15,23,42,.58); transition:all .2s ease; }
+        .creator-action:hover { border-color:rgba(103,232,249,.34); background:rgba(20,37,59,.7); transform:translateY(-2px); }
+        .creator-action .action-icon { display:grid;place-items:center;width:38px;height:38px;border-radius:12px;color:#a5f3fc;background:rgba(34,211,238,.09);border:1px solid rgba(103,232,249,.15); }
+        .creator-section-title { color:#f1f5f9;font-size:15px;font-weight:700;letter-spacing:-.02em; }
+        .creator-section-note { font-size:12px;color:#8292a8;line-height:1.55; }
+        .creator-pill { display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border:1px solid rgba(148,163,184,.18);border-radius:999px;background:rgba(15,23,42,.7);color:#a9b6ca;font-size:11px;white-space:nowrap; }
+        .creator-pill.good { color:#86efac;border-color:rgba(74,222,128,.24);background:rgba(34,197,94,.07); }
+        .creator-pill.warn { color:#fde68a;border-color:rgba(250,204,21,.24);background:rgba(250,204,21,.06); }
+        .creator-pill.bad { color:#fca5a5;border-color:rgba(248,113,113,.24);background:rgba(248,113,113,.06); }
+        .creator-divider { height:1px;background:rgba(148,163,184,.12); }
+        .creator-list-row { display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid rgba(148,163,184,.10); }
+        .creator-list-row:last-child { border-bottom:0; }
+        .creator-step { width:28px;height:28px;flex-shrink:0;display:grid;place-items:center;border-radius:9px;background:rgba(103,232,249,.08);border:1px solid rgba(103,232,249,.16);color:#9eeaf4;font-size:11px;font-weight:700; }
+        .command-trigger { display:flex;align-items:center;gap:8px;padding:8px 11px;border-radius:10px;border:1px solid rgba(148,163,184,.18);background:rgba(15,23,42,.65);color:#a9b6ca;font-size:12px;transition:all .2s; }
+        .command-trigger:hover { background:rgba(103,232,249,.08);border-color:rgba(103,232,249,.28);color:#e5fbff; }
+        .command-trigger kbd { font:inherit;font-size:10px;border:1px solid rgba(148,163,184,.22);border-radius:5px;padding:2px 5px;color:#8ea0b8; }
+        #commandPalette { position:fixed;inset:0;z-index:100;display:none;align-items:flex-start;justify-content:center;padding:14vh 16px 24px;background:rgba(2,6,14,.76);backdrop-filter:blur(8px); }
+        #commandPalette.open { display:flex; }
+        .command-window { width:min(620px,100%);overflow:hidden;border:1px solid rgba(103,232,249,.21);border-radius:18px;background:#0b1220;box-shadow:0 35px 120px rgba(0,0,0,.55); }
+        .command-result { display:flex;align-items:center;gap:12px;width:100%;padding:12px 15px;border-radius:10px;text-align:left;color:#c5d1e2; }
+        .command-result:hover,.command-result:focus { outline:none;background:rgba(103,232,249,.09);color:#e7fcff; }
+        .command-result i { width:26px;text-align:center;color:#67e8f9; }
+        #toastContainer > div { max-width:min(420px,calc(100vw - 32px));border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(12px); }
+        @media (max-width: 960px) { #mainApp > aside { width:236px; } #contentArea { padding:18px; } }
+        @media (max-width: 760px) {
+            #mainApp { position:relative; }
+            #mainApp > aside { position:absolute; inset:0 auto 0 0; width:min(288px,88vw); transform:translateX(-105%); transition:transform .24s ease; z-index:40; box-shadow:20px 0 70px rgba(0,0,0,.45); }
+            #mainApp > aside.mobile-open { transform:translateX(0); }
+            #mainApp header { padding-left:14px;padding-right:14px; }
+            #contentArea { padding:14px; }
+            .creator-hero { border-radius:20px; }
+            .command-trigger .command-label { display:none; }
+        }
+
     </style>
 </head>
 <body class="bg-gray-900 text-white min-h-screen selection:bg-indigo-500">
@@ -197,6 +267,10 @@
                     <i class="fa-solid fa-graduation-cap w-5 text-center"></i>
                     <span>Course-trained YouTube AI</span>
                 </div>
+                <div class="sidebar-item px-4 py-3 rounded-lg cursor-pointer flex items-center gap-3 text-gray-300 hover:bg-gray-800" onclick="navigate('planner')">
+                    <i class="fa-solid fa-calendar-days w-5 text-center"></i>
+                    <span>Creator Calendar</span>
+                </div>
 
                                 <div class="sidebar-item px-4 py-3 rounded-lg cursor-pointer flex items-center gap-3 text-gray-300 hover:bg-gray-800" onclick="navigate('hub')">
                     <i class="fa-solid fa-brain w-5 text-center"></i>
@@ -263,13 +337,15 @@
                     <button onclick="toggleSidebar()" class="lg:hidden text-gray-400 hover:text-white">
                         <i class="fa-solid fa-bars text-xl"></i>
                     </button>
-                    <h1 class="text-xl font-semibold text-white" id="pageTitle">Dashboard</h1>
-                </div>
-                <div class="flex items-center gap-3">
-                    <div class="hidden md:flex items-center gap-2 text-xs text-gray-400">
-                        <div class="w-2 h-2 rounded-full bg-green-500 pulse-dot"></div>
-                        <span>All systems operational</span>
+                    <div>
+                        <h1 class="text-xl font-semibold text-white" id="pageTitle">Command Center</h1>
+                        <div class="hidden sm:block text-[10px] text-slate-500 tracking-wider uppercase mt-0.5">BG LABS / creator operating system</div>
                     </div>
+                </div>
+                <div class="flex items-center gap-2 sm:gap-3">
+                    <button class="command-trigger" onclick="openCommandPalette()" title="Open command palette (Ctrl+K)">
+                        <i class="fa-solid fa-magnifying-glass"></i><span class="command-label">Quick actions</span><kbd>Ctrl K</kbd>
+                    </button>
                     <button class="text-gray-400 hover:text-white transition" onclick="showNotifications()">
                         <i class="fa-regular fa-bell text-xl"></i>
                     </button>
@@ -283,6 +359,19 @@
             <main class="flex-1 overflow-y-auto p-6 lg:p-8 custom-scrollbar" id="contentArea">
                 <!-- Page content injected here -->
             </main>
+        </div>
+    </div>
+
+    <!-- JARVIS command palette -->
+    <div id="commandPalette" role="dialog" aria-modal="true" aria-label="Quick actions" onclick="if(event.target===this)closeCommandPalette()">
+        <div class="command-window">
+            <div class="flex items-center gap-3 px-4 border-b border-slate-700/70">
+                <i class="fa-solid fa-terminal text-cyan-300"></i>
+                <input id="commandSearch" autocomplete="off" class="flex-1 bg-transparent border-0 py-4 text-sm text-white focus:ring-0" placeholder="Search pages, tools and actions…" oninput="filterCommandPalette(this.value)" onkeydown="commandPaletteKeydown(event)">
+                <button class="text-xs text-slate-500 border border-slate-700 rounded px-2 py-1" onclick="closeCommandPalette()">ESC</button>
+            </div>
+            <div class="px-3 py-3"><div id="commandResults" class="space-y-1 max-h-[55vh] overflow-y-auto"></div></div>
+            <div class="px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex justify-between"><span>JARVIS QUICK COMMANDS</span><span>↑ ↓ browse · Enter open</span></div>
         </div>
     </div>
 
@@ -442,9 +531,14 @@
     // NAVIGATION
     // ============================================================================
     function navigate(page) {
-        // Update sidebar
-        document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active', 'bg-indigo-500/20', 'border-indigo-500/20', 'border-r-4', 'text-indigo-400'));
-        event?.currentTarget?.classList.add('active', 'bg-indigo-500/20', 'border-r-4', 'text-indigo-400');
+        // Update sidebar state without depending on the deprecated global event.
+        document.querySelectorAll('.sidebar-item').forEach(el => {
+            el.classList.remove('active', 'bg-indigo-500/20', 'border-indigo-500/20', 'border-r-4', 'text-indigo-400');
+            const action = el.getAttribute('onclick') || '';
+            if (action.includes("navigate('" + page + "'") || action.includes('navigate("' + page + '"')) el.classList.add('active');
+        });
+        const sidebar = document.querySelector('#mainApp > aside');
+        if (sidebar && window.innerWidth <= 760) sidebar.classList.remove('mobile-open');
 
         const content = document.getElementById('contentArea');
         document.getElementById('pageTitle').textContent = page.charAt(0).toUpperCase() + page.slice(1);
@@ -465,6 +559,7 @@
                 case 'models': renderModelsHub(); break;
                 case 'youtube': renderYouTube(); break;
                 case 'course-ai': renderCourseAI(); break;
+                case 'planner': renderPlanner(); break;
                 case 'hub': renderHub(); break;
                 case 'billing': renderBilling(); break;
                 case 'referral': renderReferral(); break;
@@ -491,6 +586,76 @@
         container.appendChild(el);
         setTimeout(() => el.remove(), 4000);
     }
+
+
+    const COMMAND_ITEMS = [
+        {page:'dashboard',label:'Command Center',detail:'Live system overview and quick actions',icon:'fa-gauge-high',keywords:'home status dashboard'},
+        {page:'hub',label:'JARVIS Hub',detail:'Chat with your assistant and inspect providers',icon:'fa-brain',keywords:'chat assistant ai'},
+        {page:'course-ai',label:'Course-trained YouTube AI',detail:'Import lessons and ground answers in your course',icon:'fa-graduation-cap',keywords:'drive course knowledge'},
+        {page:'planner',label:'Creator Calendar',detail:'Generate a course-grounded publishing plan',icon:'fa-calendar-days',keywords:'content plan calendar shorts'},
+        {page:'youtube',label:'YouTube Automation',detail:'Connect channel, inspect uploads and publish',icon:'fa-youtube',keywords:'channel upload analytics comments'},
+        {page:'agents',label:'AI Agents',detail:'Run specialist agents and review past runs',icon:'fa-robot',keywords:'agent autopilot workflow'},
+        {page:'skills',label:'Skills & Research',detail:'Run creator skills and research sources',icon:'fa-terminal',keywords:'skills hooks seo research'},
+        {page:'vimax',label:'ViMax Video Studio',detail:'Plan and generate multi-scene video projects',icon:'fa-film',keywords:'video generation'},
+        {page:'models',label:'Models & Providers',detail:'Manage keys, endpoints and supported models',icon:'fa-cubes',keywords:'provider api key groq gemini'},
+        {page:'studio',label:'AI Studio',detail:'Generate voiceover and audio',icon:'fa-microphone',keywords:'tts voice speech'},
+        {page:'image',label:'Image Generator',detail:'Create images for thumbnails and posts',icon:'fa-image',keywords:'thumbnail art visual'},
+        {page:'script',label:'Script Writer',detail:'Draft video scripts',icon:'fa-file-lines',keywords:'script writing'},
+        {page:'avatar',label:'Avatar Studio',detail:'Create talking-avatar content',icon:'fa-user-tie',keywords:'avatar video'},
+        {page:'voices',label:'Voice Library',detail:'Browse available voices',icon:'fa-volume-high',keywords:'voice library'},
+        {page:'billing',label:'Billing & Usage',detail:'Inspect credits and plan',icon:'fa-credit-card',keywords:'billing credits'},
+        {page:'referral',label:'Referral Program',detail:'Invite users and view referral activity',icon:'fa-share-nodes',keywords:'invite referrals'}
+    ];
+    let commandMatches = COMMAND_ITEMS.slice();
+    let commandActiveIndex = 0;
+    function openCommandPalette() {
+        const palette = document.getElementById('commandPalette');
+        if (!palette) return;
+        palette.classList.add('open');
+        const input = document.getElementById('commandSearch');
+        if (input) { input.value = ''; filterCommandPalette(''); input.focus(); }
+    }
+    function closeCommandPalette() {
+        const palette = document.getElementById('commandPalette');
+        if (palette) palette.classList.remove('open');
+    }
+    function filterCommandPalette(value) {
+        const query = String(value || '').toLowerCase().trim();
+        commandMatches = COMMAND_ITEMS.filter(item => (item.label + ' ' + item.detail + ' ' + item.keywords).toLowerCase().includes(query));
+        commandActiveIndex = 0;
+        const box = document.getElementById('commandResults');
+        if (!box) return;
+        box.innerHTML = commandMatches.length ? commandMatches.map((item,index) =>
+            '<button class="command-result" data-command-index="' + index + '" onclick="runCommandPaletteItem(' + index + ')">' +
+            '<i class="fa-solid ' + item.icon + '"></i><span class="flex-1 min-w-0"><span class="block text-sm font-medium">' + hubEscape(item.label) +
+            '</span><span class="block text-xs text-slate-500 mt-0.5">' + hubEscape(item.detail) + '</span></span><span class="text-[10px] text-slate-600">OPEN ↵</span></button>').join('') :
+            '<div class="py-8 text-center text-sm text-slate-500">No matching actions. Try “YouTube”, “course” or “models”.</div>';
+        updateCommandPaletteActive();
+    }
+    function updateCommandPaletteActive() {
+        const results = document.querySelectorAll('#commandResults [data-command-index]');
+        results.forEach((el,i) => {
+            el.style.background = i === commandActiveIndex ? 'rgba(103,232,249,.10)' : '';
+            el.style.color = i === commandActiveIndex ? '#e7fcff' : '';
+        });
+        results[commandActiveIndex]?.scrollIntoView({block:'nearest'});
+    }
+    function commandPaletteKeydown(event) {
+        if (event.key === 'ArrowDown') { event.preventDefault(); commandActiveIndex = Math.min(commandActiveIndex+1,Math.max(commandMatches.length-1,0)); updateCommandPaletteActive(); }
+        else if (event.key === 'ArrowUp') { event.preventDefault(); commandActiveIndex = Math.max(0,commandActiveIndex-1); updateCommandPaletteActive(); }
+        else if (event.key === 'Enter') { event.preventDefault(); if (commandMatches[commandActiveIndex]) runCommandPaletteItem(commandActiveIndex); }
+        else if (event.key === 'Escape') closeCommandPalette();
+    }
+    function runCommandPaletteItem(index) {
+        const item = commandMatches[index];
+        if (!item) return;
+        closeCommandPalette();
+        navigate(item.page);
+    }
+    document.addEventListener('keydown', function(event) {
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); openCommandPalette(); }
+        if (event.key === 'Escape') closeCommandPalette();
+    });
 
     // ============================================================================
     // DASHBOARD
