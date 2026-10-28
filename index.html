@@ -1899,9 +1899,12 @@
         try {
             const data = await courseRequest('/api/course-ai/chat', 'POST', {message:message, provider:document.getElementById('courseAiProvider')?.value || undefined});
             const refs = (data.sources || []).map(function(s){return '- ' + s.title + (s.chunk ? ' (chunk ' + s.chunk + ')' : '') + (s.url ? ': ' + s.url : '');}).join('\n');
-            if (data.plan) {
+            if (data.plan?.proposed) {
                 courseAiPlan = data.plan;
                 renderCourseAiPlanDraft(courseAiPlan);
+            } else if (data.plan?.items) {
+                creatorPlannerCurrent = data.plan;
+                toast('Course-based content plan saved. Open Creator Calendar to review it.','success');
             }
             const toolLine = (data.tool_calls || []).map(function(t){return t.tool + ': ' + t.status;}).join('\n');
             courseAiHistory.push({role:'assistant',content:data.reply + (toolLine ? '\n\nTools used:\n' + toolLine : '') + (refs ? '\n\nCourse sources:\n' + refs : '')});
