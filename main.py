@@ -25,6 +25,17 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from dotenv import load_dotenv
 
+from app.routes.youtube_agent import router as youtube_agent_router
+from app.routes.video_generation import router as video_generation_router
+from app.routes.video_editing import router as video_editing_router
+from app.routes.agent_skills import router as agent_skills_router
+from app.routes.tts_providers import router as tts_providers_router
+from app.routes.llm_providers import router as llm_providers_router
+from app.routes.vector_memory import router as vector_memory_router
+from app.routes.browser_automation import router as browser_automation_router
+from app.routes.workflow import router as workflow_router
+from app.routes.mcp import router as mcp_router
+
 from tts_engine import (
     edge_tts_generate,
     cvoice_search_characters,
@@ -230,6 +241,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ============================================================
+# INCLUDE ALL ROUTE MODULES
+# ============================================================
+app.include_router(youtube_agent_router)
+app.include_router(video_generation_router)
+app.include_router(video_editing_router)
+app.include_router(agent_skills_router)
+app.include_router(tts_providers_router)
+app.include_router(llm_providers_router)
+app.include_router(vector_memory_router)
+app.include_router(browser_automation_router)
+app.include_router(workflow_router)
+app.include_router(mcp_router)
+
 try:
     app.mount("/api/storage", StaticFiles(directory=str(STORAGE_DIR)), name="storage")
 except Exception:
@@ -240,10 +265,10 @@ except Exception:
 # ============================================================
 @app.get("/")
 async def root():
-    html_path = BASE_DIR / "bglabs_complete.html"
+    html_path = BASE_DIR / "index.html"
     if html_path.exists():
         return FileResponse(str(html_path), media_type="text/html")
-    return {"name": "BG LABS API", "version": "9.0.0", "status": "running"}
+    return {"name": "BG LABS API", "version": "9.0.0", "status": "running", "docs": "/docs"}
 
 @app.get("/health")
 async def health():
