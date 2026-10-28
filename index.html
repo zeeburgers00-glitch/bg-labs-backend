@@ -193,6 +193,11 @@
                     <span>YouTube Automation</span>
                 </div>
 
+                <div class="sidebar-item px-4 py-3 rounded-lg cursor-pointer flex items-center gap-3 text-gray-300 hover:bg-gray-800" onclick="navigate('course-ai')">
+                    <i class="fa-solid fa-graduation-cap w-5 text-center"></i>
+                    <span>Course-trained YouTube AI</span>
+                </div>
+
                                 <div class="sidebar-item px-4 py-3 rounded-lg cursor-pointer flex items-center gap-3 text-gray-300 hover:bg-gray-800" onclick="navigate('hub')">
                     <i class="fa-solid fa-brain w-5 text-center"></i>
                     <span>JARVIS Hub</span>
@@ -302,6 +307,8 @@
     let currentUser = null;
     let sidebarOpen = true;
     let jarvisChatHistory = [];
+    let courseAiHistory = [];
+    let courseAiPlan = null;
 
     // ============================================================================
     // INIT
@@ -457,6 +464,7 @@
                 case 'vimax': renderViMaxStudio(); break;
                 case 'models': renderModelsHub(); break;
                 case 'youtube': renderYouTube(); break;
+                case 'course-ai': renderCourseAI(); break;
                 case 'hub': renderHub(); break;
                 case 'billing': renderBilling(); break;
                 case 'referral': renderReferral(); break;
@@ -1649,6 +1657,182 @@
         jarvisChatHistory = [];
         renderHubMessages();
     }
+
+
+    // Course-trained YouTube AI: Google Drive import -> Supabase RAG -> approved branding updates.
+    async function courseRequest(path, method = 'GET', body = null) {
+        const headers = {};
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+        if (body !== null) headers['Content-Type'] = 'application/json';
+        const response = await fetch(API_BASE + path, {
+            method,
+            headers,
+            body: body === null ? undefined : JSON.stringify(body)
+        });
+        let data = {};
+        try { data = await response.json(); } catch (_) { data = {detail:'Server returned a non-JSON response.'}; }
+        if (response.status === 401) { logout(); throw new Error('Please sign in again.'); }
+        if (!response.ok) {
+            const detail = data.detail;
+            throw new Error(typeof detail === 'string' ? detail : (detail?.message || JSON.stringify(detail) || 'Request failed (' + response.status + ').'));
+        }
+        return data;
+    }
+
+    async function renderCourseAI() {
+        const c = document.getElementById('contentArea');
+        c.innerHTML = '<div class="glass-panel rounded-2xl p-8"><div class="loader mx-auto"></div><p class="text-center text-gray-400 mt-4">Loading Course AI…</p></div>';
+        try {
+            const results = await Promise.all([
+                courseRequest('/api/course-ai/status'),
+                courseRequest('/api/hub/providers')
+            ]);
+            const status = results[0];
+            const providerData = results[1];
+            const channels = status.connected_channels || [];
+            const providers = providerData.providers || [];
+            const providerOptions = providers.map(function(p) {
+                return '<option value="' + hubEscape(p.id) + '"' + (p.configured ? '' : ' disabled') + '>' +
+                    hubEscape(p.name) + (p.configured ? ' · ready' : ' · needs key') + '</option>';
+            }).join('');
+            const channelText = channels.length ? channels.map(hubEscape).join(' · ') : 'No channel connected yet';
+            c.innerHTML = '<div class="fade-in max-w-7xl mx-auto space-y-6">' +
+                '<section class="jarvis-hero"><div class="jarvis-hero-copy">' +
+                '<div class="jarvis-kicker mb-3">COURSE-GROUNDED AUTOPILOT</div>' +
+                '<h2 class="jarvis-headline mb-3"><span class="jarvis-gradient-text">Train JARVIS</span><br><span class="jarvis-gradient-text">with your course.</span></h2>' +
+                '<p class="text-slate-300 max-w-xl">Import course documents from Drive, ask course-grounded questions, generate a channel strategy, and review branding changes before applying them.</p>' +
+                '</div><div class="jarvis-hero-orbspace"><div class="jarvis-orb-halo"></div><div class="jarvis-orb"><div class="jarvis-orbit"></div><div class="jarvis-orbit orbit-two"></div><div class="jarvis-orbit orbit-three"></div><div class="jarvis-orb-core"></div></div><div class="jarvis-orb-caption">COURSE KNOWLEDGE CORE</div></div></section>' +
+                '<div class="grid md:grid-cols-3 gap-4">' +
+                '<div class="jarvis-stat rounded-xl p-4"><div class="text-xs text-slate-400">Course knowledge</div><div class="text-2xl font-bold mt-2">' + (status.course_ready ? 'Ready' : 'Not imported') + '</div><div class="text-xs text-slate-500 mt-1">' + (status.documents || 0) + ' documents · ' + (status.chunks || 0) + ' chunks</div></div>' +
+                '<div class="jarvis-stat rounded-xl p-4"><div class="text-xs text-slate-400">Google Drive access</div><div class="text-2xl font-bold mt-2 ' + (status.drive_scope_granted ? 'text-emerald-300' : 'text-amber-200') + '">' + (status.drive_scope_granted ? 'Granted' : 'Needs consent') + '</div><div class="text-xs text-slate-500 mt-1">Read-only permission</div></div>' +
+                '<div class="jarvis-stat rounded-xl p-4"><div class="text-xs text-slate-400">Connected channels</div><div class="text-sm font-semibold mt-2">' + channelText + '</div><button onclick="navigate(\'youtube\')" class="text-xs text-cyan-300 mt-2 hover:underline">Connect / reconnect Google</button></div></div>' +
+                '<section class="glass-panel rounded-2xl p-5"><div class="flex flex-wrap justify-between gap-3"><div><h3 class="text-xl font-semibold">1. Import course from Google Drive</h3><p class="text-sm text-gray-400 mt-1">Only files readable by the connected Google account are imported. Use a Gmail that has access to the shared folder.</p></div><span class="text-xs text-gray-500">Max 40 files · 8 MB/file · 24 MB/import</span></div>' +
+                '<label class="block text-sm text-gray-300 mt-4 mb-2" for="courseAiFolder">Drive folder ID</label>' +
+                '<div class="flex flex-col sm:flex-row gap-2"><input id="courseAiFolder" class="min-w-0 flex-1 bg-gray-900 border border-gray-700 rounded-xl px-4 py-3" value="1f65I0DWuFQ7EZB_QQq-aJZDUprTfIqh2"><button id="courseAiImportBtn" onclick="importCourseAI()" class="px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 font-semibold"><i class="fa-brands fa-google-drive mr-2"></i>Import Course</button></div>' +
+                '<div id="courseAiImportStatus" class="text-sm text-gray-400 mt-3">' +
+                (status.drive_scope_granted ? 'Drive permission is ready. You can import the course.' : 'Connect Google in YouTube Automation and accept the read-only Drive permission. Google OAuth credentials and Drive API must be configured on the server.') + '</div>' +
+                '<p class="text-xs text-gray-500 mt-3">Supported: Google Docs/Slides/Sheets, PDF, DOCX, PPTX, TXT, Markdown, CSV, SRT and VTT. Course videos need transcripts/subtitles; this step does not fine-tune model weights.</p></section>' +
+                '<div class="grid xl:grid-cols-2 gap-6"><section class="glass-panel rounded-2xl p-5"><div class="flex justify-between items-center gap-3 mb-4"><div><h3 class="text-xl font-semibold">2. Talk to course-trained JARVIS</h3><p class="text-sm text-gray-400">Answers retrieve relevant course passages and include sources.</p></div><button onclick="clearCourseAIChat()" class="text-xs text-gray-400 hover:text-white">Clear</button></div>' +
+                '<div id="courseAiMessages" class="space-y-3 min-h-40 max-h-96 overflow-y-auto mb-4"></div>' +
+                '<label for="courseAiProvider" class="text-xs uppercase tracking-wider text-gray-400">AI provider</label><select id="courseAiProvider" class="w-full mt-1 mb-3 bg-gray-900 border border-gray-700 rounded-lg p-3">' + providerOptions + '</select>' +
+                '<form onsubmit="sendCourseAI(event)" class="space-y-2"><textarea id="courseAiInput" rows="3" maxlength="10000" class="w-full bg-gray-900 border border-gray-700 rounded-xl p-3" placeholder="Example: Course ke mutabiq mere channel ki niche aur upload strategy kya honi chahiye?"></textarea><button id="courseAiSendBtn" class="w-full py-3 rounded-xl bg-cyan-700 hover:bg-cyan-600 font-semibold"><i class="fa-solid fa-paper-plane mr-2"></i>Ask JARVIS</button></form>' +
+                '</section><section class="glass-panel rounded-2xl p-5"><h3 class="text-xl font-semibold">3. Generate channel customization</h3><p class="text-sm text-gray-400 mt-1">JARVIS reads your connected channel and uses course sources to draft branding settings.</p>' +
+                '<label for="courseAiGoal" class="block text-sm text-gray-300 mt-4 mb-2">Your channel goal</label><textarea id="courseAiGoal" rows="3" class="w-full bg-gray-900 border border-gray-700 rounded-xl p-3" placeholder="Use the course to optimize my channel for my niche and audience."></textarea>' +
+                '<button id="courseAiPlanBtn" onclick="generateCourseAIPlan()" class="mt-3 w-full py-3 rounded-xl bg-violet-700 hover:bg-violet-600 font-semibold"><i class="fa-solid fa-wand-magic-sparkles mr-2"></i>Generate Branding Plan</button><div id="courseAiPlanOutput" class="mt-4"></div>' +
+                '<p class="text-xs text-amber-200 mt-4">Applying description, keywords, country or language changes requires a separate confirmation. Channel title, banner and avatar are not changed by this endpoint.</p></section></div></div>';
+            renderCourseAiMessages();
+        } catch (error) {
+            c.innerHTML = '<div class="glass-panel rounded-2xl p-6"><h2 class="text-xl font-bold">Course AI could not load</h2><p class="text-gray-400 mt-2">' + hubEscape(error.message || 'Unknown error') + '</p><button onclick="renderCourseAI()" class="btn-primary mt-4 px-4 py-2 rounded-lg">Retry</button></div>';
+        }
+    }
+
+    function renderCourseAiMessages() {
+        const box = document.getElementById('courseAiMessages');
+        if (!box) return;
+        if (!courseAiHistory.length) {
+            box.innerHTML = '<div class="text-sm text-gray-500 text-center py-10">Import your course, then ask JARVIS about its lessons.</div>';
+            return;
+        }
+        box.innerHTML = courseAiHistory.map(function(m) {
+            return '<div class="flex ' + (m.role === 'user' ? 'justify-end' : 'justify-start') + '"><div class="max-w-[95%] rounded-xl px-4 py-3 ' + (m.role === 'user' ? 'bg-indigo-500/20 border border-indigo-500/30' : 'bg-gray-800 border border-gray-700') + '"><div class="text-xs text-gray-400 mb-1">' + (m.role === 'user' ? 'You' : 'JARVIS') + '</div><div class="text-sm whitespace-pre-wrap break-words">' + hubEscape(m.content) + '</div></div></div>';
+        }).join('');
+        box.scrollTop = box.scrollHeight;
+    }
+
+    async function importCourseAI() {
+        const button = document.getElementById('courseAiImportBtn');
+        const out = document.getElementById('courseAiImportStatus');
+        const folder = document.getElementById('courseAiFolder')?.value?.trim();
+        if (!folder) return toast('Enter a Google Drive folder ID first.', 'error');
+        button.disabled = true; button.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Importing…';
+        out.textContent = 'Reading Drive files and saving searchable course chunks to Supabase…';
+        try {
+            const result = await courseRequest('/api/course-ai/drive/import', 'POST', {folder_id: folder, max_files: 40});
+            out.innerHTML = '<span class="text-emerald-300">Imported ' + result.files_imported + ' files and saved ' + result.chunks_saved + ' chunks.</span>';
+            if (result.skipped?.length) out.innerHTML += '<div class="text-amber-200 mt-2">Skipped: ' + result.skipped.map(function(x){return hubEscape(x.name + ': ' + x.reason);}).join('<br>') + '</div>';
+            toast('Course knowledge saved in Supabase.', 'success');
+            await renderCourseAI();
+        } catch (error) {
+            out.textContent = error.message || 'Course import failed.';
+            toast(out.textContent, 'error');
+        } finally {
+            const b = document.getElementById('courseAiImportBtn');
+            if (b) { b.disabled = false; b.innerHTML = '<i class="fa-brands fa-google-drive mr-2"></i>Import Course'; }
+        }
+    }
+
+    async function sendCourseAI(event) {
+        event.preventDefault();
+        const input = document.getElementById('courseAiInput');
+        const button = document.getElementById('courseAiSendBtn');
+        const message = (input?.value || '').trim();
+        if (!message) return;
+        courseAiHistory.push({role:'user',content:message}); input.value = '';
+        button.disabled = true; renderCourseAiMessages();
+        try {
+            const data = await courseRequest('/api/course-ai/chat', 'POST', {message:message, provider:document.getElementById('courseAiProvider')?.value || undefined});
+            const refs = (data.sources || []).map(function(s){return '- ' + s.title + (s.chunk ? ' (chunk ' + s.chunk + ')' : '') + (s.url ? ': ' + s.url : '');}).join('\n');
+            courseAiHistory.push({role:'assistant',content:data.reply + (refs ? '\n\nCourse sources:\n' + refs : '')});
+        } catch (error) {
+            courseAiHistory.push({role:'assistant',content:'Request failed: ' + (error.message || 'Unknown error')});
+        } finally {
+            if (button) button.disabled = false;
+            renderCourseAiMessages();
+        }
+    }
+
+    function clearCourseAIChat() { courseAiHistory = []; renderCourseAiMessages(); }
+
+    async function generateCourseAIPlan() {
+        const button = document.getElementById('courseAiPlanBtn');
+        const out = document.getElementById('courseAiPlanOutput');
+        const goal = (document.getElementById('courseAiGoal')?.value || '').trim() || 'Optimize my channel using the course methods.';
+        button.disabled = true; out.innerHTML = '<div class="text-sm text-gray-400">Reviewing course lessons and current channel settings…</div>';
+        try {
+            courseAiPlan = await courseRequest('/api/course-ai/channel-plan', 'POST', {
+                goal:goal, provider:document.getElementById('courseAiProvider')?.value || undefined
+            });
+            const p = courseAiPlan.proposed;
+            out.innerHTML = '<div class="border border-gray-700 rounded-xl p-4 mt-3 space-y-3">' +
+                '<div class="text-xs text-emerald-300">Draft for ' + hubEscape(courseAiPlan.channel_title || 'your channel') + '</div>' +
+                '<label class="block text-xs text-gray-400">Channel description<textarea id="courseAiDescription" rows="5" maxlength="1000" class="w-full mt-1 bg-gray-900 border border-gray-700 rounded-lg p-2 text-sm">' + hubEscape(p.description || '') + '</textarea></label>' +
+                '<label class="block text-xs text-gray-400">Channel keywords (space-separated; max 500 characters)<input id="courseAiKeywords" maxlength="500" class="w-full mt-1 bg-gray-900 border border-gray-700 rounded-lg p-2 text-sm" value="' + hubEscape(p.keywords || '') + '"></label>' +
+                '<div class="grid grid-cols-2 gap-2"><label class="text-xs text-gray-400">Country<input id="courseAiCountry" maxlength="2" class="w-full mt-1 bg-gray-900 border border-gray-700 rounded-lg p-2" value="' + hubEscape(p.country || '') + '"></label><label class="text-xs text-gray-400">Default language<input id="courseAiLanguage" maxlength="10" class="w-full mt-1 bg-gray-900 border border-gray-700 rounded-lg p-2" value="' + hubEscape(p.default_language || '') + '"></label></div>' +
+                '<p class="text-sm text-gray-300">' + hubEscape(courseAiPlan.rationale || '') + '</p>' +
+                '<div class="text-xs text-gray-400">' + (courseAiPlan.action_plan || []).map(hubEscape).join('<br>') + '</div>' +
+                '<button onclick="applyCourseAIPlan()" class="w-full py-3 rounded-lg bg-emerald-700 hover:bg-emerald-600 font-semibold"><i class="fa-solid fa-check mr-2"></i>Review & Apply Branding</button>' +
+                '<div class="text-xs text-gray-500">Source files: ' + (courseAiPlan.sources || []).map(function(s){return hubEscape(s.title);}).join(', ') + '</div></div>';
+        } catch (error) {
+            out.innerHTML = '<p class="text-red-300 text-sm">' + hubEscape(error.message || 'Plan failed') + '</p>';
+        } finally {
+            const b = document.getElementById('courseAiPlanBtn');
+            if (b) b.disabled = false;
+        }
+    }
+
+    async function applyCourseAIPlan() {
+        if (!courseAiPlan) return toast('Generate a plan first.', 'error');
+        const approved = confirm('Apply the reviewed channel description, keywords, country and language to ' + (courseAiPlan.channel_title || 'this YouTube channel') + '?');
+        if (!approved) return;
+        const out = document.getElementById('courseAiPlanOutput');
+        const payload = {
+            channel_id:courseAiPlan.channel_id,
+            description:document.getElementById('courseAiDescription')?.value ?? '',
+            keywords:document.getElementById('courseAiKeywords')?.value ?? '',
+            country:document.getElementById('courseAiCountry')?.value ?? '',
+            default_language:document.getElementById('courseAiLanguage')?.value ?? '',
+            confirm:true
+        };
+        out.insertAdjacentHTML('beforeend','<p class="text-sm text-gray-400 mt-3">Applying approved branding changes…</p>');
+        try {
+            const result = await courseRequest('/api/course-ai/channel-branding','POST',payload);
+            toast(result.message || 'Channel branding updated.','success');
+            out.insertAdjacentHTML('beforeend','<p class="text-emerald-300 text-sm mt-3">' + hubEscape(result.message || 'Channel branding updated.') + '</p>');
+        } catch (error) {
+            out.insertAdjacentHTML('beforeend','<p class="text-red-300 text-sm mt-3">' + hubEscape(error.message || 'Update failed') + '</p>');
+        }
+    }
+
 
     async function renderYouTube() {
         const content = document.getElementById('contentArea');
