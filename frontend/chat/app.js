@@ -192,6 +192,7 @@
   }
   function renderMessages() {
     const container = $('messages'); container.replaceChildren();
+    container.hidden = false;
     const turns = state.chat.turns.slice(-30);
     const add = (role, text, pending = false) => {
       const row = element('article', null, `message ${role}${pending ? ' pending' : ''}`);
@@ -361,6 +362,7 @@
       const data = await sessionApi('/api/cloud/chat/history');
       if (!isCurrent(version)) return;
       state.chat.turns = Array.isArray(data.turns) ? data.turns.slice(0, 30).reverse() : [];
+      renderMessages();
       state.chat.historyReady = true; renderMessages(); updateChatControls();
     } catch (error) {
       if (isCurrent(version) && error.name !== 'AbortError') { state.chat.error = error.message; updateChatControls(); }
@@ -757,6 +759,8 @@
   });
 
   $('account-button').addEventListener('click', () => showDialog('account-dialog'));
+  $('sidebar-account').addEventListener('click', () => showDialog(state.user ? 'settings-dialog' : 'account-dialog'));
+  document.querySelector('[data-sidebar-action="chat"]').addEventListener('click', () => { $('chat-prompt').focus(); $('conversation').scrollTop = $('conversation').scrollHeight; });
   $('chat-settings').addEventListener('click', () => showDialog('settings-dialog'));
   document.querySelectorAll('[data-workspace-action]').forEach(button => button.addEventListener('click', () => {
     const action = button.dataset.workspaceAction;
@@ -913,7 +917,6 @@
         if (data.truncated) notices.push('The reply was truncated.');
         if (!data.history_saved) notices.push('This reply could not be saved.');
         if (!data.audit_saved) notices.push('The usage result could not be saved.');
-        notices.push('ViMax daily attempt caps are disabled; provider quotas and billing still apply.');
         state.chat.note = notices.join(' ') || 'Reply received.';
         renderMessages(); if ($('speak-replies').checked) speak(data.reply);
       }
