@@ -33,6 +33,10 @@ _SALT = "bglabs:keyvault:1"
 
 # What a user may store, and which provider each name unlocks.
 KNOWN_KEYS: Dict[str, Dict[str, str]] = {
+    "MISTRAL_API_KEY": {"provider": "mistral", "label": "Mistral", "get": "https://console.mistral.ai/",
+                        "unlocks": "Mistral API chat (free-mode quotas apply)"},
+    "PEXELS_API_KEY": {"provider": "pexels", "label": "Pexels", "get": "https://www.pexels.com/api/",
+                       "unlocks": "Free stock photos/videos search in JARVIS Hub"},
     "OPENAI_API_KEY": {"provider": "openai", "label": "OpenAI", "get": "https://platform.openai.com/api-keys",
                        "unlocks": "GPT Image 1, gpt-4o-mini-tts, GPT chat"},
     "GEMINI_API_KEY": {"provider": "gemini", "label": "Google Gemini", "get": "https://aistudio.google.com/apikey",
