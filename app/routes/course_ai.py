@@ -33,6 +33,8 @@ class DriveImportRequest(BaseModel):
 class CourseChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=10000)
     provider: Optional[str] = None
+class ChannelInsightsRequest(BaseModel):
+    channel_id: Optional[str] = Field(default=None, max_length=100)
 class ChannelPlanRequest(BaseModel):
     goal: str = Field(default="Optimize my YouTube channel using the course methods.", max_length=3000)
     channel_id: Optional[str] = Field(default=None, max_length=100)
@@ -293,6 +295,35 @@ async def chat(body: CourseChatRequest, request: Request):
             ],
             "plan": plan, "sources": plan.get("course_sources") or [], "course_grounded": True
         }
+    insights_intent = bool(re.search(
+        r"\b(channel (?:stats|statistics|analytics|insights)|how many subscribers|subscriber count|my views|recent uploads|latest videos|last videos|mere channel (?:ke|par) (?:views|subscribers|videos)|subscribers kitne|views kitne)\b",
+        lower))
+    if insights_intent:
+        result = await channel_insights(ChannelInsightsRequest(), request)
+        channel = result.get("channel") or {}
+        videos = result.get("recent_uploads") or []
+        lines = [
+            f"Channel: {channel.get('title') or 'Connected YouTube channel'}",
+            f"Subscribers: {channel.get('subscribers', 'unknown')}",
+            f"Lifetime views: {channel.get('views', 'unknown')}",
+            f"Videos: {channel.get('video_count', 'unknown')}",
+            "Latest uploads:",
+        ]
+        if videos:
+            lines.extend([
+                f"- {v.get('title') or 'Untitled'} — {v.get('stats', {}).get('views', 0)} views — {v.get('url', '')}"
+                for v in videos[:10]
+            ])
+        else:
+            lines.append("- No recent uploads were returned.")
+        return {
+            "reply": "I used the connected YouTube API to read your channel. These are live account results, not course claims:\n" + "\n".join(lines),
+            "tool_calls": [
+                {"tool": "youtube.read_channel_statistics", "status": "completed"},
+                {"tool": "youtube.read_recent_uploads", "status": "completed", "count": len(videos)}
+            ],
+            "insights": result, "course_grounded": False
+        }
     plan_intent = bool(re.search(
         r"\b(customi[sz]e|branding|optimi[sz]e|set\s*up|setup|improve|update)\b.{0,60}\b(channel|youtube)\b"
         r"|\b(channel|youtube)\b.{0,60}\b(customi[sz]e|branding|optimi[sz]e|set\s*up|setup|improve|description|keywords)\b"
@@ -322,6 +353,50 @@ async def _channel_resource(token: str, channel_id: str):
     items=data.get("items") or []
     if not items: raise HTTPException(404,"Connected YouTube channel was not found.")
     return items[0]
+
+@router.post("/channel-insights")
+async def channel_insights(body: ChannelInsightsRequest, request: Request):
+    user = await get_current_user(request)
+    store = await get_store()
+    conn, access_token = await _connection(store, user["id"], body.channel_id or "")
+    settings = conn.get("settings") or {}
+    channel_id = str(settings.get("channel_id") or body.channel_id or "")
+    resource = await _channel_resource(access_token, channel_id)
+    snippet = resource.get("snippet") or {}
+    statistics = resource.get("statistics") or {}
+    details = resource.get("contentDetails") or {}
+    uploads_playlist = ((details.get("relatedPlaylists") or {}).get("uploads")
+                        or settings.get("uploads_playlist") or "")
+    try:
+        videos = await google.fetch_uploads(access_token, uploads_playlist, max_results=10)
+    except google.GoogleError as exc:
+        logger.warning("Recent YouTube uploads could not be fetched: %s", exc.message)
+        videos = []
+    def metric(key: str) -> Optional[int]:
+        try:
+            return int(statistics[key]) if statistics.get(key) is not None else None
+        except (TypeError, ValueError):
+            return None
+    return {
+        "ok": True,
+        "channel": {
+            "channel_id": channel_id,
+            "title": snippet.get("title") or settings.get("title") or "YouTube channel",
+            "description": (snippet.get("description") or "")[:1000],
+            "custom_url": snippet.get("customUrl") or settings.get("custom_url") or "",
+            "subscribers": metric("subscriberCount"),
+            "views": metric("viewCount"),
+            "video_count": metric("videoCount"),
+            "subscribers_hidden": bool(statistics.get("hiddenSubscriberCount")),
+        },
+        "recent_uploads": [
+            {"video_id": v.get("video_id"), "title": v.get("title"), "url": v.get("url"),
+             "published_at": v.get("published_at"), "privacy": v.get("privacy"),
+             "stats": v.get("stats") or {}, "thumbnail": v.get("thumbnail") or ""}
+            for v in videos[:10]
+        ],
+        "read_at": _now(),
+    }
 
 @router.post("/channel-plan")
 async def channel_plan(body: ChannelPlanRequest, request: Request):
