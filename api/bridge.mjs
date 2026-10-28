@@ -300,7 +300,7 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch, g
       const message = known ? reasons[value.reason] : 'AI safety limits are unavailable. No provider request was sent.';
       throw new HttpError(['history_limit', 'paused'].includes(value.reason) ? 409 : known ? 429 : 503, message);
     }
-    if (typeof value.id !== 'string' || !UUID.test(value.id) || typeof value.finish_secret !== 'string' || !UUID.test(value.finish_secret) || !Number.isInteger(value.remaining_user) || value.remaining_user < 0 || value.remaining_user > 9) {
+    if (typeof value.id !== 'string' || !UUID.test(value.id) || typeof value.finish_secret !== 'string' || !UUID.test(value.finish_secret) || !(value.remaining_user === null || (Number.isSafeInteger(value.remaining_user) && value.remaining_user >= 0))) {
       throw new HttpError(503, 'AI safety limits returned an invalid response. No provider request was sent.');
     }
     // Never return this random capability to the browser or log it.
