@@ -79,3 +79,32 @@ and no real credentials. It stubs out edge-tts and image generation.
 Optional extras (SQLAlchemy/Alembic, passlib, Stripe, Celery, torch/numpy) live in
 `requirements-full.txt` and stay out of the Vercel bundle; enable the legacy routers with
 `ENABLE_EXTRA_ROUTERS=1`.
+
+## AI agents, Google/YouTube, skills and ViMax (Phase 2/3)
+
+The deployment runs with no AI key (built-in agents, `/yt-*`, Edge TTS, free
+Pollinations image route, timeline builder). Unlock stronger providers from the
+**Models & Providers → AI Keys / Server URLs** screen, or set them in Vercel:
+
+- Chat/images/voice: `OPENAI_API_KEY`, `GEMINI_API_KEY`, `ANTHROPIC_API_KEY`,
+  `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `ELEVENLABS_API_KEY`, `HF_TOKEN`
+- Hosted GPU: `FAL_KEY`, `REPLICATE_API_TOKEN`
+- YouTube OAuth: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`; redirect URI is
+  `https://bg-labs-backend.vercel.app/api/youtube/auth/callback`
+- Optional self-hosted repos: `COMFYUI_URL`, `COMFYUI_WORKFLOW`, `SD_WEBUI_URL`,
+  `INVOKEAI_URL`, `FOOOCUS_URL`, `FASTSD_URL`, `F5_TTS_URL`, `GPTSOVITS_URL`,
+  `OPENVOICE_URL`, `CHATTERBOX_URL`, `KOKORO_URL`, `FISH_SPEECH_URL`, `CHATTS_URL`,
+  `COQUI_URL`, `QWEN_TTS_URL`, `LIVETALKING_URL`, `MUSETALK_URL`, `SADTALKER_URL`,
+  `REALESRGAN_URL`, `RENDER_SERVICE_URL`
+- Model overrides are available for every hosted route, including
+  `GEMINI_VIDEO_MODEL`, `FAL_VEO_MODEL`, `FAL_SEEDANCE_MODEL`, `FAL_WAN_MODEL`,
+  `FAL_HUNYUAN_MODEL`, `REPLICATE_VIDEO_MODEL`, `REPLICATE_F5_TTS_MODEL`, and
+  `REPLICATE_SADTALKER_MODEL`.
+
+Vercel cannot execute CUDA/torch model weights, a browser desktop, or an FFmpeg
+binary. The backend therefore runs orchestration and connects those open-source
+repos to a hosted provider or your GPU worker. `/api/integrations` reports the
+truthful status of all requested repos (`active`, `ported`, `adapter`, `reference`).
+
+Key endpoints: `/api/models`, `/api/generate/{capability}`, `/api/vimax`,
+`/api/skills`, `/yt-script`, `/api/browse/research`, `/api/integrations`.

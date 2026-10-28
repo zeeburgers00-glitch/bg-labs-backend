@@ -138,8 +138,18 @@ app.add_middleware(
 
 # The web UI contract (index.html) - always mounted.
 from app.routes.frontend_api import router as frontend_router  # noqa: E402
+from app.routes.agents_api import router as agents_router  # noqa: E402
+from app.routes.youtube_connect import router as youtube_router  # noqa: E402
+from app.routes.skills_api import router as skills_router  # noqa: E402
+from app.routes.generation_api import router as generation_router  # noqa: E402
+from app.routes.vimax_api import router as vimax_router  # noqa: E402
 
 app.include_router(frontend_router)
+app.include_router(agents_router)
+app.include_router(youtube_router)
+app.include_router(skills_router)
+app.include_router(generation_router)
+app.include_router(vimax_router)
 
 loaded_optional_routers: List[str] = []
 if os.getenv("ENABLE_EXTRA_ROUTERS", "").lower() in ("1", "true", "yes"):

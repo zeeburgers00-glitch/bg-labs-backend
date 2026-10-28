@@ -23,6 +23,10 @@
       "dest": "main.py"
     },
     {
+      "src": "/(yt-[a-z]+|skills(/.*)?)",
+      "dest": "main.py"
+    },
+    {
       "src": "/",
       "dest": "/index.html"
     },
