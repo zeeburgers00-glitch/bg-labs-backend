@@ -1600,17 +1600,44 @@
         const button = document.getElementById('hubSendButton');
         const message = (input?.value || '').trim();
         if (!message) return;
-        const history = jarvisChatHistory.slice(-20).map(m => ({role:m.role, content:m.content}));
-        jarvisChatHistory.push({role:'user', content:message});
+
+        const history = jarvisChatHistory.slice(-20).map(m => ({role: m.role, content: m.content}));
+        jarvisChatHistory.push({role: 'user', content: message});
         input.value = '';
         if (button) button.disabled = true;
         renderHubMessages();
+
         try {
             const provider = document.getElementById('hubProviderSelect')?.value || undefined;
-            const result = await apiPost('/api/hub/chat', {message, history, provider});
-            jarvisChatHistory.push({role:'assistant', content:result.detail ? 'Setup needed: ' + result.detail : (result.reply || 'Empty response from provider.')});
+            const response = await fetch(API_BASE + '/api/hub/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? {'Authorization': 'Bearer ' + token} : {})
+                },
+                body: JSON.stringify({message, history, provider})
+            });
+            let result = {};
+            try { result = await response.json(); }
+            catch (_) { result = {detail: 'Server returned a non-JSON response.'}; }
+
+            if (response.status === 401) {
+                logout();
+                return;
+            }
+            if (!response.ok) {
+                const detail = result.detail;
+                const errorText = typeof detail === 'string'
+                    ? detail
+                    : (detail?.error || detail?.message || 'JARVIS request failed (HTTP ' + response.status + ').');
+                throw new Error(errorText);
+            }
+            if (typeof result.reply !== 'string' || !result.reply.trim()) {
+                throw new Error('AI provider returned an empty reply. Check the selected provider and try again.');
+            }
+            jarvisChatHistory.push({role: 'assistant', content: result.reply});
         } catch (error) {
-            jarvisChatHistory.push({role:'assistant', content:'Request failed: ' + (error.message || 'Unknown error')});
+            jarvisChatHistory.push({role: 'assistant', content: 'Request failed: ' + (error?.message || 'Unknown error')});
         } finally {
             if (button) button.disabled = false;
             renderHubMessages();
