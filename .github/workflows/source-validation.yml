@@ -50,6 +50,7 @@ jobs:
               '@router.post("/drive/import")',
               '@router.post("/chat")',
               '@router.post("/channel-plan")',
+              '@router.post("/channel-insights")',
               '@router.post("/channel-branding")',
               '@router.post("/content-plan")',
               '@router.get("/plans")',
@@ -84,6 +85,8 @@ jobs:
             "function openCommandPalette",
             "function renderPlanner",
             "function generateCreatorPlan",
+            "function courseAiQuickPrompt",
+            "function renderCourseAiInsights",
             "Course-trained YouTube AI",
             "navigate('planner')"
           ]) {
