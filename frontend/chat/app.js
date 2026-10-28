@@ -10,7 +10,7 @@
     facebook:{ready:false, configured:false, allowed:false, busy:false, saved:[], verified:null, autoAttempted:false, sequence:0, notice:'', error:''},
     workforce:{loaded:false, loading:false, busy:false, agentsLoaded:false, agentsLoading:false, reviewBusy:false, researchLoaded:false, researchLoading:false, researchReady:false, researchBusy:false},
   };
-  let autoConnectAfterLogin = false;
+  let offerChannelAfterLogin = false;
   const isCurrent = version => Boolean(state.user && state.version === version);
   const element = (tag, text, className = '') => {
     const item = document.createElement(tag);
@@ -369,19 +369,19 @@
       state.deployment.youtube = channel.configured ? 'configured_unverified' : 'unavailable';
       renderChannelList(); updateChannelControls();
       const savedDefault = channel.saved.find(item => item.is_default);
-      if (channel.connected) autoConnectAfterLogin = false;
+      if (channel.connected) offerChannelAfterLogin = false;
       else if (channel.configured && channel.allowed && savedDefault?.status === 'active' && !channel.autoAttempted && !channel.busy) {
-        autoConnectAfterLogin = false; channel.autoAttempted = true;
+        offerChannelAfterLogin = false; channel.autoAttempted = true;
         await selectChannel(version, savedDefault.id, true);
-      } else if (autoConnectAfterLogin) {
-        // Only a fresh Google sign-in started in this tab can launch the first
-        // channel consent automatically. A crafted callback URL alone cannot.
-        autoConnectAfterLogin = false;
-        if (channel.configured && channel.allowed && !channel.saved.length && !channel.busy) await startChannel(version);
-        else {
-          channel.notice = channel.saved.length ? 'Choose a saved channel or reconnect it with Google.' : 'Channel setup must be completed before you can connect.';
-          updateChannelControls(); showDialog('channel-dialog');
-        }
+      } else if (offerChannelAfterLogin) {
+        // App login and channel authorization are separate. A fresh login may
+        // offer the channel dialog, but must not navigate away to another OAuth
+        // flow until the user explicitly chooses to connect a channel.
+        offerChannelAfterLogin = false;
+        channel.notice = channel.saved.length ? 'Signed in. Choose a saved channel or reconnect it with Google.'
+          : channel.configured && channel.allowed ? 'Signed in. Choose Add channel with Google when you are ready to grant separate access.'
+          : 'Signed in. Channel setup must be completed before you can connect.';
+        updateChannelControls(); showDialog('channel-dialog');
       }
     } catch (error) {
       if (isCurrent(version) && sequence === state.channel.sequence && error.name !== 'AbortError') {
@@ -520,8 +520,8 @@
       if (url.protocol !== 'https:' || !/^[a-z0-9-]+\.supabase\.co$/.test(url.hostname) || url.port || url.username || url.password || url.hash
           || url.pathname !== '/auth/v1/authorize' || url.searchParams.get('provider') !== 'google') throw new Error('Invalid Google sign-in URL.');
       if (sequence !== state.sessionSequence || state.user) return;
-      // This nonsensitive, tab-scoped intent allows the first YouTube consent
-      // after app sign-in. URL parameters alone cannot trigger that redirect.
+      // This nonsensitive, tab-scoped intent allows an optional channel dialog
+      // after app sign-in. URL parameters alone cannot trigger that prompt.
       try { sessionStorage.setItem('vimax-google-channel-intent', String(Date.now())); } catch {}
       window.location.assign(url.href);
     } catch (error) {
@@ -772,7 +772,7 @@
   });
   $('logout').addEventListener('click', async () => {
     if (state.authBusy || !state.user) return;
-    state.authBusy = true; state.sessionSequence++; autoConnectAfterLogin = false;
+    state.authBusy = true; state.sessionSequence++; offerChannelAfterLogin = false;
     try { sessionStorage.removeItem('vimax-google-channel-intent'); } catch {}
     // Immediately discard owner data and ignore late requests. A provider call
     // already received by the server can still finish or incur charges.
@@ -1088,7 +1088,7 @@
     confirmation = sessionStorage.getItem('vimax-email-confirmed'); sessionStorage.removeItem('vimax-email-confirmed');
     if (googleResult) {
       const intent = sessionStorage.getItem('vimax-google-channel-intent'), age = Date.now() - Number(intent);
-      autoConnectAfterLogin = googleResult === 'success' && Boolean(intent) && age >= 0 && age < 600_000;
+      offerChannelAfterLogin = googleResult === 'success' && Boolean(intent) && age >= 0 && age < 600_000;
       sessionStorage.removeItem('vimax-google-channel-intent');
     }
   } catch {}
@@ -1096,7 +1096,7 @@
   renderMessages(); renderProviders(); renderChannelList(); renderFacebookList(); updateAccount(); updateChannelControls(); updateFacebookControls(); updateChatControls();
   void checkDeployment(); void checkGoogleSignIn();
   void checkSession().then(() => {
-    if (googleResult === 'success' && !state.user) { autoConnectAfterLogin = false; state.google.error = 'Google sign-in could not be confirmed. Try again.'; updateGoogleControls(); }
+    if (googleResult === 'success' && !state.user) { offerChannelAfterLogin = false; state.google.error = 'Google sign-in could not be confirmed. Try again.'; updateGoogleControls(); }
     if (confirmation && !state.user) {
       $('account-message').textContent = confirmation === 'yes' ? 'Email confirmed. Please sign in.' : 'Email confirmation failed or expired; please try again.';
       showDialog('account-dialog');

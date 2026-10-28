@@ -348,8 +348,8 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   assert.equal(posts.filter(value=>value==='/api/cloud/youtube/oauth/start').length,beforeAuto);
   await page.locator('#chat-prompt').fill('show my channel analytics');
   assert.equal(await page.locator('#chat-send').isDisabled(),true);
-  // Google app sign-in is first; reject untrusted redirect, then mock the
-  // Supabase callback and the first separately-consented channel authorization.
+  // Google app sign-in is first; reject untrusted redirects and do not start
+  // separate YouTube consent until the user explicitly chooses to connect.
   signedIn=false;await page.goto(`${base}/`,{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>!document.getElementById('google-signin').disabled);
   assert.equal(await page.getByRole('button',{name:'Continue with Google'}).isVisible(),true);
@@ -366,7 +366,10 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   await page.locator('#google-signin').click();await page.waitForURL('https://fake.supabase.co/**');
   assert.equal(new URL(appNavigation).pathname,'/auth/v1/authorize');
   signedIn=true;await page.goto(`${base}/skills/?google_signin=success`,{waitUntil:'domcontentloaded'});
-  await page.waitForURL('https://accounts.google.com/**');
+  await page.waitForFunction(()=>document.getElementById('channel-dialog').open && document.getElementById('channel-message').textContent.includes('Signed in. Choose Add channel'));
+  assert.equal(posts.filter(value=>value==='/api/cloud/youtube/oauth/start').length,beforeAuto);
+  assert.ok(page.url().startsWith(base),'app sign-in must not navigate away to YouTube automatically');
+  await page.locator('#google-connect').click();await page.waitForURL('https://accounts.google.com/**');
   assert.equal(posts.filter(value=>value==='/api/cloud/youtube/oauth/start').length,beforeAuto+1);
   // A saved channel restores without a second consent; it enables channel analytics.
   channels[bob]=[{id:channelB,channel_id:'UCabcdefghijklmnopqrstuv',channel_title:'Bob channel',status:'active',is_default:true}];selected[bob]=null;
