@@ -44,3 +44,7 @@ docker-compose.override.yml
 
 # local virtualenv
 .venv/
+
+# generated media (local runs / tests)
+storage/*/
+!storage/*/.gitkeep
