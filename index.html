@@ -1559,10 +1559,16 @@
                     <div class="grid grid-cols-1 xl:grid-cols-5 gap-6">
                         <section class="xl:col-span-3 glass-panel jarvis-chat-panel rounded-xl p-6">
                             <div class="flex justify-between items-center mb-4"><div><h3 class="text-xl font-semibold">Talk to JARVIS</h3><p class="text-sm text-gray-400">Requires a provider key in Vercel settings.</p></div><button onclick="clearHubChat()" class="text-sm text-gray-400 hover:text-white">Clear</button></div>
-                            ${configured ? '' : '<div class="mb-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-yellow-100 text-sm">No AI provider key is configured. Add GROQ_API_KEY in Vercel → Project Settings → Environment Variables, then redeploy. Never paste secrets into chat.</div>'}
+                            ${configured ? '' : '<div class="mb-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-yellow-100 text-sm">No AI provider keys are available to this deployment. Production secrets are only available in Production; a preview may show all providers as not configured. Add keys only through Vercel Environment Variables and keep paid usage disabled.</div>'}
                             <div id="hubMessages" class="space-y-3 min-h-40 max-h-96 overflow-y-auto mb-4"></div>
-                            <form onsubmit="sendHubChat(event)" class="flex gap-2"><input id="hubInput" maxlength="12000" placeholder="Ask JARVIS..." class="flex-1 min-w-0 bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-indigo-500"><button id="hubSendButton" type="submit" class="btn-primary px-5 py-3 rounded-lg"><i class="fa-solid fa-paper-plane"></i></button></form>
-                            <p class="text-xs text-gray-500 mt-3">Chat history is currently session-only. Windows control needs the separate local agent.</p>
+                            <div class="mb-2 flex flex-wrap items-center justify-between gap-2"><label for="hubProviderSelect" class="text-xs font-medium text-slate-400 uppercase tracking-wider">Free-tier AI provider</label><span class="text-xs text-slate-500">Model choice is locked to listed free/eligible models</span></div>
+                            <form onsubmit="sendHubChat(event)" class="space-y-2">
+                                <select id="hubProviderSelect" class="w-full bg-slate-900/90 border border-slate-700 rounded-lg px-3 py-3 text-white focus:outline-none focus:border-cyan-400">
+                                    ${providers.map(p => '<option value="' + hubEscape(p.id) + '"' + (p.configured ? '' : ' disabled') + '>' + hubEscape(p.name) + (p.configured ? ' · ready' : ' · configure key first') + '</option>').join('')}
+                                </select>
+                                <div class="flex gap-2"><input id="hubInput" maxlength="12000" placeholder="Ask JARVIS..." class="flex-1 min-w-0 bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-indigo-500"><button id="hubSendButton" type="submit" class="btn-primary px-5 py-3 rounded-lg"><i class="fa-solid fa-paper-plane"></i></button></div>
+                            </form>
+                            <p class="text-xs text-gray-500 mt-3">Chat history is currently session-only. Free tiers have rate limits; check provider billing settings. Windows control needs the separate local agent.</p>
                         </section>
                         <section class="xl:col-span-2 glass-panel rounded-xl p-6"><h3 class="text-xl font-semibold mb-4">AI Providers</h3><div class="space-y-3">${providers.map(p => `<div class="flex items-center justify-between p-3 rounded-lg bg-gray-900/60 border border-gray-800"><div><div class="font-medium">${hubEscape(p.name)}</div><div class="text-xs text-gray-500">${hubEscape(p.default_model)}</div><div class="text-xs text-gray-500 mt-1">${hubEscape(p.free_note || '')}</div></div><span class="text-xs ${p.configured ? 'text-green-300' : 'text-yellow-200'}">${p.configured ? 'Ready' : 'Needs key'}</span></div>`).join('')}</div><div class="mt-5 pt-4 border-t border-gray-800"><div class="text-sm font-medium mb-2">Media services</div>${mediaServices.map(m => `<div class="flex justify-between gap-3 text-sm py-2"><span>${hubEscape(m.name)}<span class="block text-xs text-gray-500">${hubEscape(m.free_note || '')}</span></span><span class="${m.configured ? 'text-green-300' : 'text-yellow-200'}">${m.configured ? 'Ready' : 'Needs key'}</span></div>`).join('')}</div>${excludedProviders.length ? '<div class="mt-4 text-xs text-gray-500">Not enabled in free-only mode: ' + excludedProviders.map(p => hubEscape(p.id)).join(', ') + '.</div>' : ''}<div class="mt-4 text-sm text-gray-400">Local models such as Ollama run on your Windows PC, not inside Vercel.</div></section>
                     </div>
@@ -1597,7 +1603,8 @@
         if (button) button.disabled = true;
         renderHubMessages();
         try {
-            const result = await apiPost('/api/hub/chat', {message, history});
+            const provider = document.getElementById('hubProviderSelect')?.value || undefined;
+            const result = await apiPost('/api/hub/chat', {message, history, provider});
             jarvisChatHistory.push({role:'assistant', content:result.detail ? 'Setup needed: ' + result.detail : (result.reply || 'Empty response from provider.')});
         } catch (error) {
             jarvisChatHistory.push({role:'assistant', content:'Request failed: ' + (error.message || 'Unknown error')});
