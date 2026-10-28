@@ -49,6 +49,27 @@
     </section>
 
     <main class="chat-layout">
+      <aside class="workspace-sidebar" aria-label="ViMax features">
+        <a class="sidebar-home" href="/" aria-label="ViMax home"><span class="sidebar-brand-mark">✦</span><span><strong>ViMax</strong><small>WORKSPACE</small></span></a>
+        <p class="sidebar-label">WORKSPACE</p>
+        <button type="button" class="sidebar-link active" data-sidebar-action="chat"><span>◈</span> AI Chat</button>
+        <button type="button" class="sidebar-link" data-workspace-action="video-plan"><span>▣</span> Video Factory</button>
+        <button type="button" class="sidebar-link" data-workspace-action="agent-factory"><span>✧</span> Agent Factory</button>
+        <button type="button" class="sidebar-link" data-workspace-action="creator"><span>▦</span> Creator Tools</button>
+        <button type="button" class="sidebar-link" data-workspace-action="automation"><span>⟳</span> Automation Lab</button>
+        <button type="button" class="sidebar-link" data-workspace-action="youtube"><span>▶</span> YouTube Channels</button>
+        <button type="button" class="sidebar-link" data-workspace-action="voice"><span>◖</span> Voice &amp; Models</button>
+        <button type="button" class="sidebar-link" data-workspace-action="integrations"><span>⌘</span> Skills &amp; Integrations</button>
+        <button type="button" class="sidebar-link" data-workspace-action="usage"><span>↗</span> Usage &amp; Status</button>
+        <button type="button" class="sidebar-link" data-workspace-action="research"><span>⌕</span> Research Desk</button>
+        <button type="button" class="sidebar-link" data-workspace-action="coding"><span>&lt;/&gt;</span> Code Assistant</button>
+        <button type="button" class="sidebar-link" data-workspace-action="social"><span>◎</span> Social Content</button>
+        <button type="button" class="sidebar-link" data-workspace-action="documents"><span>▤</span> Document Lab</button>
+        <div class="sidebar-spacer"></div>
+        <button type="button" class="sidebar-link" id="sidebar-account"><span>♙</span> Account &amp; Settings</button>
+      </aside>
+      <div class="chat-main">
+
       <div id="conversation" class="conversation">
         <section id="welcome" class="welcome" aria-labelledby="welcome-title">
           <div class="welcome-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2.5 14.3 9l6.6 3-6.6 2.9-2.3 6.6-2.3-6.6L3.1 12l6.6-3L12 2.5Z" fill="currentColor"/></svg></div>
@@ -85,6 +106,7 @@
         <p id="microphone-status" class="microphone-status" role="status" aria-live="polite" hidden></p>
         <p class="disclaimer">Your messages are sent to your selected AI provider. Responses can be inaccurate.</p>
         <p id="gateway-privacy" class="disclaimer" hidden>Vercel and Reflection receive your messages and may retain or use them to improve their services. Do not share secrets. Free inference is limited; separately configured team BYOK or add-ons may incur charges. There is no paid model fallback.</p>
+      </div>
       </div>
     </main>
   </div>
@@ -131,7 +153,7 @@
     <button class="secondary-button" id="provider-test" type="button" disabled>Test selected provider</button>
     <p class="hint">An optional live test sends “Reply with the word OK.” It counts as one attempt and can use up to 1,024 output tokens plus input; charges may apply. No fallback is used. A response verifies only that model at that moment.</p>
     <p class="hint" id="provider-test-message" role="status"></p>
-    <p class="hint">Prompts and replies are saved to your account until deleted. The selected provider receives the current prompt and up to three previous turns. A fallback may send them to another provider. Calls may cost money; 10 attempts per account and 50 shared attempts per UTC day are limits, not spending caps.</p>
+    <p class="hint">Prompts and replies are saved to your account until deleted. The selected provider receives the current prompt and up to three previous turns. A fallback may send them to another provider. ViMax does not enforce daily attempt caps. Provider quotas, account restrictions and billing still apply; failed requests may still incur charges.</p>
     <details class="role-plan"><summary>Provider setup status</summary>
       <p class="hint">Configuration checks never reveal or test credentials. Configured does not mean verified or free. Rotate keys exposed in chat and add replacements privately in the deployment's Sensitive environment variables; never paste them here.</p>
       <ul id="provider-status-list" aria-label="Provider configuration status"></ul>
