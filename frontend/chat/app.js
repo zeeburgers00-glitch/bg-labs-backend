@@ -784,7 +784,11 @@
     }
     if (action === 'voice') { showDialog('settings-dialog'); $('speak-replies').focus(); return; }
     if (action === 'usage') { showDialog('settings-dialog'); if (state.user && !state.chat.usageLoading) $('usage-refresh').click(); return; }
-    if (action === 'creator' || action === 'integrations' || action === 'agent-factory') {
+    if (action === 'integrations') {
+      window.location.assign('/chat/tools.html');
+      return;
+    }
+    if (action === 'creator' || action === 'agent-factory') {
       if (!state.user) { $('account-message').textContent = 'Sign in to open your private creator and agent workspace.'; showDialog('account-dialog'); return; }
       showDialog('workforce-dialog');
       void loadWorkforceRegistry(state.version); void loadAgentRegistry(state.version); void loadPublicResearchStatus(state.version);
