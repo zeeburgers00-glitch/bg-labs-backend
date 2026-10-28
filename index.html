@@ -1962,6 +1962,115 @@
     }
 
 
+
+    let creatorPlannerPlans = [];
+    let creatorPlannerCurrent = null;
+
+    async function renderPlanner() {
+        const c = document.getElementById('contentArea');
+        c.innerHTML = '<div class="glass-panel rounded-2xl p-8"><div class="loader mx-auto"></div><p class="text-center text-slate-500 mt-4">Loading creator calendar…</p></div>';
+        try {
+            const values = await Promise.all([
+                courseRequest('/api/course-ai/plans'),
+                courseRequest('/api/course-ai/status'),
+                courseRequest('/api/hub/providers')
+            ]);
+            creatorPlannerPlans = values[0].plans || [];
+            const status = values[1], providers = values[2].providers || [];
+            if (creatorPlannerCurrent) {
+                creatorPlannerCurrent = creatorPlannerPlans.find(p => String(p.id) === String(creatorPlannerCurrent.id)) || creatorPlannerCurrent;
+            } else {
+                creatorPlannerCurrent = creatorPlannerPlans[0] || null;
+            }
+            const providerOptions = providers.map(p => '<option value="'+hubEscape(p.id)+'"'+(p.configured?'':' disabled')+'>'+hubEscape(p.name)+(p.configured?' · ready':' · needs key')+'</option>').join('');
+            c.innerHTML = '<div class="max-w-7xl mx-auto space-y-6 fade-in">' +
+                '<section class="creator-hero"><div class="relative z-10 grid lg:grid-cols-[1.3fr_.7fr] gap-6 items-center">' +
+                '<div><div class="creator-eyebrow mb-4">EDITORIAL WORKSPACE</div><h2 class="creator-title text-white mb-4">Your next month,<br><span class="jarvis-gradient-text">already mapped.</span></h2>' +
+                '<p class="creator-subtitle mb-5">Build course-grounded daily video ideas, hooks, thumbnail concepts and calls to action. Plans are saved to your account so you can approve them and track production.</p>' +
+                '<div class="flex flex-wrap gap-2"><span class="creator-pill"><i class="fa-solid fa-database"></i>'+creatorPlannerPlans.length+' saved plan(s)</span><span class="creator-pill '+(status.course_ready?'good':'warn')+'"><i class="fa-solid fa-book"></i>'+(status.course_ready?'Course indexed':'Course needed')+'</span></div></div>' +
+                '<div class="grid grid-cols-2 gap-3"><div class="creator-stat"><div class="stat-label">Plans saved</div><div class="stat-value">'+creatorPlannerPlans.length+'</div><div class="text-xs text-slate-500 mt-1">Persistent in Supabase</div></div><div class="creator-stat"><div class="stat-label">Course passages</div><div class="stat-value">'+(status.chunks||0)+'</div><div class="text-xs text-slate-500 mt-1">Retrieved at generation time</div></div></div></div></section>' +
+                '<div class="grid xl:grid-cols-[.78fr_1.22fr] gap-5"><section class="glass-panel rounded-2xl p-5 h-fit"><div class="creator-eyebrow mb-2">NEW PLAN</div><h3 class="creator-section-title text-lg">Tell JARVIS your goal</h3><p class="creator-section-note mt-1">Use your course as the source of truth. AI suggestions are drafts, not scheduled uploads.</p>' +
+                '<label class="block text-xs text-slate-400 mt-5 mb-2" for="creatorPlanGoal">Channel goal / niche</label><textarea id="creatorPlanGoal" rows="5" class="w-full bg-slate-950/70 border border-slate-700 rounded-xl p-3 text-sm" placeholder="Example: A faceless Urdu channel teaching practical AI tools to beginners. Focus on trustworthy tutorials and Shorts."></textarea>' +
+                '<label class="block text-xs text-slate-400 mt-4 mb-2" for="creatorPlanDays">Planning horizon</label><select id="creatorPlanDays" class="w-full bg-slate-950/70 border border-slate-700 rounded-xl p-3 text-sm"><option value="7">7 days · one week</option><option value="14">14 days · two weeks</option><option value="30">30 days · one month</option></select>' +
+                '<label class="block text-xs text-slate-400 mt-4 mb-2" for="creatorPlanProvider">AI model provider</label><select id="creatorPlanProvider" class="w-full bg-slate-950/70 border border-slate-700 rounded-xl p-3 text-sm">'+providerOptions+'</select>' +
+                '<button id="creatorPlanGenerate" onclick="generateCreatorPlan()" class="mt-5 w-full btn-primary rounded-xl py-3 font-semibold"><i class="fa-solid fa-wand-magic-sparkles mr-2"></i>Generate course-based plan</button>' +
+                '<p id="creatorPlanGenerateStatus" class="text-xs text-slate-500 mt-3">'+(status.course_ready?'Course library is ready for retrieval.':'Import your Drive course in Course-trained YouTube AI before generating a plan.')+'</p></section>' +
+                '<section class="glass-panel rounded-2xl p-5 min-w-0"><div class="flex flex-wrap items-center justify-between gap-3"><div><div class="creator-eyebrow mb-2">CURRENT PLAN</div><h3 class="creator-section-title text-lg">'+(creatorPlannerCurrent?hubEscape(creatorPlannerCurrent.name):'No saved calendar yet')+'</h3><p class="creator-section-note mt-1">'+(creatorPlannerCurrent?hubEscape(creatorPlannerCurrent.goal||''):'Generate your first course-grounded calendar to see it here.')+'</p></div>' +
+                (creatorPlannerCurrent?'<span class="creator-pill '+plannerStatusClass(creatorPlannerCurrent.status)+'">'+plannerStatusLabel(creatorPlannerCurrent.status)+'</span>':'')+'</div>' +
+                '<div id="creatorPlanContent" class="mt-5">'+renderCreatorPlanContent(creatorPlannerCurrent)+'</div></section></div>' +
+                '<section class="glass-panel rounded-2xl p-5"><div class="flex items-end justify-between gap-3 mb-4"><div><div class="creator-eyebrow mb-2">PLAN LIBRARY</div><h3 class="creator-section-title text-lg">Saved calendars</h3><p class="creator-section-note mt-1">“Complete” tracks production progress; it does not claim that a video was published.</p></div></div>' +
+                '<div class="grid md:grid-cols-2 xl:grid-cols-3 gap-3">'+(creatorPlannerPlans.length?creatorPlannerPlans.map(p=>'<button onclick="openCreatorPlan('+Number(p.id)+')" class="text-left rounded-xl p-4 border '+(creatorPlannerCurrent&&String(p.id)===String(creatorPlannerCurrent.id)?'border-cyan-300/40 bg-cyan-300/5':'border-slate-700/70 bg-slate-950/30 hover:border-slate-500')+'"><div class="flex items-start justify-between gap-2"><span class="text-sm font-semibold text-slate-200">'+hubEscape(p.name||'YouTube calendar')+'</span><span class="creator-pill '+plannerStatusClass(p.status)+'">'+plannerStatusLabel(p.status)+'</span></div><p class="text-xs text-slate-500 mt-3">'+(p.days||p.items?.length||0)+' content ideas</p><p class="text-xs text-slate-600 mt-1">'+(p.created_at?hubEscape(new Date(p.created_at).toLocaleDateString()):'Saved plan')+'</p></button>').join(''):'<div class="text-sm text-slate-500 py-8 text-center md:col-span-2 xl:col-span-3">Your saved content plans will appear here.</div>')+'</div></section>' +
+                '</div>';
+        } catch (error) {
+            c.innerHTML = '<div class="glass-panel rounded-2xl p-6"><h2 class="text-xl font-bold">Creator Calendar could not load</h2><p class="text-sm text-slate-400 mt-2">'+hubEscape(error.message||'Unknown error')+'</p><button onclick="renderPlanner()" class="btn-primary mt-4 px-4 py-2 rounded-lg">Retry</button></div>';
+        }
+    }
+
+    function plannerStatusLabel(status) {
+        return ({draft:'Draft',approved:'Approved',in_production:'In production',complete:'Production complete'})[status] || 'Draft';
+    }
+    function plannerStatusClass(status) {
+        return status==='approved'?'good':status==='in_production'?'warn':status==='complete'?'good':'';
+    }
+    function renderCreatorPlanContent(plan) {
+        if (!plan) return '<div class="py-12 text-center"><div class="w-14 h-14 mx-auto rounded-2xl bg-cyan-300/5 border border-cyan-300/10 grid place-items-center text-cyan-200"><i class="fa-solid fa-calendar-plus text-xl"></i></div><p class="text-sm text-slate-300 mt-4">Your calendar appears here</p><p class="text-xs text-slate-500 mt-1">Start with 7 days to test your niche and workflow.</p></div>';
+        const items = plan.items || [];
+        const actions = [];
+        if (plan.status === 'draft') actions.push(['approved','Approve plan']);
+        if (plan.status === 'approved') actions.push(['in_production','Start production']);
+        if (plan.status === 'in_production') actions.push(['complete','Mark production complete']);
+        if (plan.status !== 'draft') actions.push(['draft','Return to draft']);
+        return '<div class="flex flex-wrap gap-2 mb-4">'+actions.map(a=>'<button onclick="setCreatorPlanStatus('+Number(plan.id)+',\''+a[0]+'\')" class="text-xs px-3 py-2 rounded-lg border border-slate-600/70 hover:border-cyan-300/40 bg-slate-900/50">'+hubEscape(a[1])+'</button>').join('')+
+            '<button onclick="copyCreatorPlan('+Number(plan.id)+')" class="text-xs px-3 py-2 rounded-lg border border-slate-600/70 hover:border-cyan-300/40"><i class="fa-regular fa-copy mr-1"></i>Copy plan</button></div>'+
+            '<div class="space-y-3 max-h-[820px] overflow-y-auto pr-1">'+items.map(item=>'<article class="rounded-xl border border-slate-700/70 bg-slate-950/35 p-4"><div class="flex items-start gap-3"><div class="creator-step">D'+Number(item.day||0)+'</div><div class="flex-1 min-w-0"><div class="flex flex-wrap gap-2 items-center mb-2"><span class="creator-pill">'+hubEscape(item.format||'Video')+'</span><span class="text-[10px] text-slate-600">'+hubEscape(item.status||'draft')+'</span></div><h4 class="text-sm font-semibold text-slate-100">'+hubEscape(item.title||'Content idea')+'</h4>' +
+            (item.hook?'<p class="text-xs text-cyan-100/80 mt-2"><span class="text-slate-500">HOOK</span> · '+hubEscape(item.hook)+'</p>':'')+
+            (item.brief?'<p class="text-xs text-slate-400 leading-relaxed mt-2">'+hubEscape(item.brief)+'</p>':'')+
+            '<div class="grid sm:grid-cols-2 gap-2 mt-3">'+(item.thumbnail_concept?'<div class="text-xs text-slate-400 bg-slate-900/60 rounded-lg p-2"><span class="block text-[10px] uppercase tracking-wider text-slate-600 mb-1">Thumbnail idea</span>'+hubEscape(item.thumbnail_concept)+'</div>':'')+(item.call_to_action?'<div class="text-xs text-slate-400 bg-slate-900/60 rounded-lg p-2"><span class="block text-[10px] uppercase tracking-wider text-slate-600 mb-1">Call to action</span>'+hubEscape(item.call_to_action)+'</div>':'')+'</div>'+
+            (item.tags?.length?'<div class="flex flex-wrap gap-1 mt-3">'+item.tags.map(t=>'<span class="text-[10px] text-slate-500 bg-slate-800/80 rounded px-2 py-1">'+hubEscape(t)+'</span>').join('')+'</div>':'')+'</div></div></article>').join('')+'</div>'+
+            '<div class="creator-divider my-4"></div><div class="text-[11px] text-slate-500">Sources: '+((plan.course_sources||[]).map(s=>hubEscape(s.title)).join(' · ')||'Course sources attached at generation time')+'</div>';
+    }
+    async function generateCreatorPlan() {
+        const button=document.getElementById('creatorPlanGenerate');
+        const status=document.getElementById('creatorPlanGenerateStatus');
+        const goal=(document.getElementById('creatorPlanGoal')?.value||'').trim()||'Build a consistent YouTube publishing plan using the course lessons.';
+        const days=Number(document.getElementById('creatorPlanDays')?.value||7);
+        const provider=document.getElementById('creatorPlanProvider')?.value||undefined;
+        button.disabled=true; button.innerHTML='<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Building course-based calendar…';
+        status.textContent='Retrieving course passages, drafting daily ideas and saving your plan to Supabase…';
+        try {
+            const data=await courseRequest('/api/course-ai/content-plan','POST',{goal:goal,days:days,provider:provider});
+            creatorPlannerCurrent=data.plan;
+            toast('Content calendar saved. Review it before production.','success');
+            await renderPlanner();
+        } catch(error) {
+            status.textContent=error.message||'Calendar generation failed.';
+            toast(status.textContent,'error');
+        } finally {
+            const b=document.getElementById('creatorPlanGenerate');
+            if(b){b.disabled=false;b.innerHTML='<i class="fa-solid fa-wand-magic-sparkles mr-2"></i>Generate course-based plan';}
+        }
+    }
+    function openCreatorPlan(id) {
+        creatorPlannerCurrent=creatorPlannerPlans.find(p=>String(p.id)===String(id)||p.id===id)||null;
+        renderPlanner();
+    }
+    async function setCreatorPlanStatus(id,status) {
+        try {
+            const updated=await courseRequest('/api/course-ai/plans/'+encodeURIComponent(id)+'/status','POST',{status:status});
+            if(creatorPlannerCurrent) { creatorPlannerCurrent.status=updated.status; creatorPlannerCurrent.updated_at=updated.updated_at; }
+            toast('Plan status updated: '+plannerStatusLabel(updated.status),'success');
+            await renderPlanner();
+        } catch(error) { toast(error.message||'Could not update plan status.','error'); }
+    }
+    async function copyCreatorPlan(id) {
+        const p=creatorPlannerPlans.find(x=>String(x.id)===String(id))||creatorPlannerCurrent;
+        if(!p)return;
+        const text=p.items.map(i=>'Day '+i.day+' ['+i.format+'] '+i.title+'\nHook: '+i.hook+'\nThumbnail: '+i.thumbnail_concept+'\nBrief: '+i.brief+'\nCTA: '+i.call_to_action+'\nTags: '+(i.tags||[]).join(', ')).join('\n\n');
+        try { await navigator.clipboard.writeText(text); toast('Calendar copied to clipboard.','success'); }
+        catch(_) { toast('Clipboard permission was denied by the browser.','error'); }
+    }
+
+
     async function renderYouTube() {
         const content = document.getElementById('contentArea');
         content.innerHTML = `
