@@ -29,7 +29,7 @@
     $('ai-pause').textContent = state.paused ? 'Resume my provider calls' : 'Pause my provider calls';
     $('ai-provider').disabled = state.busy || !configured().length;
     $('ai-model').disabled = state.busy || !configured().length;
-    $('ai-fallback').disabled = state.busy || !configured().length;
+    $('ai-fallback').disabled = state.busy || !configured().length || $('ai-provider').value === 'vercel';
   }
   function chooseModels() {
     const select = $('ai-model'), old = select.value;
@@ -38,6 +38,7 @@
     if (!provider) option(select, '', 'No model configured');
     else for (const model of provider.models) option(select, model, model);
     if (Array.from(select.options).some(o => o.value === old)) select.value = old;
+    if (provider?.id === 'vercel') $('ai-fallback').value = '';
     updateControls();
   }
   function renderAccess() {

@@ -19,7 +19,7 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   let confirm=true;page.on('dialog',dialog=>confirm?dialog.accept():dialog.dismiss());
   const alice='aaaaaaaa-0000-4000-8000-000000000001',bob='bbbbbbbb-0000-4000-8000-000000000002';
   const channelA='12345678-0000-4000-8000-000000000010',channelB='12345678-0000-4000-8000-000000000011';
-  let signedIn=false,current=alice,configured=false,allowed=true,paused=false,googleConfigured=false,googleAllowed=true,appLoginEnabled=false,fbConfigured=false;
+  let signedIn=false,current=alice,configured=false,gatewayConfigured=false,allowed=true,paused=false,googleConfigured=false,googleAllowed=true,appLoginEnabled=false,fbConfigured=false;
   let googleStatusFailure=false,sessionFailure=false;
   let analyticsEnabled=false,analyticsGranted=false,analyticsMode='ok';
   let authorizationUrl='https://accounts.google.com/o/oauth2/v2/auth?state=mock',appAuthorizationUrl='https://fake.supabase.co/auth/v1/authorize?provider=google',holdChat=false,holdOAuth=false,holdProviders=false,releaseChat,releaseOAuth,releaseProviders,notifyChat,notifyOAuth,notifyProviders;
@@ -58,7 +58,7 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
    else if(p==='/api/cloud/logout'){signedIn=false;data={ok:true};}
    else if(p==='/api/cloud/providers'){
     if(holdProviders)await new Promise(resolve=>{releaseProviders=resolve;notifyProviders();});
-    data={providers:configured?[{id:'groq',label:'Groq',state:'configured_unverified',models:['openai/gpt-oss-120b','llama-3.1-8b-instant']},{id:'openai',label:'OpenAI',state:'configured_unverified',models:['gpt-5.4-mini']}]:[],allowed,paused};
+    data={providers:configured?[...(gatewayConfigured?[{id:'vercel',label:'Vercel · Reflection Free',state:'configured_unverified',models:['reflection/beam-free']}]:[]),{id:'groq',label:'Groq',state:'configured_unverified',models:['openai/gpt-oss-120b','llama-3.1-8b-instant']},{id:'openai',label:'OpenAI',state:'configured_unverified',models:['gpt-5.4-mini']}]:[],allowed,paused};
    }
    else if(p==='/api/cloud/chat/history' && m==='GET')data={turns:[...histories[current]].reverse()};
    else if(p==='/api/cloud/chat/history' && m==='DELETE'){histories[current]=[];data={ok:true};}
@@ -134,7 +134,7 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   await page.locator('#account-form button[value=login]').click();await providersReached;
   await page.waitForFunction(()=>document.getElementById('account-button').textContent==='Account' && !document.getElementById('account-dialog').open);
   releaseProviders();holdProviders=false;
-  await page.waitForFunction(()=>document.getElementById('chat-status').textContent.includes('channel setup is incomplete'));
+  await page.waitForFunction(()=>document.getElementById('chat-status').textContent.includes('No AI provider is configured'));
   assert.equal(loginBodies.length,1);assert.equal(await page.locator('#google-connect').isDisabled(),true);
   await page.locator('#chat-prompt').fill('Hello');await page.locator('#chat-form').dispatchEvent('submit');
   assert.equal(chatBodies.length,0,'unconfigured chat must not call the provider');
@@ -185,9 +185,26 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   await page.waitForFunction(()=>document.getElementById('messages').textContent.includes('Bob private question'));
   assert.doesNotMatch(await page.locator('#messages').textContent(),/Alice private|Private pending/);
   assert.equal(await page.locator('#channel-manage').isHidden(),true);
-  // Validate redirect origin and prevent a late OAuth start from navigating after logout.
+  // General chat works without a YouTube grant; analytics still requires one.
+  gatewayConfigured=true;await page.reload({waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>document.getElementById('provider').value==='vercel');
+  assert.equal(await page.locator('#gateway-privacy').isVisible(),true);
+  assert.match(await page.locator('#gateway-privacy').textContent(),/Vercel and Reflection.*retain or use/i);
+  await page.locator('#chat-prompt').fill('Hello without a channel');
+  await page.waitForFunction(()=>!document.getElementById('chat-send').disabled);
+  await page.locator('#chat-send').click();
+  await page.waitForFunction(()=>document.getElementById('chat-status').textContent.includes('request attempt'));
+  assert.equal(chatBodies.at(-1).provider,'vercel');assert.equal(chatBodies.at(-1).fallback,null);
+  await page.locator('#chat-settings').click();assert.equal(await page.locator('#fallback').isDisabled(),true);
+  await page.locator('#provider').selectOption('groq');await page.locator('#fallback').selectOption('vercel|reflection/beam-free');
+  assert.equal(await page.locator('#gateway-privacy').evaluate(el=>el.hidden),false);
+  await page.locator('#provider').selectOption('vercel');assert.equal(await page.locator('#fallback').inputValue(),'');
+  assert.equal(await page.locator('#fallback').isDisabled(),true);await page.locator('[data-close=settings-dialog]').click();
+  await page.locator('#chat-prompt').fill('show my channel analytics');
   assert.match(await page.locator('#chat-status').textContent(),/Connect a YouTube channel/);
   assert.equal(await page.locator('#chat-send').isDisabled(),true);
+  await page.locator('#chat-prompt').fill('');gatewayConfigured=false;
+  // Validate redirect origin and prevent a late OAuth start from navigating after logout.
   authorizationUrl='https://example.invalid/steal';await page.locator('#account-button').click();await page.locator('#channel-manage').click();await page.locator('#google-connect').click();
   await page.waitForFunction(()=>document.getElementById('channel-error').textContent.includes('Invalid Google authorization URL'));
   assert.ok(page.url().startsWith(base));await page.locator('[data-close=channel-dialog]').click();
@@ -216,8 +233,9 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   // A forged success query without this tab's login intent cannot start channel consent.
   appLoginEnabled=true;signedIn=true;current=bob;const beforeAuto=posts.filter(value=>value==='/api/cloud/youtube/oauth/start').length;
   await page.goto(`${base}/skills/?google_signin=success`,{waitUntil:'domcontentloaded'});
-  await page.waitForFunction(()=>document.getElementById('chat-status').textContent.includes('Connect a YouTube channel'));
+  await page.waitForFunction(()=>document.getElementById('channel-status').textContent.includes('Connect your YouTube channel'));
   assert.equal(posts.filter(value=>value==='/api/cloud/youtube/oauth/start').length,beforeAuto);
+  await page.locator('#chat-prompt').fill('show my channel analytics');
   assert.equal(await page.locator('#chat-send').isDisabled(),true);
   // Google app sign-in is first; reject untrusted redirect, then mock the
   // Supabase callback and the first separately-consented channel authorization.
@@ -235,7 +253,7 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   signedIn=true;await page.goto(`${base}/skills/?google_signin=success`,{waitUntil:'domcontentloaded'});
   await page.waitForURL('https://accounts.google.com/**');
   assert.equal(posts.filter(value=>value==='/api/cloud/youtube/oauth/start').length,beforeAuto+1);
-  // A saved channel restores without a second consent; it gates the composer.
+  // A saved channel restores without a second consent; it enables channel analytics.
   channels[bob]=[{id:channelB,channel_id:'UCabcdefghijklmnopqrstuv',channel_title:'Bob channel',status:'active',is_default:true}];selected[bob]=null;
   await page.goto(`${base}/skills/?youtube=connected#youtube`,{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>document.getElementById('channel-status').textContent.includes('Bob channel'));

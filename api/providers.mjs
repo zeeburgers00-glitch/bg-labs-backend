@@ -1,6 +1,9 @@
 // Server-only, fixed-host provider adapters. Browser input can choose only a
 // configured provider/model; it never supplies a URL, key, or arbitrary model.
 const SPECS = Object.freeze([
+  // The bridge injects a fresh Vercel request-context token, never browser input
+  // or a durable user-supplied key. The model and provider cannot be overridden.
+  {id:'vercel', label:'Vercel · Reflection Free', key:'VIMAX_GATEWAY_REQUEST_TOKEN', enabled:'VIMAX_GATEWAY_FREE_ENABLED', defaults:['reflection/beam-free'], allowedModels:['reflection/beam-free'], url:'https://ai-gateway.vercel.sh/v1/chat/completions'},
   {id:'openai', label:'OpenAI', key:'OPENAI_API_KEY', models:'OPENAI_MODELS', defaults:['gpt-5.4-mini','gpt-5.4'], url:'https://api.openai.com/v1/chat/completions', maxTokenField:'max_completion_tokens'},
   {id:'groq', label:'Groq', key:'GROQ_API_KEY', models:'GROQ_MODELS', defaults:['openai/gpt-oss-120b','llama-3.1-8b-instant'], url:'https://api.groq.com/openai/v1/chat/completions'},
   // Google limits 2.5 Flash for new projects; prefer its current Flash model.
@@ -27,11 +30,14 @@ function validKey(value) {
   return typeof value === 'string' && /^[\x21-\x7e]{1,2048}$/.test(value);
 }
 function configuration(env, spec) {
+  if (spec.enabled && env[spec.enabled] !== 'true') return {state:'not_configured', models:[]};
   const key = env[spec.key] || '';
-  const raw = env[spec.models];
+  const raw = spec.models ? env[spec.models] : undefined;
   const models = raw === undefined || raw === '' ? spec.defaults : String(raw).split(',').map(s => s.trim());
   if (!key) return {state:'not_configured', models:[]};
-  if (!validKey(key)) return {state:'invalid_configuration', models:[]};
+  // OIDC JWTs can be longer than ordinary provider API keys.
+  const valid = spec.id === 'vercel' ? typeof key === 'string' && /^[A-Za-z0-9._-]{1,8192}$/.test(key) : validKey(key);
+  if (!valid) return {state:'invalid_configuration', models:[]};
   if (!models.length) return {state:'model_required', models:[]};
   if (models.length > 10 || new Set(models).size !== models.length || models.some(m => !MODEL.test(m) || (spec.allowedModels && !spec.allowedModels.includes(m)))) {
     return {state:'invalid_configuration', models:[]};
@@ -93,20 +99,45 @@ async function readResponse(response) {
 function safeCount(value) {
   return Number.isSafeInteger(value) && value >= 0 && value <= 10_000_000 ? value : null;
 }
+
+// Check the fixed public catalog before every free-route call. This is a
+// fail-closed check of published Gateway prices, not a guarantee against team
+// BYOK or add-on charges. It must never turn into a paid model fallback.
+async function requireFreeGatewayEndpoint(fetchImpl) {
+  try {
+    const response = await fetchImpl('https://ai-gateway.vercel.sh/v1/models/reflection/beam-free/endpoints', {
+      method:'GET', signal:AbortSignal.timeout(12_000), redirect:'error', cache:'no-store'
+    });
+    const catalog = await readResponse(response);
+    const endpoints = catalog?.data?.endpoints;
+    const endpoint = Array.isArray(endpoints) && endpoints.find(item => item?.provider_name === 'reflection');
+    const prices = endpoint?.pricing;
+    const zero = value => (typeof value === 'number' && Number.isFinite(value) && value === 0)
+      || (typeof value === 'string' && value.length <= 32 && /^0+(?:\.0+)?$/.test(value));
+    if (catalog?.data?.id !== 'reflection/beam-free' || endpoint?.status !== 0 || !Array.isArray(endpoint?.tags) || !endpoint.tags.includes('free')
+        || !prices || typeof prices !== 'object' || Array.isArray(prices)
+        || !['prompt','completion','request'].every(key => Object.hasOwn(prices, key) && zero(prices[key]))
+        || !Object.values(prices).every(zero)) throw new Error('Free endpoint is not confirmed.');
+  } catch {
+    throw new ProviderError(503, 'Free AI pricing or availability could not be verified. No AI generation was sent.');
+  }
+}
 // Explicitly bound reasoning for the documented models below. Other models
 // keep their provider defaults rather than receiving an incompatible parameter.
 function reasoningOptions(id, model) {
+  if (id === 'vercel') return {reasoning:{effort:'low', exclude:true}, providerOptions:{gateway:{only:['reflection'], has:['free']}}};
   if (id === 'groq' && /^openai\/gpt-oss-(?:20b|120b)$/.test(model)) return {reasoning_effort:'low', reasoning_format:'hidden'};
   if (id === 'gemini' && ['gemini-3.8-flash','gemini-4-argon'].includes(model)) return {reasoning_effort:'low'};
   return {};
 }
 export function providerTestTokens(id, model) {
   // Thinking models may use the small probe budget before producing an answer.
-  return id === 'gemini' || (id === 'groq' && /^openai\/gpt-oss-(?:20b|120b)$/.test(model)) ? 1024 : 16;
+  return id === 'vercel' || id === 'gemini' || (id === 'groq' && /^openai\/gpt-oss-(?:20b|120b)$/.test(model)) ? 1024 : 16;
 }
 export async function chatCompletion({env, fetchImpl, id, model, messages, maxTokens = 600}) {
   const {spec, key} = selected(env, id, model);
   if (!Number.isInteger(maxTokens) || maxTokens < 1 || maxTokens > 1600) throw new ProviderError(422, 'Invalid response-length limit.');
+  if (id === 'vercel') await requireFreeGatewayEndpoint(fetchImpl);
   let value;
   try {
     const response = await fetchImpl(spec.url, {method:'POST', headers:{authorization:`Bearer ${key}`, 'content-type':'application/json'},

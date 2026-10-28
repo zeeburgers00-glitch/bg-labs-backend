@@ -3,6 +3,18 @@
   "version": "0.2.0",
   "private": true,
   "type": "module",
-  "scripts": {"build": "node build.mjs"},
-  "engines": {"node": ">=22"}
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@vercel/oidc": "4.0.4"
+  },
+  "overrides": {
+    "@vercel/cli-config": {
+      "zod": "4.6.7"
+    }
+  }
 }

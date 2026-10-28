@@ -1,5 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
 import {patchApi, patchApp, patchSessionWarning} from '../scripts/apply-overlay.mjs';
 import {secureUpstream} from '../scripts/secure-upstream.mjs';
 import bridge from '../api/bridge.mjs';
@@ -61,7 +62,9 @@ test('the optional cloud warning is surfaced without changing local sessions', (
   assert.throws(() => patchSessionWarning('bad', 'bad'), /did not match/);
 });
 
-test('Vercel web entry exports the same tested handler', async () => {
-  const deployed = await import('../web/api/bridge.mjs');
-  assert.equal(deployed.default, bridge);
+test('Vercel web entry injects request-scoped OIDC into the canonical bridge', async () => {
+  const source = await readFile(new URL('../web/api/bridge.mjs', import.meta.url), 'utf8');
+  assert.match(source, /import \{getVercelOidcTokenSync\} from '@vercel\/oidc'/);
+  assert.match(source, /import \{createBridge\} from '\.\.\/\.\.\/api\/bridge\.mjs'/);
+  assert.match(source, /createBridge\(\{getGatewayToken:getVercelOidcTokenSync\}\)/);
 });

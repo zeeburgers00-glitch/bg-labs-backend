@@ -188,7 +188,16 @@ function missionJobInput(input) {
   return {p_channel_id:input.channel_id,p_client_key:input.client_key,p_topic:topic,p_provider:input.provider,p_model:input.model,p_not_before:when};
 }
 
-export function createBridge({env = process.env, fetchImpl = globalThis.fetch} = {}) {
+export function createBridge({env = process.env, fetchImpl = globalThis.fetch, getGatewayToken} = {}) {
+  // Resolve on each request from Vercel's trusted request context. Never read
+  // a request header, cache the token, mutate process.env, or return it to JS.
+  async function providerEnv() {
+    const runtime = {...env, VIMAX_GATEWAY_REQUEST_TOKEN:''};
+    if (env.VIMAX_GATEWAY_FREE_ENABLED === 'true' && typeof getGatewayToken === 'function') {
+      try { runtime.VIMAX_GATEWAY_REQUEST_TOKEN = await getGatewayToken(); } catch { /* status remains unconfigured */ }
+    }
+    return runtime;
+  }
   function config() {
     let url;
     try { url = new URL(env.SUPABASE_URL || ''); } catch { throw new HttpError(503, 'Supabase is not configured on this deployment.'); }
@@ -371,7 +380,7 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch} =
 
       if (method === 'GET' && path === '/api/health') {
         await databaseReady();
-        return json({ok:true, database:'connected', text_chat:providerStatus(env).some(p => p.state === 'configured_unverified') ? 'configured_unverified' : 'unconfigured', video_agent:'unavailable', gpu_preview:gpu.configured() ? 'configured_unverified' : 'unconfigured', youtube_upload:youtube.configured(request) ? 'configured_unverified' : 'unavailable'});
+        return json({ok:true, database:'connected', text_chat:providerStatus(await providerEnv()).some(p => p.state === 'configured_unverified') ? 'configured_unverified' : 'unconfigured', video_agent:'unavailable', gpu_preview:gpu.configured() ? 'configured_unverified' : 'unconfigured', youtube_upload:youtube.configured(request) ? 'configured_unverified' : 'unavailable'});
       }
       if (method === 'GET' && path === '/api/sessions') {
         await databaseReady();
@@ -383,7 +392,7 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch} =
       }
       if (method === 'GET' && path === '/api/skills/system') {
         await databaseReady();
-        return json({local_only:false, database_connected:true, text_chat:providerStatus(env).some(p => p.state === 'configured_unverified') ? 'configured_unverified' : 'unconfigured', gpu_preview:gpu.configured() ? 'configured_unverified' : 'unconfigured', youtube_upload:youtube.configured(request) ? 'configured_unverified' : 'unavailable', ready_for_video:false, piper_installed:false, ffmpeg_installed:false, scene_detection_installed:false,
+        return json({local_only:false, database_connected:true, text_chat:providerStatus(await providerEnv()).some(p => p.state === 'configured_unverified') ? 'configured_unverified' : 'unconfigured', gpu_preview:gpu.configured() ? 'configured_unverified' : 'unconfigured', youtube_upload:youtube.configured(request) ? 'configured_unverified' : 'unavailable', ready_for_video:false, piper_installed:false, ffmpeg_installed:false, scene_detection_installed:false,
           voices:[], hardware:{logical_cpus:null, memory_gib:null, home_disk_free_gib:null, nvidia_gpu:null}, warnings:[AGENT_UNAVAILABLE]});
       }
       if (method === 'GET' && path === '/api/cloud/session') {
@@ -543,7 +552,7 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch} =
         if (!preferences.response.ok || !Array.isArray(preferences.value) || preferences.value.length > 1 || (preferences.value.length && typeof preferences.value[0].paused !== 'boolean')) {
           throw new HttpError(503, 'AI safety settings are temporarily unavailable.');
         }
-        return json({providers:providerStatus(env), pexels:pexelsStatus(env), allowed:aiAllowed(session), paused:preferences.value[0]?.paused ?? false,
+        return json({providers:providerStatus(await providerEnv()), pexels:pexelsStatus(env), allowed:aiAllowed(session), paused:preferences.value[0]?.paused ?? false,
           hackerai:{state:'unsupported', reason:'Its private API endpoint has not been verified for this deployment.'},
           limits:{user_daily_attempts:10, global_daily_attempts:50, history_turns:200}}, 200, session.updates);
       }
@@ -558,9 +567,10 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch} =
       if (method === 'POST' && path === '/api/cloud/providers/test') {
         const session = await authenticated(); requireAiAccess(session);
         const input = await body(request);
-        validateSelection(env, input.provider, input.model);
+        const runtime = await providerEnv();
+        validateSelection(runtime, input.provider, input.model);
         const selection = {provider:input.provider, model:input.model};
-        const tested = await attempt(session, 'provider_test', selection, () => chatCompletion({env, fetchImpl, id:selection.provider, model:selection.model,
+        const tested = await attempt(session, 'provider_test', selection, () => chatCompletion({env:runtime, fetchImpl, id:selection.provider, model:selection.model,
           messages:[{role:'user', content:'Reply with the word OK.'}], maxTokens:providerTestTokens(selection.provider,selection.model)}));
         return json({ok:true, provider:selection.provider, model:selection.model, remaining_user:tested.remaining, audit_saved:tested.auditSaved}, 200, session.updates);
       }
@@ -584,8 +594,12 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch} =
       if (method === 'POST' && path === '/api/cloud/chat') {
         const session = await authenticated(); requireAiAccess(session);
         const input = chatInput(await body(request));
-        validateSelection(env, input.primary.provider, input.primary.model);
-        if (input.fallback) validateSelection(env, input.fallback.provider, input.fallback.model);
+        // The owner's free-route choice must not silently fall back to a paid
+        // provider, even if another configured key or a crafted client exists.
+        if (input.primary.provider === 'vercel' && input.fallback) throw new HttpError(422, 'Free AI does not allow a fallback provider.');
+        const runtime = await providerEnv();
+        validateSelection(runtime, input.primary.provider, input.primary.model);
+        if (input.fallback) validateSelection(runtime, input.fallback.provider, input.fallback.model);
         const history = await supa('/rest/v1/vimax_chat_turns?select=prompt,reply&order=created_at.desc,id.desc&limit=3', {token:session.access});
         if (!history.response.ok || !Array.isArray(history.value)) throw new HttpError(503, 'Chat history is unavailable. No provider request was sent.');
         const messages = [{role:'system', content:`${SYSTEM_PROMPT} ${MODES[input.mode]}`}];
@@ -596,7 +610,7 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch} =
           }
         }
         messages.push({role:'user', content:input.prompt});
-        const run = selection => attempt(session, 'chat', selection, () => chatCompletion({env, fetchImpl, id:selection.provider, model:selection.model, messages, maxTokens:input.length === 'detailed' ? 1600 : 600}));
+        const run = selection => attempt(session, 'chat', selection, () => chatCompletion({env:runtime, fetchImpl, id:selection.provider, model:selection.model, messages, maxTokens:input.length === 'detailed' ? 1600 : 600}));
         let selection = input.primary, completed, usedFallback = false;
         try { completed = await run(selection); }
         catch (error) {

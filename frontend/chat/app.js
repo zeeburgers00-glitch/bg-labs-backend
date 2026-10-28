@@ -52,6 +52,7 @@
   function updateModels() {
     const provider = availableProviders().find(item => item.id === $('provider').value);
     setOptions($('model'), provider ? provider.models.map(model => [model, model]) : [], 'No model configured');
+    if (provider?.id === 'vercel') $('fallback').value = '';
     updateChatControls();
   }
   function renderProviders() {
@@ -73,20 +74,25 @@
   }
   function canChat() {
     const analytics = isAnalyticsRequest($('chat-prompt').value);
-    return Boolean(state.user && state.channel.ready && state.channel.connected && state.chat.settingsReady && state.chat.historyReady
-      && state.chat.allowed && !state.chat.paused && !state.chat.busy && (analytics || ($('provider').value && $('model').value)));
+    // General text chat does not require a YouTube grant. Analytics still
+    // requires the selected authorized channel and never uses the text model.
+    const readyForRequest = analytics ? state.channel.ready && state.channel.connected : $('provider').value && $('model').value;
+    return Boolean(state.user && state.chat.settingsReady && state.chat.historyReady && state.chat.allowed
+      && !state.chat.paused && !state.chat.busy && readyForRequest);
   }
   function updateChatControls() {
     const chat = state.chat;
     $('chat-send').disabled = !canChat() || !$('chat-prompt').value.trim();
     $('provider').disabled = chat.busy || !availableProviders().length;
     $('model').disabled = chat.busy || !availableProviders().length;
-    $('fallback').disabled = chat.busy || !availableProviders().length;
+    $('fallback').disabled = chat.busy || !availableProviders().length || $('provider').value === 'vercel';
     $('answer-length').disabled = chat.busy;
     $('clear-history').disabled = !state.user || !chat.historyReady || chat.busy;
     $('toggle-pause').disabled = !state.user || !chat.settingsReady || chat.busy;
     $('toggle-pause').textContent = chat.paused ? 'Resume chat' : 'Pause chat';
     const selected = availableProviders().find(provider => provider.id === $('provider').value);
+    const analytics = isAnalyticsRequest($('chat-prompt').value);
+    $('gateway-privacy').hidden = selected?.id !== 'vercel' && !$('fallback').value.startsWith('vercel|');
     $('model-label').textContent = selected && $('model').value ? `${selected.label} · ${$('model').value}` : 'Chat settings';
     let status;
     if (state.session === 'loading') status = 'Checking your account…';
@@ -98,16 +104,17 @@
     else if (!chat.settingsReady || !chat.historyReady) status = 'Checking chat settings…';
     else if (!chat.allowed) status = 'Chat access is not enabled for this account.';
     else if (chat.paused) status = 'Chat is paused for this account. Resume it in chat settings.';
-    else if (!state.channel.ready && state.channel.error) status = 'Channel status could not be checked. Open Account to try again.';
-    else if (!state.channel.ready) status = 'Checking your channel connection…';
-    else if (!state.channel.configured) status = 'YouTube channel setup is incomplete. An AI provider may also need setup.';
-    else if (!state.channel.allowed) status = 'YouTube channel access is not enabled for this account.';
-    else if (state.channel.busy) status = 'Restoring your channel…';
-    else if (!state.channel.connected) status = 'Connect a YouTube channel in Account before chatting.';
     else if (chat.busy) status = 'Waiting for a reply…';
-    else if (!availableProviders().length && isAnalyticsRequest($('chat-prompt').value) && state.channel.analyticsConfigured)
+    else if (analytics && !state.channel.ready && state.channel.error) status = 'Channel status could not be checked. Open Account to try again.';
+    else if (analytics && !state.channel.ready) status = 'Checking your channel connection…';
+    else if (analytics && !state.channel.configured) status = 'YouTube channel setup is incomplete.';
+    else if (analytics && !state.channel.allowed) status = 'YouTube channel access is not enabled for this account.';
+    else if (analytics && state.channel.busy) status = 'Restoring your channel…';
+    else if (analytics && !state.channel.connected) status = 'Connect a YouTube channel in Account to request analytics.';
+    else if (!availableProviders().length && analytics && state.channel.analyticsConfigured)
       status = 'Analytics can be requested separately; an AI provider is still needed for general chat.';
-    else if (!availableProviders().length) status = 'No AI provider is configured. The deployment owner needs to finish setup.';
+    else if (!availableProviders().length && !analytics) status = 'No AI provider is configured. The deployment owner needs to finish setup.';
+    else if (selected?.id === 'vercel') status = chat.note || 'Free AI configured but not yet verified. YouTube features need a separate channel connection.';
     else status = chat.note || 'Provider configured; it has not necessarily been verified. Calls may incur charges.';
     $('chat-status').textContent = status;
     $('chat-error').textContent = chat.error;
@@ -511,6 +518,7 @@
 
   $('provider').addEventListener('change', updateModels);
   $('model').addEventListener('change', updateChatControls);
+  $('fallback').addEventListener('change', updateChatControls);
   $('chat-prompt').addEventListener('input', updateChatControls);
   $('chat-prompt').addEventListener('keydown', event => {
     if (event.key === 'Enter' && !event.shiftKey && !event.isComposing && !event.repeat) {

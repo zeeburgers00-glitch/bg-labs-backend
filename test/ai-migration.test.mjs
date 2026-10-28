@@ -32,8 +32,11 @@ test('cloud AI migration enforces RLS and atomic, durable request budgets', asyn
 
     await t.test('chat history and audit rows are isolated; clients cannot mutate budgets', async () => {
       await role(users[0]);
-      await db.query("insert into public.vimax_chat_turns(prompt,reply,provider,model) values ('Alice private','hello','groq','model')");
-      const aliceReservation = await reserve(); assert.equal(aliceReservation.allowed, true);
+      // The free Gateway provider/model must fit the existing live SQL checks;
+      // no database migration or widened permission is needed for this route.
+      await db.query("insert into public.vimax_chat_turns(prompt,reply,provider,model) values ('Alice private','hello','vercel','reflection/beam-free')");
+      const aliceReservation = (await db.query("select public.vimax_reserve_ai_call('chat','vercel','reflection/beam-free') as result")).rows[0].result;
+      assert.equal(aliceReservation.allowed, true);
       await assert.rejects(db.query('select completion_secret from public.vimax_ai_calls'), /permission denied/);
       await assert.rejects(db.query('select id from public.vimax_ai_calls where completion_secret=$1', [aliceReservation.finish_secret]), /permission denied/);
       assert.equal(await finish(aliceReservation, users[5]), false, 'a guessed completion capability must not release a reservation');

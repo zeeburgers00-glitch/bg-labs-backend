@@ -238,3 +238,109 @@ test('GitHub lookup is authenticated, budgeted, public-only, fixed-host and sani
   const quota=await createBridge({env:testEnv,fetchImpl:limited.fetchImpl}).fetch(req('/api/cloud/github/repository',{method:'POST',body:{repository:'octocat/Hello-World'}}));
   assert.equal(quota.status,429);assert.match((await quota.json()).error,/quota/);
 });
+
+// These tests are simulated. No Vercel or provider request is made.
+const freeCatalog = (changes = {}) => ({data:{id:'reflection/beam-free', endpoints:[{
+  provider_name:'reflection', status:0, tags:['free'], pricing:{prompt:'0',completion:'0',request:'0',internal_reasoning:'0',discount:0},
+  ...changes,
+}]}});
+const gatewayInput = {provider:'vercel', model:'reflection/beam-free', prompt:'A nonsensitive question.', mode:'chat'};
+
+test('Vercel free adapter uses a fixed model, free routing and a fresh request token', async () => {
+  const fake = mockBackend({provider:async target => target.pathname.endsWith('/endpoints')
+    ? Response.json(freeCatalog()) : Response.json({choices:[{message:{content:'Free-route reply.'}}],usage:{prompt_tokens:7,completion_tokens:3}})});
+  let issued = 0;
+  const env = {...testEnv, VIMAX_GATEWAY_FREE_ENABLED:'true', VIMAX_GATEWAY_REQUEST_TOKEN:'untrusted-static-token'};
+  const bridge = createBridge({env, fetchImpl:fake.fetchImpl, getGatewayToken:() => `temporary.request.token${++issued}`});
+  const status = await (await bridge.fetch(req('/api/cloud/providers'))).json();
+  const gateway = status.providers.find(p => p.id === 'vercel');
+  assert.equal(gateway.state, 'configured_unverified');
+  assert.deepEqual(gateway.models, ['reflection/beam-free']);
+  assert.doesNotMatch(JSON.stringify(status), /temporary|untrusted-static/);
+  const health = await (await bridge.fetch(req('/api/health', {user:null}))).json();
+  assert.equal(health.text_chat, 'configured_unverified');
+  assert.doesNotMatch(JSON.stringify(health), /temporary|untrusted-static/);
+
+  const response = await bridge.fetch(req('/api/cloud/chat', {method:'POST', body:gatewayInput}));
+  assert.equal(response.status, 200);
+  const result = await response.json();
+  assert.equal(result.reply, 'Free-route reply.');
+  assert.equal(result.used_fallback, false);
+  assert.doesNotMatch(JSON.stringify(result), /temporary|untrusted-static/);
+  assert.equal(fake.external.length, 2);
+  const [catalog, generation] = fake.external;
+  assert.equal(catalog.url, 'https://ai-gateway.vercel.sh/v1/models/reflection/beam-free/endpoints');
+  assert.equal(catalog.init.method, 'GET');
+  assert.equal(catalog.init.redirect, 'error');
+  assert.equal(catalog.init.cache, 'no-store');
+  assert.equal(catalog.init.headers, undefined);
+  assert.equal(generation.url, 'https://ai-gateway.vercel.sh/v1/chat/completions');
+  assert.equal(generation.init.headers.authorization, 'Bearer temporary.request.token3');
+  assert.equal(generation.init.redirect, 'error');
+  assert.equal(generation.payload.model, 'reflection/beam-free');
+  assert.equal(generation.payload.max_tokens, 600);
+  assert.deepEqual(generation.payload.providerOptions, {gateway:{only:['reflection'], has:['free']}});
+  assert.deepEqual(generation.payload.reasoning, {effort:'low',exclude:true});
+  assert.equal(Object.hasOwn(generation.payload, 'models'), false);
+  assert.equal(Object.hasOwn(generation.payload, 'tools'), false);
+  assert.equal(fake.usage[0].provider, 'vercel');
+  assert.equal(fake.usage[0].status, 'succeeded');
+  assert.equal(env.VIMAX_GATEWAY_REQUEST_TOKEN, 'untrusted-static-token', 'do not mutate source environment');
+
+  const next = await bridge.fetch(req('/api/cloud/providers/test', {method:'POST', body:gatewayInput}));
+  assert.equal(next.status, 200);
+  assert.equal(fake.external[3].init.headers.authorization, 'Bearer temporary.request.token4');
+  assert.equal(fake.external[3].payload.max_tokens, 1024);
+  assert.equal(fake.usage[1].feature, 'provider_test');
+});
+
+test('free adapter fails closed on missing flag or trusted token, wrong model, owner denial, and any fallback', async () => {
+  const fake = mockBackend(), base = {...testEnv,VIMAX_GATEWAY_REQUEST_TOKEN:'static-token'};
+  let calls = 0;
+  const disabled = createBridge({env:base,fetchImpl:fake.fetchImpl,getGatewayToken:() => {calls++;return 'valid.token';}});
+  const status = await (await disabled.fetch(req('/api/cloud/providers'))).json();
+  assert.equal(status.providers.find(p => p.id === 'vercel').state, 'not_configured');
+  assert.equal(calls, 0, 'disabled feature must not resolve credentials');
+  const enabled = {...base, VIMAX_GATEWAY_FREE_ENABLED:'true'};
+  const missing = createBridge({env:enabled,fetchImpl:fake.fetchImpl,getGatewayToken:() => {throw new Error('secret diagnostic');}});
+  const missingStatus = await (await missing.fetch(req('/api/cloud/providers'))).json();
+  assert.equal(missingStatus.providers.find(p => p.id === 'vercel').state, 'not_configured');
+  assert.doesNotMatch(JSON.stringify(missingStatus), /secret diagnostic|static-token/);
+  assert.equal((await missing.fetch(req('/api/cloud/chat',{method:'POST',body:gatewayInput}))).status,503);
+  const noResolver = createBridge({env:enabled,fetchImpl:fake.fetchImpl});
+  assert.equal((await (await noResolver.fetch(req('/api/cloud/providers'))).json()).providers.find(p => p.id === 'vercel').state, 'not_configured');
+  const valid = createBridge({env:enabled,fetchImpl:fake.fetchImpl,getGatewayToken:() => 'trusted.token'});
+  const badModel = await valid.fetch(req('/api/cloud/chat',{method:'POST',body:{...gatewayInput,model:'openai/gpt-6'}}));
+  assert.equal(badModel.status, 422);
+  const fallback = await valid.fetch(req('/api/cloud/chat',{method:'POST',body:{...gatewayInput,fallback:{provider:'groq',model:'llama-3.1-8b-instant'}}}));
+  assert.equal(fallback.status, 422);
+  assert.match((await fallback.json()).error, /does not allow a fallback/);
+  const denied = createBridge({env:{...enabled,VIMAX_AI_ALLOW_ALL_AUTHENTICATED:'false'},fetchImpl:fake.fetchImpl,getGatewayToken:() => 'trusted.token'});
+  assert.equal((await denied.fetch(req('/api/cloud/chat',{method:'POST',body:gatewayInput}))).status, 403);
+  assert.equal(fake.external.length, 0);
+  assert.equal(fake.usage.length, 0);
+});
+
+test('free catalog rejects paid, changed, missing or unverifiable endpoints without sending a generation', async () => {
+  const price = {prompt:'0',completion:'0',request:'0'};
+  const invalidCatalogs = [
+    {data:{id:'different/model',endpoints:freeCatalog().data.endpoints}},
+    freeCatalog({provider_name:'other'}), freeCatalog({status:1}), freeCatalog({tags:['reasoning']}),
+    freeCatalog({tags:'free'}), freeCatalog({pricing:{...price,completion:'0.01'}}),
+    freeCatalog({pricing:{...price,unexpected_price:'0.00001'}}), freeCatalog({pricing:{...price,prompt:''}}),
+    freeCatalog({pricing:{prompt:'0',completion:'0'}}), freeCatalog({pricing:{...price,tiers:[{cost:'0'}]}}),
+    {data:{id:'reflection/beam-free',endpoints:[]}}, null,
+  ];
+  const env = {VIMAX_GATEWAY_FREE_ENABLED:'true',VIMAX_GATEWAY_REQUEST_TOKEN:'trusted.token'};
+  for (const catalog of invalidCatalogs) {
+    const targets = [];
+    await assert.rejects(chatCompletion({env,id:'vercel',model:'reflection/beam-free',messages:[],fetchImpl:async (url)=>{
+      targets.push(url); return Response.json(catalog);
+    }}), error => error.status === 503 && /No AI generation was sent/.test(error.message));
+    assert.deepEqual(targets, ['https://ai-gateway.vercel.sh/v1/models/reflection/beam-free/endpoints']);
+  }
+  let calls = 0;
+  await assert.rejects(chatCompletion({env,id:'vercel',model:'reflection/beam-free',messages:[],fetchImpl:async()=>{calls++;throw new Error('private network details');}}),
+    error => error.status === 503 && !error.message.includes('private network details'));
+  assert.equal(calls, 1);
+});
