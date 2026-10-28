@@ -208,6 +208,11 @@ async def status(request: Request):
     docs={str((r.get("settings") or {}).get("source_id") or r.get("id")) for r in chunks}
     return {"course_ready":bool(chunks),"chunks":len(chunks),"documents":len(docs),
             "connected_channels":[str((c.get("settings") or {}).get("title") or c.get("name") or "YouTube channel") for c in channels],
+            "channel_details":[{"channel_id":str((c.get("settings") or {}).get("channel_id") or ""),
+                                "title":str((c.get("settings") or {}).get("title") or c.get("name") or "YouTube channel"),
+                                "is_primary":bool((c.get("settings") or {}).get("is_primary")),
+                                "mode":str((c.get("settings") or {}).get("mode") or "unknown")}
+                               for c in channels],
             "google_oauth_configured":google.oauth_configured(),
             "drive_scope_granted":"https://www.googleapis.com/auth/drive.readonly" in scopes,
             "supported_formats":["Google Docs","Google Slides","Google Sheets","PDF","DOCX","PPTX","TXT","MD","CSV","SRT","VTT"],
