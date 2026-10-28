@@ -1772,7 +1772,12 @@
         try {
             const data = await courseRequest('/api/course-ai/chat', 'POST', {message:message, provider:document.getElementById('courseAiProvider')?.value || undefined});
             const refs = (data.sources || []).map(function(s){return '- ' + s.title + (s.chunk ? ' (chunk ' + s.chunk + ')' : '') + (s.url ? ': ' + s.url : '');}).join('\n');
-            courseAiHistory.push({role:'assistant',content:data.reply + (refs ? '\n\nCourse sources:\n' + refs : '')});
+            if (data.plan) {
+                courseAiPlan = data.plan;
+                renderCourseAiPlanDraft(courseAiPlan);
+            }
+            const toolLine = (data.tool_calls || []).map(function(t){return t.tool + ': ' + t.status;}).join('\n');
+            courseAiHistory.push({role:'assistant',content:data.reply + (toolLine ? '\n\nTools used:\n' + toolLine : '') + (refs ? '\n\nCourse sources:\n' + refs : '')});
         } catch (error) {
             courseAiHistory.push({role:'assistant',content:'Request failed: ' + (error.message || 'Unknown error')});
         } finally {
@@ -1783,6 +1788,23 @@
 
     function clearCourseAIChat() { courseAiHistory = []; renderCourseAiMessages(); }
 
+
+    function renderCourseAiPlanDraft(plan) {
+        const out = document.getElementById('courseAiPlanOutput');
+        if (!out || !plan) return;
+        const p = plan.proposed || {};
+        out.innerHTML = '<div class="border border-gray-700 rounded-xl p-4 mt-3 space-y-3">' +
+            '<div class="text-xs text-emerald-300">Draft for ' + hubEscape(plan.channel_title || 'your channel') + '</div>' +
+            '<label class="block text-xs text-gray-400">Channel description<textarea id="courseAiDescription" rows="5" maxlength="1000" class="w-full mt-1 bg-gray-900 border border-gray-700 rounded-lg p-2 text-sm">' + hubEscape(p.description || '') + '</textarea></label>' +
+            '<label class="block text-xs text-gray-400">Channel keywords (space-separated; max 500 characters)<input id="courseAiKeywords" maxlength="500" class="w-full mt-1 bg-gray-900 border border-gray-700 rounded-lg p-2 text-sm" value="' + hubEscape(p.keywords || '') + '"></label>' +
+            '<div class="grid grid-cols-2 gap-2"><label class="text-xs text-gray-400">Country<input id="courseAiCountry" maxlength="2" class="w-full mt-1 bg-gray-900 border border-gray-700 rounded-lg p-2" value="' + hubEscape(p.country || '') + '"></label><label class="text-xs text-gray-400">Default language<input id="courseAiLanguage" maxlength="10" class="w-full mt-1 bg-gray-900 border border-gray-700 rounded-lg p-2" value="' + hubEscape(p.default_language || '') + '"></label></div>' +
+            '<p class="text-sm text-gray-300">' + hubEscape(plan.rationale || '') + '</p>' +
+            '<div class="text-xs text-gray-400">' + (plan.action_plan || []).map(hubEscape).join('<br>') + '</div>' +
+            '<button onclick="applyCourseAIPlan()" class="w-full py-3 rounded-lg bg-emerald-700 hover:bg-emerald-600 font-semibold"><i class="fa-solid fa-check mr-2"></i>Review & Apply Branding</button>' +
+            '<div class="text-xs text-gray-500">Source files: ' + (plan.sources || []).map(function(s){return hubEscape(s.title);}).join(', ') + '</div></div>';
+        out.scrollIntoView({behavior:'smooth',block:'nearest'});
+    }
+
     async function generateCourseAIPlan() {
         const button = document.getElementById('courseAiPlanBtn');
         const out = document.getElementById('courseAiPlanOutput');
@@ -1792,16 +1814,7 @@
             courseAiPlan = await courseRequest('/api/course-ai/channel-plan', 'POST', {
                 goal:goal, provider:document.getElementById('courseAiProvider')?.value || undefined
             });
-            const p = courseAiPlan.proposed;
-            out.innerHTML = '<div class="border border-gray-700 rounded-xl p-4 mt-3 space-y-3">' +
-                '<div class="text-xs text-emerald-300">Draft for ' + hubEscape(courseAiPlan.channel_title || 'your channel') + '</div>' +
-                '<label class="block text-xs text-gray-400">Channel description<textarea id="courseAiDescription" rows="5" maxlength="1000" class="w-full mt-1 bg-gray-900 border border-gray-700 rounded-lg p-2 text-sm">' + hubEscape(p.description || '') + '</textarea></label>' +
-                '<label class="block text-xs text-gray-400">Channel keywords (space-separated; max 500 characters)<input id="courseAiKeywords" maxlength="500" class="w-full mt-1 bg-gray-900 border border-gray-700 rounded-lg p-2 text-sm" value="' + hubEscape(p.keywords || '') + '"></label>' +
-                '<div class="grid grid-cols-2 gap-2"><label class="text-xs text-gray-400">Country<input id="courseAiCountry" maxlength="2" class="w-full mt-1 bg-gray-900 border border-gray-700 rounded-lg p-2" value="' + hubEscape(p.country || '') + '"></label><label class="text-xs text-gray-400">Default language<input id="courseAiLanguage" maxlength="10" class="w-full mt-1 bg-gray-900 border border-gray-700 rounded-lg p-2" value="' + hubEscape(p.default_language || '') + '"></label></div>' +
-                '<p class="text-sm text-gray-300">' + hubEscape(courseAiPlan.rationale || '') + '</p>' +
-                '<div class="text-xs text-gray-400">' + (courseAiPlan.action_plan || []).map(hubEscape).join('<br>') + '</div>' +
-                '<button onclick="applyCourseAIPlan()" class="w-full py-3 rounded-lg bg-emerald-700 hover:bg-emerald-600 font-semibold"><i class="fa-solid fa-check mr-2"></i>Review & Apply Branding</button>' +
-                '<div class="text-xs text-gray-500">Source files: ' + (courseAiPlan.sources || []).map(function(s){return hubEscape(s.title);}).join(', ') + '</div></div>';
+            renderCourseAiPlanDraft(courseAiPlan);
         } catch (error) {
             out.innerHTML = '<p class="text-red-300 text-sm">' + hubEscape(error.message || 'Plan failed') + '</p>';
         } finally {
