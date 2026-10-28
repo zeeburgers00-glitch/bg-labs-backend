@@ -7,6 +7,13 @@ import {GpuError, createGpu} from './gpu.mjs';
 import {workforceRegistry, runHostedSkill, SkillError} from './workforce-skills.mjs';
 import {creatorAgentRegistry, runCreatorAgent} from './creator-agents.mjs';
 import {youtubePublicStatus, youtubeResearchInput, samplePublicChannel} from './youtube-public-research.mjs';
+import {createReliability, ReliabilityError} from './reliability.mjs';
+import {createResearch, ResearchError} from './research.mjs';
+import {createPublishing, PublishingError} from './publishing.mjs';
+import {createChannelIntelligence, ChannelIntelligenceError} from './channel-intelligence.mjs';
+import {createProduction, ProductionError} from './production.mjs';
+import {createBudgetSecurity, BudgetError} from './budget-security.mjs';
+import {createMonetization, MonetizationError} from './monetization.mjs';
 import {createHash, randomBytes} from 'node:crypto';
 
 const GOOGLE_PKCE_COOKIE = '__Host-vimax_google_pkce';
@@ -321,6 +328,13 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch, g
   const youtube = createYouTube({env, fetchImpl, supa, body, json});
   const social = createSocial({env, fetchImpl, supa, body, json});
   const gpu = createGpu({env, fetchImpl, supa, body, json});
+  const reliability = createReliability({supa});
+  const research = createResearch({supa, fetchImpl});
+  const publishing = createPublishing({supa, youtube});
+  const channelIntel = createChannelIntelligence({supa});
+  const production = createProduction({supa, reliability});
+  const budgetSecurity = createBudgetSecurity({supa});
+  const monetization = createMonetization({supa, fetchImpl, env});
   async function handler(request) {
     let sessionUpdates = [];
     try {
@@ -690,10 +704,143 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch, g
         const result = await attempt(session, 'stock_search', {provider:'pexels', model:''}, () => searchPexels({env, fetchImpl, ...input}));
         return json({videos:result.result, remaining_user:result.remaining, audit_saved:result.auditSaved}, 200, session.updates);
       }
+      // Reliability Center
+      if (path === '/api/cloud/reliability/jobs' && method === 'GET') {
+        const session = await authenticated();
+        return json({jobs: await reliability.listJobs(session, {status: new URL(request.url).searchParams.get('status')})}, 200, session.updates);
+      }
+      if (path === '/api/cloud/reliability/jobs' && method === 'POST') {
+        const session = await authenticated(); requireAiAccess(session);
+        return json(await reliability.createJob(session, await body(request)), 200, session.updates);
+      }
+      if (path.match(/^\/api\/cloud\/reliability\/jobs\/[^/]+$/) && method === 'GET') {
+        const session = await authenticated();
+        const id = path.split('/').pop();
+        return json(await reliability.getJob(session, id), 200, session.updates);
+      }
+      if (path.match(/^\/api\/cloud\/reliability\/jobs\/[^/]+\/cancel$/) && method === 'POST') {
+        const session = await authenticated();
+        const id = path.split('/')[5];
+        return json(await reliability.cancelJob(session, id), 200, session.updates);
+      }
+      if (path.match(/^\/api\/cloud\/reliability\/jobs\/[^/]+\/retry$/) && method === 'POST') {
+        const session = await authenticated();
+        const id = path.split('/')[5];
+        return json(await reliability.retryJob(session, id), 200, session.updates);
+      }
+      if (path === '/api/cloud/reliability/recovery-decision' && method === 'POST') {
+        const session = await authenticated();
+        return json(reliability.recoveryDecision(await body(request)), 200, session.updates);
+      }
+      // Research & Fact Verification
+      if (path === '/api/cloud/research/fetch' && method === 'POST') {
+        const session = await authenticated(); requireAiAccess(session);
+        const {url} = await body(request);
+        return json(await research.fetchSource(url, session), 200, session.updates);
+      }
+      if (path === '/api/cloud/research/citations' && method === 'GET') {
+        const session = await authenticated();
+        const jobId = new URL(request.url).searchParams.get('job_id');
+        return json({citations: await research.listCitations(session, jobId)}, 200, session.updates);
+      }
+      if (path === '/api/cloud/research/citations' && method === 'POST') {
+        const session = await authenticated(); requireAiAccess(session);
+        return json(await research.saveCitation(session, await body(request)), 200, session.updates);
+      }
+      // Publishing & Approval
+      if (path === '/api/cloud/publishing/approvals' && method === 'GET') {
+        const session = await authenticated();
+        return json({approvals: await publishing.listApprovals(session, {status: new URL(request.url).searchParams.get('status')})}, 200, session.updates);
+      }
+      if (path === '/api/cloud/publishing/approvals' && method === 'POST') {
+        const session = await authenticated();
+        return json(await publishing.requestApproval(session, await body(request)), 200, session.updates);
+      }
+      if (path.match(/^\/api\/cloud\/publishing\/approvals\/[^/]+\/decision$/) && method === 'POST') {
+        const session = await authenticated();
+        const id = path.split('/')[5];
+        const {decision} = await body(request);
+        return json(await publishing.approve(session, id, decision), 200, session.updates);
+      }
+      if (path.match(/^\/api\/cloud\/publishing\/approvals\/[^/]+\/reconcile$/) && method === 'GET') {
+        const session = await authenticated();
+        const id = path.split('/')[5];
+        return json(await publishing.reconcile(session, id), 200, session.updates);
+      }
+      // Multi-Channel Intelligence
+      if (path === '/api/cloud/channel-intelligence/channels' && method === 'GET') {
+        const session = await authenticated();
+        return json({channels: await channelIntel.listChannels(session)}, 200, session.updates);
+      }
+      if (path.match(/^\/api\/cloud\/channel-intelligence\/channels\/[^/]+$/) && method === 'GET') {
+        const session = await authenticated();
+        const id = path.split('/').pop();
+        return json(await channelIntel.getChannel(session, id), 200, session.updates);
+      }
+      if (path.match(/^\/api\/cloud\/channel-intelligence\/channels\/[^/]+$/) && method === 'PATCH') {
+        const session = await authenticated();
+        const id = path.split('/').pop();
+        return json(await channelIntel.updateChannel(session, id, await body(request)), 200, session.updates);
+      }
+      if (path.match(/^\/api\/cloud\/channel-intelligence\/channels\/[^/]+\/recommend$/) && method === 'POST') {
+        const session = await authenticated();
+        const id = path.split('/')[5];
+        return json(await channelIntel.recommendTopics(session, id, await body(request)), 200, session.updates);
+      }
+      // End-to-End Production
+      if (path === '/api/cloud/production/start' && method === 'POST') {
+        const session = await authenticated(); requireAiAccess(session);
+        return json(await production.startPipeline(session, await body(request)), 200, session.updates);
+      }
+      if (path.match(/^\/api\/cloud\/production\/jobs\/[^/]+\/advance$/) && method === 'POST') {
+        const session = await authenticated();
+        const id = path.split('/')[5];
+        return json(await production.advanceStage(session, id, (await body(request)).stage, await body(request)), 200, session.updates);
+      }
+      if (path === '/api/cloud/production/shorts' && method === 'POST') {
+        const session = await authenticated(); requireAiAccess(session);
+        return json(await production.shortFromLong(session, (await body(request)).long_job_id, await body(request)), 200, session.updates);
+      }
+      if (path === '/api/cloud/production/assets' && method === 'POST') {
+        const session = await authenticated(); requireAiAccess(session);
+        const input = await body(request);
+        return json(await production.trackAsset(session, input.job_id, input), 200, session.updates);
+      }
+      // Budget & Security
+      if (path === '/api/cloud/budget/limits' && method === 'GET') {
+        const session = await authenticated();
+        return json(await budgetSecurity.getLimits(session), 200, session.updates);
+      }
+      if (path === '/api/cloud/budget/limits' && method === 'POST') {
+        const session = await authenticated();
+        return json(await budgetSecurity.setLimits(session, await body(request)), 200, session.updates);
+      }
+      if (path === '/api/cloud/budget/usage' && method === 'GET') {
+        const session = await authenticated();
+        return json(await budgetSecurity.getUsage(session), 200, session.updates);
+      }
+      if (path === '/api/cloud/budget/audit' && method === 'GET') {
+        const session = await authenticated();
+        return json({trail: await budgetSecurity.getAuditTrail(session)}, 200, session.updates);
+      }
+      if (path === '/api/cloud/budget/concurrency' && method === 'GET') {
+        const session = await authenticated();
+        return json(await budgetSecurity.checkConcurrency(session), 200, session.updates);
+      }
+      // Monetization
+      if (path === '/api/cloud/monetization/readiness' && method === 'GET') {
+        const session = await authenticated();
+        return json({channels: await monetization.getReadiness(session, new URL(request.url).searchParams.get('channel_id'))}, 200, session.updates);
+      }
+      if (path.match(/^\/api\/cloud\/monetization\/channels\/[^/]+\/refresh$/) && method === 'POST') {
+        const session = await authenticated();
+        const id = path.split('/')[5];
+        return json(await monetization.refreshFromYouTube(session, id), 200, session.updates);
+      }
       if (path.startsWith('/api/')) throw new HttpError(503, AGENT_UNAVAILABLE);
       throw new HttpError(404, 'Not found.');
     } catch (error) {
-      const status = error instanceof HttpError || error instanceof ProviderError || error instanceof YouTubeError || error instanceof SocialError || error instanceof GpuError || error instanceof SkillError ? error.status : 500;
+      const status = error instanceof HttpError || error instanceof ProviderError || error instanceof YouTubeError || error instanceof SocialError || error instanceof GpuError || error instanceof SkillError || error instanceof ReliabilityError || error instanceof ResearchError || error instanceof PublishingError || error instanceof ChannelIntelligenceError || error instanceof ProductionError || error instanceof BudgetError || error instanceof MonetizationError ? error.status : 500;
       return json({error:status === 500 ? 'The request could not be completed.' : error.message}, status, sessionUpdates);
     }
   }
