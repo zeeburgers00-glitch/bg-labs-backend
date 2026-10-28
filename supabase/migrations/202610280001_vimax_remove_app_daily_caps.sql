@@ -16,6 +16,7 @@ declare
   v_owner uuid := auth.uid();
   v_since timestamptz := date_trunc('day', now() at time zone 'utc') at time zone 'utc';
   v_today date := (now() at time zone 'utc')::date;
+  v_user_count bigint;
   v_in_flight bigint;
   v_id uuid;
   v_secret uuid;
@@ -32,8 +33,9 @@ begin
   end if;
   delete from public.vimax_ai_calls where created_at < now() - interval '90 days';
   delete from public.vimax_ai_daily_budget where day < v_today - 90;
-  select count(*) filter (where status = 'reserved' and created_at > now() - interval '60 seconds')
-    into v_in_flight
+  select count(*) filter (where created_at >= v_since),
+         count(*) filter (where status = 'reserved' and created_at > now() - interval '60 seconds')
+    into v_user_count, v_in_flight
     from public.vimax_ai_calls
     where owner_id = v_owner and created_at >= least(v_since, now() - interval '60 seconds');
   if v_in_flight >= 1 then
@@ -46,7 +48,7 @@ begin
     on conflict (day) do update set attempts = public.vimax_ai_daily_budget.attempts + 1;
   insert into public.vimax_ai_calls (owner_id, feature, provider, model)
     values (v_owner, p_feature, p_provider, p_model) returning id, completion_secret into v_id, v_secret;
-  return jsonb_build_object('allowed', true, 'id', v_id, 'finish_secret', v_secret, 'remaining_user', null);
+  return jsonb_build_object('allowed', true, 'id', v_id, 'finish_secret', v_secret, 'remaining_user', greatest(0, 9 - v_user_count));
 end
 $$;
 revoke all on function public.vimax_reserve_ai_call(text, text, text) from public, anon, authenticated;
