@@ -615,7 +615,8 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch, g
         try { completed = await run(selection); }
         catch (error) {
           // Fallback is opt-in, separately budgeted, and only for explicit
-          // upstream failures. Ambiguous timeouts are never retried automatically.
+          // rejected requests. Ambiguous 5xx, timeouts and unusable completions
+          // may already be billable and must never trigger a second call.
           if (!(input.fallback && error instanceof ProviderError && error.retryable && error.auditSaved)) throw error;
           selection = input.fallback; usedFallback = true; completed = await run(selection);
         }

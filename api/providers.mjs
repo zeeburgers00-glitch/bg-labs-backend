@@ -22,8 +22,8 @@ const MODEL = /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$/;
 const MAX_RESPONSE_BYTES = 256 * 1024;
 
 export class ProviderError extends Error {
-  constructor(status, message, retryable = false) {
-    super(message); this.status = status; this.retryable = retryable;
+  constructor(status, message, retryable = false, uncertain = false) {
+    super(message); this.status = status; this.retryable = retryable; this.uncertain = uncertain;
   }
 }
 function validKey(value) {
@@ -65,21 +65,27 @@ function selected(env, id, model) {
 export function validateSelection(env, id, model) {
   selected(env, id, model);
 }
-function responseFailure(status) {
+function responseFailure(status, inference = false) {
   if (status === 401 || status === 403) return new ProviderError(502, 'The provider rejected its credentials or permissions.', true);
   if (status === 429) return new ProviderError(429, 'The provider rate limit or quota was reached.', true);
+  // An intermediary or provider may fail after the model has already run.
+  // An unexpected HTTP error is not proof that it was free or unprocessed.
+  if (inference) return new ProviderError(502,
+    'The provider returned an unexpected error. The request may have been processed or incurred charges; no further automatic retry or fallback will be sent.', false, true);
   if ([500, 502, 503, 504].includes(status)) return new ProviderError(502, 'The provider is temporarily unavailable.', true);
   return new ProviderError(502, 'The provider rejected the configured model or request.');
 }
-async function readResponse(response) {
+async function readResponse(response, {inference = false} = {}) {
+  const invalidResponse = message => new ProviderError(502,
+    inference ? `${message} The request may have incurred charges.` : message, false, inference);
   if (!response.ok) {
     try { await response.body?.cancel(); } catch { /* Never disclose provider error bodies. */ }
-    throw responseFailure(response.status);
+    throw responseFailure(response.status, inference);
   }
   const declared = response.headers.get('content-length');
-  if (declared && Number(declared) > MAX_RESPONSE_BYTES) throw new ProviderError(502, 'The provider response was too large.');
+  if (declared && Number(declared) > MAX_RESPONSE_BYTES) throw invalidResponse('The provider response was too large.');
   const reader = response.body?.getReader();
-  if (!reader) throw new ProviderError(502, 'The provider returned an empty response.');
+  if (!reader) throw invalidResponse('The provider returned an empty response.');
   const chunks = []; let size = 0;
   while (true) {
     const {done, value} = await reader.read();
@@ -87,14 +93,14 @@ async function readResponse(response) {
     size += value.byteLength;
     if (size > MAX_RESPONSE_BYTES) {
       await reader.cancel();
-      throw new ProviderError(502, 'The provider response was too large.');
+      throw invalidResponse('The provider response was too large.');
     }
     chunks.push(value);
   }
   const joined = new Uint8Array(size); let offset = 0;
   for (const chunk of chunks) { joined.set(chunk, offset); offset += chunk.byteLength; }
   try { return JSON.parse(new TextDecoder().decode(joined)); }
-  catch { throw new ProviderError(502, 'The provider returned invalid JSON.'); }
+  catch { throw invalidResponse('The provider returned invalid JSON.'); }
 }
 function safeCount(value) {
   return Number.isSafeInteger(value) && value >= 0 && value <= 10_000_000 ? value : null;
@@ -142,15 +148,16 @@ export async function chatCompletion({env, fetchImpl, id, model, messages, maxTo
   try {
     const response = await fetchImpl(spec.url, {method:'POST', headers:{authorization:`Bearer ${key}`, 'content-type':'application/json'},
       body:JSON.stringify({model, messages, [spec.maxTokenField || 'max_tokens']:maxTokens, ...reasoningOptions(id, model)}), signal:AbortSignal.timeout(25_000), redirect:'error', cache:'no-store'});
-    value = await readResponse(response);
+    value = await readResponse(response, {inference:true});
   } catch (error) {
     if (error instanceof ProviderError) throw error;
-    // A timed-out request may already have been billed. Do not automatically
-    // retry it or switch providers in that ambiguous situation.
-    throw new ProviderError(504, 'The provider request timed out or could not be completed; it may have incurred charges.');
+    // A timed-out or interrupted request may already have been billed. Do not
+    // automatically retry or switch providers in that ambiguous situation.
+    throw new ProviderError(504, 'The provider request timed out or could not be completed; it may have incurred charges.', false, true);
   }
   const text = value?.choices?.[0]?.message?.content;
-  if (typeof text !== 'string' || !text.trim()) throw new ProviderError(502, 'The provider returned no text.');
+  if (typeof text !== 'string' || !text.trim()) throw new ProviderError(502,
+    'The provider returned no text. The request may have incurred charges.', false, true);
   const chars = Array.from(text.trim());
   return {text:chars.slice(0, 6000).join(''), truncated:chars.length > 6000 || value?.choices?.[0]?.finish_reason === 'length',
     inputTokens:safeCount(value?.usage?.prompt_tokens), outputTokens:safeCount(value?.usage?.completion_tokens)};

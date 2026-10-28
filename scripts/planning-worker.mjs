@@ -93,10 +93,11 @@ export function planningMessages(job, stage, steps) {
   })}];
 }
 function failureCode(error) {
-  if (!(error instanceof ProviderError)) return 'ambiguous';
-  if (error.status === 504) return 'ambiguous';
+  // 5xx responses, transport failures and unreadable/empty completions may be
+  // billed even though no usable result arrived. Keep the existing queue in
+  // its explicit review state instead of scheduling another provider call.
+  if (!(error instanceof ProviderError) || error.uncertain || error.status === 504) return 'ambiguous';
   if (error.status === 429) return 'rate_limit';
-  if (error.message === 'The provider is temporarily unavailable.') return 'provider_unavailable';
   if (error.message === 'The provider rejected its credentials or permissions.') return 'credentials';
   return 'bad_response';
 }

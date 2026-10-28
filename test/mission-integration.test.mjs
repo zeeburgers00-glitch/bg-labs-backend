@@ -39,6 +39,10 @@ async function fixture() {
       providerCalls.push(payload);
       if(providerMode==='timeout') throw new TypeError('network failure');
       if(providerMode==='rate') return Response.json({secret:'must not be shown'},{status:429});
+      if(providerMode==='server') return Response.json({secret:'must not be shown'},{status:503});
+      if(providerMode==='http-timeout') return Response.json({secret:'must not be shown'},{status:408});
+      if(providerMode==='invalid') return new Response('not valid json');
+      if(providerMode==='empty') return Response.json({choices:[{message:{content:''}}]});
       return Response.json({choices:[{message:{content:`Real adapter result ${providerCalls.length}`},...(providerMode==='truncated'?{finish_reason:'length'}:{})}],usage:{prompt_tokens:12,completion_tokens:8}});
     }
     if(url.hostname!=='example.supabase.co') throw new Error('Unexpected external host');
@@ -169,6 +173,31 @@ test('worker avoids duplicate paid calls on ambiguous failures and honours backo
     const audits=await fx.as(owner,()=>fx.db.query("select count(*)::int as n from public.vimax_ai_calls where feature='job_stage'")); assert.equal(audits.rows[0].n,2,'missing config must not consume a reservation');
     const wrong=createPlanningWorker({env:{...workerEnv,VIMAX_WORKER_OWNER_ID:other},fetchImpl:fx.fetch,logger:quiet});
     await assert.rejects(wrong.tick(),/did not match/); assert.equal(fx.providerCalls.length,2);
+  } finally {await fx.db.close();}
+});
+
+test('worker records server and malformed-response outcomes as uncertain and never auto-replays',async()=>{
+  const fx=await fixture();
+  try {
+    const bridge=createBridge({env,fetchImpl:fx.fetch});
+    const profile=(await (await bridge.fetch(req('/api/cloud/mission/channels',{method:'POST',payload:channel}))).json()).channel;
+    const worker=createPlanningWorker({env:workerEnv,fetchImpl:fx.fetch,logger:quiet});
+    for (const [index,mode] of ['server','http-timeout','invalid','empty'].entries()) {
+      const body={channel_id:profile.id,client_key:randomUUID(),topic:`Uncertain ${mode}`,provider:'groq',model:'llama-3.1-8b-instant'};
+      const job=(await (await bridge.fetch(req('/api/cloud/mission/jobs',{method:'POST',payload:body}))).json()).job;
+      fx.setMode(mode); await worker.tick();
+      const detail=await (await bridge.fetch(req(`/api/cloud/mission/jobs/${job.id}`))).json();
+      assert.equal(detail.job.status,'needs_review',mode);
+      assert.equal(detail.job.review_reason,'uncertain',mode);
+      assert.equal(detail.job.last_error,'ambiguous',mode);
+      assert.equal(detail.steps[0].status,'uncertain',mode);
+      assert.equal(fx.providerCalls.length,index+1,mode);
+      await worker.tick();
+      assert.equal(fx.providerCalls.length,index+1,`${mode} was automatically replayed`);
+      const retry=await bridge.fetch(req(`/api/cloud/mission/jobs/${job.id}/action`,{method:'POST',payload:{action:'retry'}}));
+      assert.equal(retry.status,409,`${mode} needs explicit duplicate-charge confirmation`);
+    }
+    assert.equal(fx.providerCalls.length,4);
   } finally {await fx.db.close();}
 });
 

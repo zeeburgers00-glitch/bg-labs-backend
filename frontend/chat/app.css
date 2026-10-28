@@ -81,6 +81,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .send-button:hover:not(:disabled) { background: #ded4ff; }
 .send-button:disabled { opacity: .38; }
 .send-button svg { width: 20px; height: 20px; stroke-width: 2; }
+.microphone-status { margin: 9px 4px 0; color: #d6caff; font-size: 11px; line-height: 1.45; }
 .disclaimer { margin: 11px 0 0; text-align: center; color: #7e7a8e; font-size: 10px; line-height: 1.45; }
 .dialog { width: min(480px, calc(100% - 32px)); max-height: min(86vh, 800px); padding: 25px; border: 1px solid #454354; border-radius: 18px; background: #1c1d29; color: #eeedf4; box-shadow: 0 28px 90px #0009; overflow-y: auto; }
 .dialog::backdrop { background: #090911b8; backdrop-filter: blur(5px); }
@@ -101,6 +102,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .text-button:hover:not(:disabled) { text-decoration: underline; }
 .text-button.danger { color: #f1a6a8; }
 .hint { color: #a49fb1; font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; }
+.usage-list { margin: 0; padding: 0; list-style: none; }
+.usage-list li { padding: 9px 0; border-top: 1px solid #383744; color: #d8d5e3; font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+.usage-list span { display: block; color: #a49fb1; }
 .account-message:empty { display: none; }
 .account-message:not(:empty) { margin: 0 0 16px; padding: 10px 12px; border: 1px solid #584e7f; border-radius: 8px; background: #29263a; color: #e3dcf4; }
 .account-identity { color: #f0edf8; overflow-wrap: anywhere; font-size: 14px; }

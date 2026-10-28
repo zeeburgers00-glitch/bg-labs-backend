@@ -60,6 +60,7 @@
             </div>
           </div>
         </form>
+        <p id="microphone-status" class="microphone-status" role="status" aria-live="polite" hidden></p>
         <p class="disclaimer">Your messages are sent to your selected AI provider. Responses can be inaccurate.</p>
         <p id="gateway-privacy" class="disclaimer" hidden>Vercel and Reflection receive your messages and may retain or use them to improve their services. Do not share secrets. Free inference is limited; separately configured team BYOK or add-ons may incur charges. There is no paid model fallback.</p>
       </div>
@@ -96,6 +97,10 @@
       <label>Optional fallback<select id="fallback"><option value="">No fallback</option></select></label>
     </div>
     <p class="hint">Prompts and replies are saved to your account until deleted. The selected provider receives the current prompt and up to three previous turns. A fallback may send them to another provider. Calls may cost money; 10 attempts per account and 50 shared attempts per UTC day are limits, not spending caps.</p>
+    <button class="text-button" id="usage-refresh" type="button" disabled>Show recent usage</button>
+    <p class="hint">Up to 20 recorded attempts. Token counts are provider-reported when available; prices are not calculated. Failed calls may still be billed. Check provider billing for actual cost.</p>
+    <p id="usage-message" class="hint" role="status"></p>
+    <ul id="usage-list" class="usage-list" aria-label="Recent provider usage"></ul>
     <div class="dialog-divider"></div>
     <label class="check-label"><input type="checkbox" id="speak-replies"> Read new replies aloud</label>
     <label>Voice<select id="speech-voice"><option value="">Browser default</option></select></label>

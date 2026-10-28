@@ -131,6 +131,28 @@ test('provider failures are sanitized, response size is bounded and timeouts do 
   await assert.rejects(chatCompletion({...options, fetchImpl:async () => new Response('not json')}), /invalid JSON/);
 });
 
+test('inference errors that might have incurred a charge never trigger automatic fallback', async () => {
+  const fallback = {provider:'mistral',model:'mistral-small-latest'};
+  const failures = [
+    ...[400,404,408,409,422,499,500,501,502,503,504,599].map(status => [`HTTP ${status}`, () => Response.json({secret:'upstream-only'}, {status})]),
+    ['invalid JSON', () => new Response('not json')],
+    ['empty output', () => Response.json({choices:[{message:{content:''}}]})],
+    ['oversized output', () => new Response('x'.repeat(270_000))],
+    ['network timeout', () => {throw new Error('private-network-detail');}],
+  ];
+  for (const [label,fail] of failures) {
+    const fake = mockBackend({provider:async target => target.hostname === 'api.groq.com'
+      ? fail() : Response.json({choices:[{message:{content:'must never be sent'}}]})});
+    const response = await createBridge({env:testEnv,fetchImpl:fake.fetchImpl}).fetch(req('/api/cloud/chat',{method:'POST',body:{...input,fallback}}));
+    const result = await response.json();
+    assert.ok([502,504].includes(response.status),label);
+    assert.match(result.error, /may have (?:been processed|incurred charges)/i,label);
+    assert.doesNotMatch(JSON.stringify(result), /upstream-only|private-network-detail/,label);
+    assert.equal(fake.external.length,1,`${label} sent a second external request`);
+    assert.deepEqual(fake.usage.map(call=>call.status),['failed'],label);
+  }
+});
+
 test('cloud text planning requires auth and budget; chat and usage remain user scoped', async () => {
   const fake = mockBackend(), bridge = createBridge({env:testEnv, fetchImpl:fake.fetchImpl});
   assert.equal((await bridge.fetch(req('/api/cloud/providers',{user:null}))).status,401);

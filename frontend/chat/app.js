@@ -5,7 +5,7 @@
     user:null, session:'loading', sessionSequence:0, version:0, controllers:new Set(), authBusy:false,
     deployment:{chat:'checking', youtube:'checking'},
     google:{status:'checking', busy:false, error:''},
-    chat:{providers:[], allowed:false, paused:false, settingsReady:false, historyReady:false, busy:false, turns:[], pending:null, note:'', error:''},
+    chat:{providers:[], allowed:false, paused:false, settingsReady:false, historyReady:false, busy:false, usageLoading:false, turns:[], pending:null, note:'', error:''},
     channel:{ready:false, configured:false, allowed:false, analyticsConfigured:false, analyticsConnected:false, busy:false, connected:null, connectionId:null, saved:[], autoAttempted:false, sequence:0, notice:'', error:''},
     facebook:{ready:false, configured:false, allowed:false, busy:false, saved:[], verified:null, autoAttempted:false, sequence:0, notice:'', error:''},
   };
@@ -88,6 +88,7 @@
     $('fallback').disabled = chat.busy || !availableProviders().length || $('provider').value === 'vercel';
     $('answer-length').disabled = chat.busy;
     $('clear-history').disabled = !state.user || !chat.historyReady || chat.busy;
+    $('usage-refresh').disabled = !state.user || chat.usageLoading;
     $('toggle-pause').disabled = !state.user || !chat.settingsReady || chat.busy;
     $('toggle-pause').textContent = chat.paused ? 'Resume chat' : 'Pause chat';
     const selected = availableProviders().find(provider => provider.id === $('provider').value);
@@ -281,13 +282,17 @@
     for (const controller of state.controllers) controller.abort();
     state.controllers.clear();
     stopAllSpeech();
+    // A disclosure accepted by one signed-in user must not carry over to the
+    // next person using the same browser tab.
+    voiceDisclosureAccepted = false;
     state.user = user && typeof user.id === 'string' ? {id:user.id, email:typeof user.email === 'string' ? user.email : ''} : null;
     state.session = state.user ? 'signed-in' : sessionState;
-    state.chat = {providers:[], allowed:false, paused:false, settingsReady:false, historyReady:false, busy:false, turns:[], pending:null, note:'', error:''};
+    state.chat = {providers:[], allowed:false, paused:false, settingsReady:false, historyReady:false, busy:false, usageLoading:false, turns:[], pending:null, note:'', error:''};
     state.channel = {ready:false, configured:false, allowed:false, analyticsConfigured:false, analyticsConnected:false, busy:false, connected:null, connectionId:null, saved:[], autoAttempted:false, sequence:0, notice:'', error:''};
     state.facebook = {ready:false, configured:false, allowed:false, busy:false, saved:[], verified:null, autoAttempted:false, sequence:0, notice:'', error:''};
     $('chat-prompt').value = ''; $('account-password').value = ''; $('speak-replies').checked = false;
     $('settings-message').textContent = ''; $('account-error').textContent = ''; $('account-message').textContent = '';
+    $('usage-message').textContent = ''; $('usage-list').replaceChildren();
     closeDialog('channel-dialog'); closeDialog('facebook-dialog'); closeDialog('settings-dialog');
     renderMessages(); renderProviders(); renderChannelList(); renderFacebookList(); updateAccount(); updateChannelControls(); updateFacebookControls(); updateChatControls();
     return state.version;
@@ -533,6 +538,7 @@
     const provider = $('provider').value, model = $('model').value, fallbackValue = $('fallback').value, divider = fallbackValue.indexOf('|');
     const fallback = fallbackValue && divider > 0 ? {provider:fallbackValue.slice(0, divider), model:fallbackValue.slice(divider + 1)} : null;
     if (!analytics && fallback && fallback.provider === provider && fallback.model === model) { state.chat.error = 'Choose a different fallback or turn it off.'; updateChatControls(); return; }
+    stopRecognition();
     state.chat.busy = true; state.chat.pending = prompt; state.chat.error = ''; state.chat.note = '';
     renderMessages(); updateChatControls();
     try {
@@ -581,6 +587,37 @@
         renderMessages();
       }
     } finally { if (isCurrent(version)) { state.chat.busy = false; updateChatControls(); } }
+  });
+  $('usage-refresh').addEventListener('click', async () => {
+    if (!state.user || state.chat.usageLoading) return;
+    const version = state.version;
+    state.chat.usageLoading = true; $('usage-message').textContent = 'Loading recorded usage…'; updateChatControls();
+    try {
+      const data = await sessionApi('/api/cloud/usage');
+      if (!isCurrent(version)) return;
+      if (!Array.isArray(data?.calls) || data.calls.length > 20) throw new Error('Usage data was invalid. Try again.');
+      const list = $('usage-list'); list.replaceChildren();
+      const clean = (value, max, fallback) => typeof value === 'string'
+        ? Array.from(value.replace(/[\u0000-\u001f\u007f]/g, ' ')).slice(0,max).join('') || fallback : fallback;
+      const count = value => Number.isSafeInteger(value) && value >= 0 && value <= 10_000_000 ? String(value) : 'unknown';
+      for (const call of data.calls) {
+        if (!call || typeof call !== 'object') continue;
+        const provider = clean(call.provider,24,'Unknown provider'), model = clean(call.model,128,'No model');
+        const feature = clean(call.feature,32,'request');
+        const statuses = {succeeded:'completed',failed:'failed; charges may apply',reserved:'in progress or unconfirmed'};
+        const status = typeof call.status === 'string' && Object.hasOwn(statuses,call.status) ? statuses[call.status] : 'unknown status';
+        const time = typeof call.created_at === 'string' && call.created_at.length <= 40 ? Date.parse(call.created_at) : NaN;
+        const when = Number.isFinite(time) ? new Date(time).toISOString().replace('T',' ').replace('.000Z',' UTC') : 'Time unavailable';
+        const row = element('li');
+        row.append(element('strong', `${provider} · ${model}`),
+          element('span', `${feature} · ${status} · ${when}`),
+          element('span', `Input tokens: ${count(call.input_tokens)} · Output tokens: ${count(call.output_tokens)}`));
+        list.append(row);
+      }
+      $('usage-message').textContent = list.childElementCount ? `Showing ${list.childElementCount} recent recorded attempt(s).` : 'No recorded usage yet.';
+    } catch (error) {
+      if (isCurrent(version) && error.name !== 'AbortError') { $('usage-list').replaceChildren(); $('usage-message').textContent = error.message; }
+    } finally { if (isCurrent(version)) { state.chat.usageLoading = false; updateChatControls(); } }
   });
   $('toggle-pause').addEventListener('click', async () => {
     if (!state.user || !state.chat.settingsReady || state.chat.busy) return;
@@ -670,7 +707,7 @@
 
   const synthesis = 'speechSynthesis' in window ? window.speechSynthesis : null;
   const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  let recognition = null, voices = [], voiceDisclosureAccepted = false;
+  let recognition = null, currentUtterance = null, voices = [], voiceDisclosureAccepted = false;
   function refreshVoices() {
     const select = $('speech-voice'), previous = select.value;
     select.replaceChildren(); makeOption(select, '', 'Browser default');
@@ -682,42 +719,96 @@
     try { return new Intl.Locale($('speech-language').value.trim() || 'en-US').toString(); }
     catch { $('voice-status').textContent = 'Enter a valid language tag, such as en-US or ur-PK.'; return null; }
   }
+  function microphoneStatus(message = '') {
+    $('microphone-status').textContent = message;
+    $('microphone-status').hidden = !message;
+  }
+  function dictateLabel(listening) {
+    const label = listening ? 'Stop voice input' : 'Start voice input';
+    $('dictate').setAttribute('aria-label', label); $('dictate').title = label;
+  }
+  function cancelPlayback() {
+    // Invalidate callbacks before cancel: browsers may deliver old end events
+    // after a newer utterance has started or an account has changed.
+    currentUtterance = null;
+    try { synthesis?.cancel(); } catch {}
+    $('stop-speech').hidden = true;
+  }
+  function stopRecognition() {
+    const active = recognition; recognition = null;
+    if (active) { try { active.abort(); } catch {} }
+    dictateLabel(false); microphoneStatus();
+  }
   function stopAllSpeech() {
-    if (recognition) { try { recognition.abort(); } catch {} recognition = null; }
-    if (synthesis) synthesis.cancel();
-    $('dictate').disabled = !Recognition; $('dictate').setAttribute('aria-label', 'Start voice input'); $('dictate').title = 'Start voice input'; $('stop-speech').hidden = true;
+    stopRecognition(); cancelPlayback();
+    $('dictate').disabled = !Recognition;
   }
   function speak(text) {
-    if (!synthesis || typeof window.SpeechSynthesisUtterance !== 'function') { $('voice-status').textContent = 'Spoken playback is unavailable; the text reply is still visible.'; return; }
-    const language = speechLanguage(); if (!language) return;
-    synthesis.cancel(); const utterance = new SpeechSynthesisUtterance(text); utterance.lang = language;
+    // Do not let the microphone transcribe the assistant's own reply, even if
+    // playback turns out to be unavailable or the language setting is invalid.
+    stopRecognition(); cancelPlayback();
+    if (!synthesis || typeof window.SpeechSynthesisUtterance !== 'function') {
+      const message = 'Spoken playback is unavailable; the text reply is still visible.';
+      $('voice-status').textContent = message; microphoneStatus(message); return;
+    }
+    const language = speechLanguage();
+    if (!language) { microphoneStatus('Invalid speech language. The text reply is still visible.'); return; }
+    const utterance = new window.SpeechSynthesisUtterance(text); currentUtterance = utterance; utterance.lang = language;
     if ($('speech-voice').value !== '') utterance.voice = voices[Number($('speech-voice').value)] || null;
-    utterance.onstart = () => { $('stop-speech').hidden = false; };
-    utterance.onend = utterance.onerror = () => { $('stop-speech').hidden = true; };
-    try { synthesis.speak(utterance); } catch { $('voice-status').textContent = 'Spoken playback is unavailable; the text reply is still visible.'; }
+    utterance.onstart = () => { if (currentUtterance === utterance) $('stop-speech').hidden = false; };
+    utterance.onend = () => { if (currentUtterance === utterance) { currentUtterance = null; $('stop-speech').hidden = true; } };
+    const playbackError = () => {
+      if (currentUtterance !== utterance) return;
+      currentUtterance = null; $('stop-speech').hidden = true;
+      const message = 'Spoken playback is unavailable; the text reply is still visible.';
+      $('voice-status').textContent = message; microphoneStatus(message);
+    };
+    utterance.onerror = playbackError;
+    try { synthesis.speak(utterance); } catch { playbackError(); }
   }
-  $('stop-speech').addEventListener('click', () => { synthesis?.cancel(); $('stop-speech').hidden = true; });
+  $('stop-speech').addEventListener('click', cancelPlayback);
   $('dictate').addEventListener('click', () => {
     if (!Recognition) return;
-    if (recognition) { try { recognition.stop(); } catch {} return; }
+    if (recognition) {
+      microphoneStatus('Stopping microphone…');
+      try { recognition.stop(); } catch { stopRecognition(); }
+      return;
+    }
     if (!voiceDisclosureAccepted && !confirm('Voice input may send audio to your browser’s speech service. Continue?')) return;
-    voiceDisclosureAccepted = true; const language = speechLanguage(); if (!language) return;
+    voiceDisclosureAccepted = true; const language = speechLanguage();
+    if (!language) { microphoneStatus('Invalid speech language. You can type instead.'); return; }
+    // Starting dictation interrupts playback; recognition is always one-shot
+    // and fills the composer for review rather than sending automatically.
+    cancelPlayback();
     const existing = $('chat-prompt').value.trim();
     try {
-      const instance = new Recognition(); recognition = instance; instance.lang = language; instance.interimResults = true; instance.continuous = false;
-      instance.onstart = () => { $('dictate').setAttribute('aria-label', 'Stop voice input'); $('dictate').title = 'Stop voice input'; };
+      const instance = new Recognition(); recognition = instance; let failed = false;
+      instance.lang = language; instance.interimResults = true; instance.continuous = false;
+      microphoneStatus('Requesting microphone access…');
+      instance.onstart = () => { if (recognition === instance) { dictateLabel(true); microphoneStatus('Microphone is listening. Tap the microphone to stop.'); } };
       instance.onresult = event => {
         if (recognition !== instance) return;
         const transcript = Array.from(event.results, result => result[0]?.transcript || '').join(' ');
         $('chat-prompt').value = `${existing}${existing && transcript ? ' ' : ''}${transcript}`.slice(0, 1600); updateChatControls();
       };
-      instance.onerror = () => { $('voice-status').textContent = 'Voice input is unavailable. You can type instead.'; };
-      instance.onend = () => { if (recognition === instance) recognition = null; $('dictate').setAttribute('aria-label', 'Start voice input'); $('dictate').title = 'Start voice input'; };
+      instance.onerror = () => {
+        if (recognition !== instance) return;
+        failed = true; const message = 'Voice input is unavailable. You can type instead.';
+        $('voice-status').textContent = message; microphoneStatus(message);
+      };
+      instance.onend = () => {
+        if (recognition !== instance) return;
+        recognition = null; dictateLabel(false); if (!failed) microphoneStatus();
+      };
       instance.start();
-    } catch { recognition = null; $('voice-status').textContent = 'Could not start voice input. You can type instead.'; }
+    } catch { recognition = null; dictateLabel(false); const message = 'Could not start voice input. You can type instead.'; $('voice-status').textContent = message; microphoneStatus(message); }
   });
   $('dictate').disabled = !Recognition;
   if (synthesis) { refreshVoices(); synthesis.addEventListener?.('voiceschanged', refreshVoices); }
+  // Stop microphone and playback when the tab is backgrounded or leaves; they
+  // never restart automatically on return.
+  document.addEventListener('visibilitychange', () => { if (document.hidden) stopAllSpeech(); });
+  window.addEventListener('pagehide', stopAllSpeech);
 
   // The callback contains no tokens; only show success after the owner-scoped
   // status endpoint confirms the saved channel. Email fragments are scrubbed by

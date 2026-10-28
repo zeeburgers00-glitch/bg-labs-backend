@@ -16,13 +16,36 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   if(!process.env.VIMAX_BROWSER_PATH)throw new Error('Set VIMAX_BROWSER_PATH to a Chromium executable.');
   browser=await chromium.launch({executablePath:process.env.VIMAX_BROWSER_PATH,args:['--no-sandbox','--disable-dev-shm-usage'],headless:true});
   const page=await browser.newPage({viewport:{width:1280,height:900}}),errors=[];page.on('pageerror',error=>errors.push(error.message));
-  let confirm=true;page.on('dialog',dialog=>confirm?dialog.accept():dialog.dismiss());
+  // Deterministic browser-speech fakes: no microphone or external speech service.
+  await page.addInitScript(()=>{
+   if(new URL(location.href).searchParams.has('no-voice')){
+    Object.defineProperty(window,'speechSynthesis',{configurable:true,value:null});
+    Object.defineProperty(window,'SpeechRecognition',{configurable:true,value:undefined});
+    Object.defineProperty(window,'webkitSpeechRecognition',{configurable:true,value:undefined});return;
+   }
+   const voice={instances:[],utterances:[],cancelled:0};window.__voice=voice;
+   class FakeRecognition {
+    constructor(){voice.instances.push(this);}
+    start(){this.started=true;this.onstart?.();}
+    stop(){this.stopped=true;this.onend?.();}
+    abort(){this.aborted=true;}
+   }
+   class FakeUtterance {constructor(text){this.text=text;}}
+   const synthesis={getVoices:()=>[{name:'Test male voice',lang:'en-US',localService:true}],addEventListener(){},
+    cancel(){voice.cancelled++;},speak(utterance){voice.utterances.push(utterance);utterance.onstart?.();}};
+   Object.defineProperty(window,'speechSynthesis',{configurable:true,value:synthesis});
+   window.SpeechRecognition=FakeRecognition;window.SpeechSynthesisUtterance=FakeUtterance;
+  });
+  let confirm=true,voiceConfirmCount=0;page.on('dialog',dialog=>{
+   if(dialog.message().includes('Voice input may send audio'))voiceConfirmCount++;
+   return confirm?dialog.accept():dialog.dismiss();
+  });
   const alice='aaaaaaaa-0000-4000-8000-000000000001',bob='bbbbbbbb-0000-4000-8000-000000000002';
   const channelA='12345678-0000-4000-8000-000000000010',channelB='12345678-0000-4000-8000-000000000011';
   let signedIn=false,current=alice,configured=false,gatewayConfigured=false,allowed=true,paused=false,googleConfigured=false,googleAllowed=true,appLoginEnabled=false,fbConfigured=false;
-  let googleStatusFailure=false,sessionFailure=false;
+  let googleStatusFailure=false,sessionFailure=false,usageMode='ok';
   let analyticsEnabled=false,analyticsGranted=false,analyticsMode='ok';
-  let authorizationUrl='https://accounts.google.com/o/oauth2/v2/auth?state=mock',appAuthorizationUrl='https://fake.supabase.co/auth/v1/authorize?provider=google',holdChat=false,holdOAuth=false,holdProviders=false,releaseChat,releaseOAuth,releaseProviders,notifyChat,notifyOAuth,notifyProviders;
+  let authorizationUrl='https://accounts.google.com/o/oauth2/v2/auth?state=mock',appAuthorizationUrl='https://fake.supabase.co/auth/v1/authorize?provider=google',holdChat=false,holdOAuth=false,holdProviders=false,holdUsage=false,releaseChat,releaseOAuth,releaseProviders,releaseUsage,notifyChat,notifyOAuth,notifyProviders,notifyUsage;
   const selected={[alice]:null,[bob]:null}, histories={
    [alice]:[{prompt:'Alice private question',reply:'<img src=x onerror=alert(1)> safe answer',provider:'groq',model:'openai/gpt-oss-120b'}],
    [bob]:[{prompt:'Bob private question',reply:'Bob reply',provider:'groq',model:'openai/gpt-oss-120b'}],
@@ -62,6 +85,13 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
    }
    else if(p==='/api/cloud/chat/history' && m==='GET')data={turns:[...histories[current]].reverse()};
    else if(p==='/api/cloud/chat/history' && m==='DELETE'){histories[current]=[];data={ok:true};}
+   else if(p==='/api/cloud/usage' && m==='GET'){
+    const owner=current;if(holdUsage)await new Promise(resolve=>{releaseUsage=resolve;notifyUsage();});
+    if(usageMode==='error')return route.fulfill({status:503,json:{error:'Usage unavailable. Try again.'}});
+    if(usageMode==='invalid')return route.fulfill({status:200,json:{calls:'invalid'}});
+    data={calls:owner===alice?[{provider:'groq',model:'<img src=x onerror=alert(1)>',feature:'chat',status:'succeeded',input_tokens:33,output_tokens:12,created_at:'2026-10-28T06:00:00Z'},
+     {provider:'groq',model:'llama-test',feature:'chat',status:'failed',input_tokens:null,output_tokens:null,created_at:'2026-10-28T06:01:00Z'}]:[]};
+   }
    else if(p==='/api/cloud/ai/pause'){paused=body.paused;data={paused};}
    else if(p==='/api/cloud/chat' && m==='POST'){
     chatBodies.push(body);const owner=current;
@@ -146,13 +176,62 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   assert.equal(await page.locator('#channel-status img').count(),0);
   await page.waitForFunction(()=>document.getElementById('facebook-status').textContent.includes('Verified this session'));
   assert.deepEqual(facebookSelections,[{owner:alice,id:facebookPage}]);
-  await page.locator('#chat-settings').click();await page.locator('#provider').selectOption('groq');
+  await page.locator('#chat-settings').click();
+  await page.locator('#usage-refresh').click();await page.waitForFunction(()=>document.getElementById('usage-list').childElementCount===2);
+  assert.match(await page.locator('#usage-list').textContent(),/Input tokens: 33 · Output tokens: 12/);
+  assert.match(await page.locator('#usage-list').textContent(),/failed; charges may apply/);
+  assert.match(await page.locator('#usage-list').textContent(),/Input tokens: unknown/);
+  assert.equal(await page.locator('#usage-list img').count(),0);
+  assert.match(await page.locator('#usage-list').textContent(),/<img src=x/);
+  usageMode='error';await page.locator('#usage-refresh').click();
+  await page.waitForFunction(()=>document.getElementById('usage-message').textContent.includes('Usage unavailable'));
+  assert.equal(await page.locator('#usage-list').textContent(),'');
+  usageMode='invalid';await page.locator('#usage-refresh').click();
+  await page.waitForFunction(()=>document.getElementById('usage-message').textContent.includes('Usage data was invalid'));
+  usageMode='ok';await page.locator('#provider').selectOption('groq');
   await page.locator('#model').selectOption('openai/gpt-oss-120b');await page.locator('#answer-length').selectOption('detailed');
   await page.locator('#fallback').selectOption('openai|gpt-5.4-mini');await page.locator('[data-close=settings-dialog]').click();
   await page.locator('#chat-prompt').fill('A useful question');await page.locator('#chat-send').click();
   await page.waitForFunction(()=>document.getElementById('messages').textContent.includes('mocked reply'));
   assert.deepEqual(chatBodies[0],{provider:'groq',model:'openai/gpt-oss-120b',mode:'chat',length:'detailed',prompt:'A useful question',fallback:{provider:'openai',model:'gpt-5.4-mini'}});
   assert.equal(await page.locator('#messages img').count(),0);assert.match(await page.locator('#chat-status').textContent(),/8 request attempt/);
+  // Voice is opt-in, one-shot, user-reviewed and interrupted by later input.
+  const chatBeforeVoice=chatBodies.length;
+  assert.equal(await page.evaluate(()=>window.__voice.instances.length),0);
+  confirm=false;await page.locator('#dictate').click();confirm=true;
+  assert.equal(await page.evaluate(()=>window.__voice.instances.length),0,'denied disclosure must not start the microphone');
+  await page.locator('#dictate').click();
+  assert.equal(voiceConfirmCount,2);
+  assert.match(await page.locator('#microphone-status').textContent(),/Microphone is listening/);
+  assert.equal(await page.locator('#dictate').getAttribute('aria-label'),'Stop voice input');
+  await page.evaluate(()=>window.__voice.instances.at(-1).onresult({results:[[{transcript:'Assalam alaikum'}]]}));
+  assert.equal(await page.locator('#chat-prompt').inputValue(),'Assalam alaikum');
+  assert.equal(chatBodies.length,chatBeforeVoice,'dictation must not auto-send');
+  await page.locator('#dictate').click();assert.equal(await page.locator('#microphone-status').isHidden(),true);
+  await page.locator('#chat-settings').click();await page.locator('#speak-replies').check();
+  await page.locator('#speech-voice').selectOption('0');await page.locator('#speech-language').fill('ur-PK');
+  await page.locator('[data-close=settings-dialog]').click();await page.locator('#dictate').click();
+  await page.locator('#chat-send').click();
+  assert.equal(await page.evaluate(()=>window.__voice.instances.at(-1).aborted),true,'sending stops the microphone');
+  await page.waitForFunction(()=>window.__voice.utterances.length===1);
+  assert.deepEqual(await page.evaluate(()=>({lang:window.__voice.utterances[0].lang,voice:window.__voice.utterances[0].voice.name})),{lang:'ur-PK',voice:'Test male voice'});
+  assert.equal(await page.locator('#stop-speech').isVisible(),true);
+  await page.locator('#chat-prompt').fill('Another voice reply');await page.locator('#chat-send').click();
+  await page.waitForFunction(()=>window.__voice.utterances.length===2);
+  await page.evaluate(()=>window.__voice.utterances[0].onend());
+  assert.equal(await page.locator('#stop-speech').isVisible(),true,'a stale speech callback must not hide a newer stop control');
+  const cancelBefore=await page.evaluate(()=>window.__voice.cancelled);await page.locator('#dictate').click();
+  assert.ok((await page.evaluate(()=>window.__voice.cancelled))>cancelBefore,'dictation interrupts playback');
+  assert.equal(await page.locator('#stop-speech').isHidden(),true);await page.locator('#dictate').click();
+  await page.locator('#dictate').click();
+  await page.evaluate(()=>{const instance=window.__voice.instances.at(-1);instance.onerror();instance.onend();});
+  assert.match(await page.locator('#microphone-status').textContent(),/Voice input is unavailable/);
+  assert.equal(await page.locator('#dictate').getAttribute('aria-label'),'Start voice input');
+  await page.locator('#chat-prompt').fill('Voice playback error');await page.locator('#chat-send').click();
+  await page.waitForFunction(()=>window.__voice.utterances.length===3);
+  await page.evaluate(()=>window.__voice.utterances[2].onerror());
+  assert.match(await page.locator('#microphone-status').textContent(),/Spoken playback is unavailable/);
+  assert.match(await page.locator('#messages').textContent(),/mocked reply/);
   // Pause/resume stays part of chat and does not bypass backend safety settings.
   await page.locator('#chat-settings').click();await page.locator('#toggle-pause').click();
   await page.waitForFunction(()=>document.getElementById('toggle-pause').textContent==='Resume chat');assert.equal(await page.locator('#chat-send').isDisabled(),true);
@@ -171,12 +250,21 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   await page.locator('#facebook-disconnect').click();
   await page.waitForFunction(()=>document.getElementById('facebook-message').textContent.includes('not revoked'));
   await page.locator('[data-close=facebook-dialog]').click();
-  // A late provider response after logout must not reveal the old owner's data.
+  // Late usage and provider responses after logout must not reveal the old owner's data.
+  holdUsage=true;const usageReached=new Promise(resolve=>{notifyUsage=resolve;});
+  await page.locator('#chat-settings').click();await page.locator('#usage-refresh').click();await usageReached;
+  await page.locator('[data-close=settings-dialog]').click();
   holdChat=true;const chatReached=new Promise(resolve=>{notifyChat=resolve;});
   await page.locator('#chat-prompt').fill('Private pending question');await page.locator('#chat-send').click();await chatReached;
+  await page.locator('#dictate').click();assert.equal(await page.locator('#microphone-status').isVisible(),true);
   await page.locator('#account-button').click();await page.locator('#logout').click();
   await page.waitForFunction(()=>document.getElementById('account-button').textContent==='Email sign in');
-  releaseChat();await page.waitForTimeout(100);holdChat=false;
+  assert.equal(await page.evaluate(()=>window.__voice.instances.at(-1).aborted),true);
+  // Browser callbacks arriving after logout must not repopulate the next session.
+  await page.evaluate(()=>{const old=window.__voice.instances.at(-1);old.onresult({results:[[{transcript:'private late speech'}]]});old.onend();});
+  releaseChat();releaseUsage();await page.waitForTimeout(100);holdChat=false;holdUsage=false;
+  assert.equal(await page.locator('#microphone-status').isHidden(),true);
+  assert.equal(await page.locator('#usage-list').textContent(),'');
   assert.equal(await page.locator('#messages').textContent(),'');assert.equal(await page.locator('#chat-prompt').inputValue(),'');
   assert.equal(await page.locator('#channel-manage').isHidden(),true);assert.doesNotMatch(await page.locator('#channel-status').textContent(),/Selected|img src/);
   // A different account never sees Alice's history or saved-channel names.
@@ -184,6 +272,14 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   await page.locator('#account-password').fill('sample-password');await page.locator('#account-form button[value=login]').click();
   await page.waitForFunction(()=>document.getElementById('messages').textContent.includes('Bob private question'));
   assert.doesNotMatch(await page.locator('#messages').textContent(),/Alice private|Private pending/);
+  await page.locator('#chat-settings').click();await page.locator('#usage-refresh').click();
+  await page.waitForFunction(()=>document.getElementById('usage-message').textContent.includes('No recorded usage'));
+  assert.equal(await page.locator('#usage-list').textContent(),'');await page.locator('[data-close=settings-dialog]').click();
+  const voicePromptsBeforeBob=voiceConfirmCount;await page.locator('#dictate').click();
+  assert.equal(voiceConfirmCount,voicePromptsBeforeBob+1,'voice disclosure must not carry between accounts');
+  await page.evaluate(()=>window.dispatchEvent(new Event('pagehide')));
+  assert.equal(await page.evaluate(()=>window.__voice.instances.at(-1).aborted),true);
+  assert.equal(await page.locator('#microphone-status').isHidden(),true);
   assert.equal(await page.locator('#channel-manage').isHidden(),true);
   // General chat works without a YouTube grant; analytics still requires one.
   gatewayConfigured=true;await page.reload({waitUntil:'domcontentloaded'});
@@ -308,7 +404,16 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   await page.locator('#google-signin').click();
   assert.match(await page.locator('#account-message').textContent(),/account service could not be checked/i);
   assert.equal(posts.filter(value=>value==='/api/cloud/google/start').length,starts);
+  // Devices without browser speech still have a working text path and a clear error.
+  sessionFailure=false;appLoginEnabled=false;signedIn=true;current=bob;configured=true;
+  await page.goto(`${base}/?no-voice=1`,{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>document.getElementById('account-button').textContent==='Account' && document.getElementById('provider').value==='groq');
+  assert.equal(await page.locator('#dictate').isDisabled(),true);
+  await page.locator('#chat-settings').click();await page.locator('#speak-replies').check();await page.locator('[data-close=settings-dialog]').click();
+  await page.locator('#chat-prompt').fill('Text still works');await page.locator('#chat-send').click();
+  await page.waitForFunction(()=>document.getElementById('microphone-status').textContent.includes('Spoken playback is unavailable'));
+  assert.match(await page.locator('#messages').textContent(),/mocked reply/);
   assert.deepEqual(errors,[]);
-  console.log('Mocked hosted chat smoke passed: Google help/app login, channel consent/restore, analytics chart, privacy and mobile.');
+  console.log('Mocked hosted chat smoke passed: auth, channel consent/restore, analytics, usage, speech safety and mobile.');
  } finally {await browser?.close();await new Promise(resolve=>server.close(resolve));}
 })().catch(error=>{console.error(error);process.exitCode=1});
