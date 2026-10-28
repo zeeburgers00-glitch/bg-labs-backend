@@ -226,7 +226,11 @@ async def import_drive(body: DriveImportRequest, request: Request):
         try:
             data=await _drive_bytes(file_id,mime,token); total+=len(data)
             if total>MAX_TOTAL: skipped.append({"name":name,"reason":"24 MB total import limit reached."}); break
-            extracted=_extract(name,mime,data)[:60000]
+            extract_mime=mime
+            if mime == "application/vnd.google-apps.document": extract_mime="text/plain"
+            elif mime == "application/vnd.google-apps.spreadsheet": extract_mime="text/csv"
+            elif mime == "application/vnd.google-apps.presentation": extract_mime="application/pdf"
+            extracted=_extract(name,extract_mime,data)[:60000]
         except (ValueError,ImportError,zipfile.BadZipFile,ET.ParseError) as exc:
             skipped.append({"name":name,"reason":str(exc)[:180] or "Could not extract text."}); continue
         except HTTPException: raise
