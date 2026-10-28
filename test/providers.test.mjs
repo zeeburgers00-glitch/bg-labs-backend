@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createBridge} from '../api/bridge.mjs';
-import {chatCompletion, providerStatus, searchPexels, validateSelection} from '../api/providers.mjs';
+import {chatCompletion, providerStatus, providerTestTokens, searchPexels, validateSelection} from '../api/providers.mjs';
 
 const baseEnv = {SUPABASE_URL:'https://example.supabase.co', SUPABASE_PUBLISHABLE_KEY:'sb_publishable_test'};
 const testEnv = {...baseEnv, GROQ_API_KEY:'test-only-groq', MISTRAL_API_KEY:'test-only-mistral', PEXELS_API_KEY:'test-only-pexels', VIMAX_AI_ALLOW_ALL_AUTHENTICATED:'true'};
@@ -51,12 +51,12 @@ function mockBackend({provider, denyReservation=false, finishAvailable=true} = {
   };
   return {fetchImpl, calls, external, turns, usage};
 }
-const input = {provider:'groq', model:'llama-3.1-8b-instant', prompt:'Plan a short original video.', mode:'ideas'};
+const input = {provider:'groq', model:'qwen/qwen3.8-27b', prompt:'Plan a short original video.', mode:'ideas'};
 
 test('fixed-host chat adapters use server-only credentials and enforce model allowlists', async () => {
   const cases = [
     ['openai','OPENAI_API_KEY','gpt-5.4-mini','https://api.openai.com/v1/chat/completions'],
-    ['groq','GROQ_API_KEY','llama-3.1-8b-instant','https://api.groq.com/openai/v1/chat/completions'],
+    ['groq','GROQ_API_KEY','qwen/qwen3.8-27b','https://api.groq.com/openai/v1/chat/completions'],
     ['gemini','GEMINI_API_KEY','gemini-2.5-flash','https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'],
     ['mistral','MISTRAL_API_KEY','mistral-small-latest','https://api.mistral.ai/v1/chat/completions'],
     ['zai','ZAI_API_KEY','glm-4.5-flash','https://api.z.ai/api/paas/v4/chat/completions'],
@@ -78,7 +78,16 @@ test('fixed-host chat adapters use server-only credentials and enforce model all
   }
   assert.equal(providerStatus({OPENCODE_API_KEY:'test-only-key'}).find(p => p.id === 'opencode').state,'model_required');
   assert.equal(providerStatus({OPENCODE_API_KEY:'test-only-key',OPENCODE_MODELS:'gpt-5'}).find(p => p.id === 'opencode').state,'invalid_configuration');
-  assert.throws(() => validateSelection({GROQ_API_KEY:'key with spaces'},'groq','llama-3.1-8b-instant'), /not configured/);
+  assert.throws(() => validateSelection({GROQ_API_KEY:'key with spaces'},'groq','qwen/qwen3.8-27b'), /not configured/);
+});
+
+test('current defaults avoid retired Groq models and keep explicit owner overrides', () => {
+  const initial = providerStatus({GROQ_API_KEY:'test-only-key'}).find(provider => provider.id === 'groq');
+  assert.deepEqual(initial.models, ['openai/gpt-oss-120b','openai/gpt-oss-20b','qwen/qwen3.8-27b']);
+  const override = providerStatus({GROQ_API_KEY:'test-only-key', GROQ_MODELS:'openai/gpt-oss-20b'}).find(provider => provider.id === 'groq');
+  assert.deepEqual(override.models, ['openai/gpt-oss-20b']);
+  const zai = providerStatus({ZAI_API_KEY:'test-only-key'}).find(provider => provider.id === 'zai');
+  assert.deepEqual(zai.models, ['glm-4.7-flash','glm-4.5-flash']);
 });
 
 test('Gemini prefers current Flash while preserving owner-selected model overrides', () => {
@@ -92,7 +101,9 @@ test('Gemini prefers current Flash while preserving owner-selected model overrid
 
 test('stronger documented models use bounded, provider-specific reasoning parameters', async () => {
   for (const [id,keyName,model,expected] of [
-    ['groq','GROQ_API_KEY','openai/gpt-oss-120b',{reasoning_effort:'low',reasoning_format:'hidden'}],
+    ['groq','GROQ_API_KEY','openai/gpt-oss-120b',{reasoning_effort:'low',include_reasoning:false}],
+    ['groq','GROQ_API_KEY','openai/gpt-oss-20b',{reasoning_effort:'low',include_reasoning:false}],
+    ['groq','GROQ_API_KEY','qwen/qwen3.8-27b',{reasoning_effort:'none'}],
     ['gemini','GEMINI_API_KEY','gemini-3.8-flash',{reasoning_effort:'low'}],
     ['gemini','GEMINI_API_KEY','gemini-4-argon',{reasoning_effort:'low'}],
   ]) {
@@ -103,11 +114,55 @@ test('stronger documented models use bounded, provider-specific reasoning parame
     for (const [name,value] of Object.entries(expected)) assert.equal(request[name],value);
     assert.equal(request.max_tokens,600);
   }
-  const fake=mockBackend(), bridge=createBridge({env:testEnv,fetchImpl:fake.fetchImpl});
+  const fake=mockBackend({provider:async (_target,_init,payload) => {
+    // Mimic Groq's documented GPT-OSS parameter contract rather than accepting every payload.
+    if ('reasoning_format' in payload || payload.include_reasoning !== false) return Response.json({}, {status:400});
+    return Response.json({choices:[{message:{content:'OK'}}]});
+  }}), bridge=createBridge({env:testEnv,fetchImpl:fake.fetchImpl});
   const response=await bridge.fetch(req('/api/cloud/providers/test',{method:'POST',body:{provider:'groq',model:'openai/gpt-oss-120b'}}));
   assert.equal(response.status,200); assert.equal(fake.external[0].payload.max_tokens,1024);
-  assert.equal(fake.external[0].payload.reasoning_format,'hidden');
-  await assert.rejects(chatCompletion({env:testEnv,id:'groq',model:'llama-3.1-8b-instant',messages:[],maxTokens:1601,fetchImpl:fake.fetchImpl}),/response-length/);
+  assert.equal(fake.external[0].payload.include_reasoning,false);
+  assert.equal('reasoning_format' in fake.external[0].payload,false, 'Groq GPT-OSS rejects reasoning_format');
+  await assert.rejects(chatCompletion({env:testEnv,id:'groq',model:'qwen/qwen3.8-27b',messages:[],maxTokens:1601,fetchImpl:fake.fetchImpl}),/response-length/);
+});
+
+test('reasoning settings and free-route price filters are confined to documented models', async () => {
+  assert.equal(providerTestTokens('groq','openai/gpt-oss-120b'),1024);
+  assert.equal(providerTestTokens('opencode','minimax-m2.7'),1024);
+  assert.equal(providerTestTokens('openrouter','openrouter/free'),1024);
+  assert.equal(providerTestTokens('huggingface','openai/gpt-oss-120b:groq'),1024);
+  assert.equal(providerTestTokens('zai','glm-4.7-flash'),16);
+  for (const [id,keyName,model,expected] of [
+    ['zai','ZAI_API_KEY','glm-4.7-flash',{thinking:{type:'disabled'}}],
+    ['zai','ZAI_API_KEY','glm-4.5-flash',{thinking:{type:'disabled'}}],
+    ['openrouter','OPENROUTER_API_KEY','openrouter/free',{provider:{max_price:{prompt:0,completion:0,request:0}}}],
+    ['openrouter','OPENROUTER_API_KEY','nvidia/nemotron-3.5-lightning:free',{provider:{max_price:{prompt:0,completion:0,request:0}},reasoning:{enabled:false}}],
+    ['zai','ZAI_API_KEY','glm-5.3',{}],
+    ['openrouter','OPENROUTER_API_KEY','openai/gpt-5.4',{}],
+  ]) {
+    let payload;
+    const env = {[keyName]:'test-only-key', ...(id === 'zai' ? {ZAI_MODELS:model} : {OPENROUTER_MODELS:model})};
+    await chatCompletion({env,id,model,messages:[{role:'user',content:'Hi'}],fetchImpl:async (_,init)=>{
+      payload = JSON.parse(init.body);
+      return Response.json({choices:[{message:{content:'OK'}}]});
+    }});
+    assert.deepEqual(payload, {model,messages:[{role:'user',content:'Hi'}],max_tokens:600,...expected});
+    assert.equal('models' in payload,false, 'never send a model fallback list');
+  }
+  for (const [provider,model,keyName,modelsName] of [
+    ['openrouter','openrouter/free','OPENROUTER_API_KEY','OPENROUTER_MODELS'],
+    ['openrouter','nvidia/nemotron-3.5-lightning:free','OPENROUTER_API_KEY','OPENROUTER_MODELS'],
+    ['zai','glm-4.7-flash','ZAI_API_KEY','ZAI_MODELS'],
+    ['zai','glm-4.5-flash','ZAI_API_KEY','ZAI_MODELS'],
+  ]) {
+    const fake = mockBackend({provider:async()=>Response.json({}, {status:429})});
+    const bridge = createBridge({env:{...testEnv,[keyName]:'test-only-key',[modelsName]:model},fetchImpl:fake.fetchImpl});
+    const res = await bridge.fetch(req('/api/cloud/chat',{method:'POST',body:{...input,provider,model,fallback:{provider:'mistral',model:'mistral-small-latest'}}}));
+    assert.equal(res.status,422); assert.match((await res.json()).error,/does not allow a fallback/);
+    assert.equal(fake.external.length,0); assert.equal(fake.usage.length,0);
+    const noFallback = await bridge.fetch(req('/api/cloud/chat',{method:'POST',body:{...input,provider,model}}));
+    assert.equal(noFallback.status,429); assert.equal(fake.external.length,1); assert.equal(fake.usage.length,1);
+  }
 });
 
 test('detailed chat has a bounded token budget and reports truncated output', async () => {
@@ -124,7 +179,7 @@ test('detailed chat has a bounded token budget and reports truncated output', as
 });
 
 test('provider failures are sanitized, response size is bounded and timeouts do not request a retry', async () => {
-  const options = {env:testEnv, id:'groq', model:'llama-3.1-8b-instant', messages:[]};
+  const options = {env:testEnv, id:'groq', model:'qwen/qwen3.8-27b', messages:[]};
   await assert.rejects(chatCompletion({...options, fetchImpl:async () => Response.json({error:'test-only-groq'}, {status:401})}), error => error.status === 502 && error.retryable && !error.message.includes('test-only-groq'));
   await assert.rejects(chatCompletion({...options, fetchImpl:async () => {throw new Error('test-only-groq');}}), error => error.status === 504 && !error.retryable && !error.message.includes('test-only-groq'));
   await assert.rejects(chatCompletion({...options, fetchImpl:async () => new Response('x'.repeat(270_000))}), /too large/);
@@ -134,7 +189,7 @@ test('provider failures are sanitized, response size is bounded and timeouts do 
 test('inference errors that might have incurred a charge never trigger automatic fallback', async () => {
   const fallback = {provider:'mistral',model:'mistral-small-latest'};
   const failures = [
-    ...[400,404,408,409,422,499,500,501,502,503,504,599].map(status => [`HTTP ${status}`, () => Response.json({secret:'upstream-only'}, {status})]),
+    ...[400,402,404,408,409,422,499,500,501,502,503,504,599].map(status => [`HTTP ${status}`, () => Response.json({secret:'upstream-only'}, {status})]),
     ['invalid JSON', () => new Response('not json')],
     ['empty output', () => Response.json({choices:[{message:{content:''}}]})],
     ['oversized output', () => new Response('x'.repeat(270_000))],
@@ -147,6 +202,8 @@ test('inference errors that might have incurred a charge never trigger automatic
     const result = await response.json();
     assert.ok([502,504].includes(response.status),label);
     assert.match(result.error, /may have (?:been processed|incurred charges)/i,label);
+    if (label === 'HTTP 400') assert.match(result.error,/HTTP 400.*configured model/i);
+    if (label === 'HTTP 402') assert.match(result.error,/HTTP 402.*balance and billing/i);
     assert.doesNotMatch(JSON.stringify(result), /upstream-only|private-network-detail/,label);
     assert.equal(fake.external.length,1,`${label} sent a second external request`);
     assert.deepEqual(fake.usage.map(call=>call.status),['failed'],label);
@@ -334,7 +391,7 @@ test('free adapter fails closed on missing flag or trusted token, wrong model, o
   const valid = createBridge({env:enabled,fetchImpl:fake.fetchImpl,getGatewayToken:() => 'trusted.token'});
   const badModel = await valid.fetch(req('/api/cloud/chat',{method:'POST',body:{...gatewayInput,model:'openai/gpt-6'}}));
   assert.equal(badModel.status, 422);
-  const fallback = await valid.fetch(req('/api/cloud/chat',{method:'POST',body:{...gatewayInput,fallback:{provider:'groq',model:'llama-3.1-8b-instant'}}}));
+  const fallback = await valid.fetch(req('/api/cloud/chat',{method:'POST',body:{...gatewayInput,fallback:{provider:'groq',model:'qwen/qwen3.8-27b'}}}));
   assert.equal(fallback.status, 422);
   assert.match((await fallback.json()).error, /does not allow a fallback/);
   const denied = createBridge({env:{...enabled,VIMAX_AI_ALLOW_ALL_AUTHENTICATED:'false'},fetchImpl:fake.fetchImpl,getGatewayToken:() => 'trusted.token'});

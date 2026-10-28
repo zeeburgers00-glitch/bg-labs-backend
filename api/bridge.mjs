@@ -1,6 +1,6 @@
 // Public, stateless Supabase API. It never exposes ViMax's unauthenticated
 // single-workspace local server or server-side provider keys to the Internet.
-import {ProviderError, providerStatus, pexelsStatus, validateSelection, chatCompletion, providerTestTokens, searchPexels, githubRepositoryInput, getGithubRepository} from './providers.mjs';
+import {ProviderError, providerStatus, pexelsStatus, validateSelection, requiresNoFallback, chatCompletion, providerTestTokens, searchPexels, githubRepositoryInput, getGithubRepository} from './providers.mjs';
 import {YouTubeError, createYouTube, clearYouTubeCookies} from './youtube.mjs';
 import {SocialError, createSocial, clearSocialCookies} from './social.mjs';
 import {GpuError, createGpu} from './gpu.mjs';
@@ -621,9 +621,9 @@ export function createBridge({env = process.env, fetchImpl = globalThis.fetch, g
       if (method === 'POST' && path === '/api/cloud/chat') {
         const session = await authenticated(); requireAiAccess(session);
         const input = chatInput(await body(request));
-        // The owner's free-route choice must not silently fall back to a paid
-        // provider, even if another configured key or a crafted client exists.
-        if (input.primary.provider === 'vercel' && input.fallback) throw new HttpError(422, 'Free AI does not allow a fallback provider.');
+        // A selected free route must never automatically fall back to another
+        // provider, even when a crafted client submits a configured paid key.
+        if (requiresNoFallback(input.primary.provider, input.primary.model) && input.fallback) throw new HttpError(422, 'Free AI does not allow a fallback provider.');
         const runtime = await providerEnv();
         validateSelection(runtime, input.primary.provider, input.primary.model);
         if (input.fallback) validateSelection(runtime, input.fallback.provider, input.fallback.model);

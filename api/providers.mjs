@@ -5,12 +5,12 @@ const SPECS = Object.freeze([
   // or a durable user-supplied key. The model and provider cannot be overridden.
   {id:'vercel', label:'Vercel · Reflection Free', key:'VIMAX_GATEWAY_REQUEST_TOKEN', enabled:'VIMAX_GATEWAY_FREE_ENABLED', defaults:['reflection/beam-free'], allowedModels:['reflection/beam-free'], url:'https://ai-gateway.vercel.sh/v1/chat/completions'},
   {id:'openai', label:'OpenAI', key:'OPENAI_API_KEY', models:'OPENAI_MODELS', defaults:['gpt-5.4-mini','gpt-5.4'], url:'https://api.openai.com/v1/chat/completions', maxTokenField:'max_completion_tokens'},
-  {id:'groq', label:'Groq', key:'GROQ_API_KEY', models:'GROQ_MODELS', defaults:['openai/gpt-oss-120b','llama-3.1-8b-instant'], url:'https://api.groq.com/openai/v1/chat/completions'},
+  {id:'groq', label:'Groq', key:'GROQ_API_KEY', models:'GROQ_MODELS', defaults:['openai/gpt-oss-120b','openai/gpt-oss-20b','qwen/qwen3.8-27b'], url:'https://api.groq.com/openai/v1/chat/completions'},
   // Google limits 2.5 Flash for new projects; prefer its current Flash model.
   // Actual model availability and pricing still depend on the owner's account.
   {id:'gemini', label:'Gemini', key:'GEMINI_API_KEY', models:'GEMINI_MODELS', defaults:['gemini-3.8-flash','gemini-2.5-flash','gemini-4-argon'], url:'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'},
   {id:'mistral', label:'Mistral', key:'MISTRAL_API_KEY', models:'MISTRAL_MODELS', defaults:['mistral-small-latest'], url:'https://api.mistral.ai/v1/chat/completions'},
-  {id:'zai', label:'Z.ai (general API)', key:'ZAI_API_KEY', models:'ZAI_MODELS', defaults:['glm-4.5-flash'], url:'https://api.z.ai/api/paas/v4/chat/completions'},
+  {id:'zai', label:'Z.ai (general API)', key:'ZAI_API_KEY', models:'ZAI_MODELS', defaults:['glm-4.7-flash','glm-4.5-flash'], url:'https://api.z.ai/api/paas/v4/chat/completions'},
   {id:'openrouter', label:'OpenRouter', key:'OPENROUTER_API_KEY', models:'OPENROUTER_MODELS', defaults:['openrouter/free'], url:'https://openrouter.ai/api/v1/chat/completions'},
   {id:'huggingface', label:'Hugging Face Inference', key:'HF_TOKEN', models:'HF_MODELS', defaults:['openai/gpt-oss-120b:groq'], url:'https://router.huggingface.co/v1/chat/completions'},
   // OpenCode's different model families use different protocols. Restrict this
@@ -69,9 +69,13 @@ function responseFailure(status, inference = false) {
   if (status === 401 || status === 403) return new ProviderError(502, 'The provider rejected its credentials or permissions.', true);
   if (status === 429) return new ProviderError(429, 'The provider rate limit or quota was reached.', true);
   // An intermediary or provider may fail after the model has already run.
-  // An unexpected HTTP error is not proof that it was free or unprocessed.
-  if (inference) return new ProviderError(502,
-    'The provider returned an unexpected error. The request may have been processed or incurred charges; no further automatic retry or fallback will be sent.', false, true);
+  // Show only the HTTP status, never the upstream error body or credential.
+  if (inference) {
+    const help = [400,404,422].includes(status) ? ' Check the configured model and account access.'
+      : status === 402 ? ' Check the provider account balance and billing.' : '';
+    return new ProviderError(502,
+      `The provider returned HTTP ${status}.${help} The request may have been processed or incurred charges; no further automatic retry or fallback will be sent.`, false, true);
+  }
   if ([500, 502, 503, 504].includes(status)) return new ProviderError(502, 'The provider is temporarily unavailable.', true);
   return new ProviderError(502, 'The provider rejected the configured model or request.');
 }
@@ -128,17 +132,38 @@ async function requireFreeGatewayEndpoint(fetchImpl) {
     throw new ProviderError(503, 'Free AI pricing or availability could not be verified. No AI generation was sent.');
   }
 }
-// Explicitly bound reasoning for the documented models below. Other models
-// keep their provider defaults rather than receiving an incompatible parameter.
-function reasoningOptions(id, model) {
+function isFreeOpenRouter(id, model) {
+  return id === 'openrouter' && typeof model === 'string' && (model === 'openrouter/free' || model.endsWith(':free'));
+}
+// Do not automatically move an explicitly selected free route to any other
+// provider. Listed prices are not a guarantee against BYOK or account charges.
+export function requiresNoFallback(id, model) {
+  return id === 'vercel' || isFreeOpenRouter(id, model)
+    || (id === 'zai' && ['glm-4.7-flash','glm-4.5-flash'].includes(model));
+}
+// Use only parameters documented for each exact model. Other owner-selected
+// models keep their provider defaults instead of receiving incompatible fields.
+function requestOptions(id, model) {
   if (id === 'vercel') return {reasoning:{effort:'low', exclude:true}, providerOptions:{gateway:{only:['reflection'], has:['free']}}};
-  if (id === 'groq' && /^openai\/gpt-oss-(?:20b|120b)$/.test(model)) return {reasoning_effort:'low', reasoning_format:'hidden'};
+  // Groq GPT-OSS does not support reasoning_format. include_reasoning is the
+  // documented alternative; the two parameters are mutually exclusive.
+  if (id === 'groq' && /^openai\/gpt-oss-(?:20b|120b)$/.test(model)) return {reasoning_effort:'low', include_reasoning:false};
+  if (id === 'groq' && model === 'qwen/qwen3.8-27b') return {reasoning_effort:'none'};
   if (id === 'gemini' && ['gemini-3.8-flash','gemini-4-argon'].includes(model)) return {reasoning_effort:'low'};
+  if (id === 'zai' && ['glm-4.7-flash','glm-4.5-flash'].includes(model)) return {thinking:{type:'disabled'}};
+  if (isFreeOpenRouter(id, model)) {
+    return {provider:{max_price:{prompt:0, completion:0, request:0}},
+      ...(model === 'nvidia/nemotron-3.5-lightning:free' ? {reasoning:{enabled:false}} : {})};
+  }
   return {};
 }
 export function providerTestTokens(id, model) {
-  // Thinking models may use the small probe budget before producing an answer.
-  return id === 'vercel' || id === 'gemini' || (id === 'groq' && /^openai\/gpt-oss-(?:20b|120b)$/.test(model)) ? 1024 : 16;
+  // Reasoning can consume the entire probe before a visible answer is produced.
+  // These are maximum output tokens, not a cost or availability guarantee.
+  return id === 'vercel' || id === 'gemini' || id === 'huggingface'
+    || (id === 'opencode' && /^minimax-m2\.[57]$/.test(model))
+    || (id === 'openrouter' && model === 'openrouter/free')
+    || (id === 'groq' && /^openai\/gpt-oss-(?:20b|120b)$/.test(model)) ? 1024 : 16;
 }
 export async function chatCompletion({env, fetchImpl, id, model, messages, maxTokens = 600}) {
   const {spec, key} = selected(env, id, model);
@@ -147,7 +172,7 @@ export async function chatCompletion({env, fetchImpl, id, model, messages, maxTo
   let value;
   try {
     const response = await fetchImpl(spec.url, {method:'POST', headers:{authorization:`Bearer ${key}`, 'content-type':'application/json'},
-      body:JSON.stringify({model, messages, [spec.maxTokenField || 'max_tokens']:maxTokens, ...reasoningOptions(id, model)}), signal:AbortSignal.timeout(25_000), redirect:'error', cache:'no-store'});
+      body:JSON.stringify({model, messages, [spec.maxTokenField || 'max_tokens']:maxTokens, ...requestOptions(id, model)}), signal:AbortSignal.timeout(25_000), redirect:'error', cache:'no-store'});
     value = await readResponse(response, {inference:true});
   } catch (error) {
     if (error instanceof ProviderError) throw error;

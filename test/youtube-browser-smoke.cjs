@@ -32,7 +32,7 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
     {id:socialFb,provider:'facebook',external_id:'123456789',display_name:'Example Page',status:'active',is_default:true}];
   const socialSelections=[],socialRemovals=[];
   let reachedChunk,reachedSecond;const chunkReached=new Promise(r=>{reachedChunk=r;}),secondReached=new Promise(r=>{reachedSecond=r;});
-  const jobs=[],keys=[],posts=[],requests=[],chatBodies=[],resendBodies=[];
+  const jobs=[],keys=[],posts=[],requests=[],chatBodies=[],providerTestBodies=[],resendBodies=[];
   await page.route('**/api/**',async route=>{
    const rq=route.request(),u=new URL(rq.url()),p=u.pathname,m=rq.method();let data={},body={};try{body=rq.postDataJSON()||{}}catch{}
    requests.push(p);if(m!=='GET')posts.push(p);
@@ -41,7 +41,8 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
    else if(p==='/api/cloud/session')data={user:signedIn?{id:current,email:'person@example.test'}:null};
    else if(p==='/api/cloud/resend-confirmation'){resendBodies.push(body);data={message:'If this account needs confirmation, check your inbox.'};}
    else if(p==='/api/cloud/projects')data={projects:[]};
-   else if(p==='/api/cloud/providers')data={providers:[{id:'groq',label:'Groq',state:'configured_unverified',models:['openai/gpt-oss-120b']}],pexels:'not_configured',allowed:true,paused:false};
+   else if(p==='/api/cloud/providers')data={providers:[{id:'groq',label:'Groq',state:'configured_unverified',models:['openai/gpt-oss-120b']},{id:'zai',label:'Z.ai',state:'configured_unverified',models:['glm-4.7-flash']},{id:'openrouter',label:'OpenRouter',state:'configured_unverified',models:['openrouter/free']}],pexels:'not_configured',allowed:true,paused:false};
+   else if(p==='/api/cloud/providers/test'){providerTestBodies.push(body);data={ok:true,...body,remaining_user:9,audit_saved:true};}
    else if(p==='/api/cloud/chat/history')data={turns:[]};
    else if(p==='/api/cloud/chat'){chatBodies.push(body);data={reply:'A partial response',provider:body.provider,model:body.model,truncated:true,used_fallback:false,remaining_user:8,history_saved:true,audit_saved:true};}
    else if(p==='/api/cloud/usage')data={calls:[]};
@@ -128,6 +129,13 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   assert.equal(await page.locator('#mission-model').inputValue(),'gpt-5.4-mini');
   await page.locator('#mission-provider').selectOption('groq');
   await page.waitForFunction(()=>!document.getElementById('chat-send').disabled);
+  await page.locator('#ai-test').click();assert.equal(providerTestBodies.length,0,'declining the disclosure must not send a test');
+  acceptDialog=true;await page.locator('#ai-test').click();acceptDialog=false;
+  await page.waitForFunction(()=>document.getElementById('chat-status').textContent.includes('Provider responded successfully'));
+  assert.deepEqual(providerTestBodies,[{provider:'groq',model:'openai/gpt-oss-120b'}]);
+  await page.locator('#ai-provider').selectOption('zai');assert.equal(await page.locator('#ai-fallback').isDisabled(),true);
+  await page.locator('#ai-provider').selectOption('openrouter');assert.equal(await page.locator('#ai-fallback').isDisabled(),true);
+  await page.locator('#ai-provider').selectOption('groq');assert.equal(await page.locator('#ai-fallback').isDisabled(),false);
   await page.locator('#ai-length').selectOption('detailed');
   await page.locator('#chat-prompt').fill('Write a detailed response.');
   await page.locator('#chat-send').click();

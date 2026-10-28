@@ -18,6 +18,9 @@
   function option(select, value, label) { const el = node('option', label); el.value = value; select.append(el); }
   function configured() { return state.providers.filter(p => p.state === 'configured_unverified' && Array.isArray(p.models) && p.models.length); }
   function selected() { return {provider:$('ai-provider').value, model:$('ai-model').value}; }
+  const noAutomaticFallback = ({provider, model}) => provider === 'vercel'
+    || (provider === 'openrouter' && (model === 'openrouter/free' || model.endsWith(':free')))
+    || (provider === 'zai' && ['glm-4.7-flash','glm-4.5-flash'].includes(model));
   function updateControls() {
     const canRequest = state.loggedIn && state.settingsReady && state.allowed && !state.paused && !state.busy && !state.pauseBusy;
     const canChat = canRequest && Boolean($('ai-provider').value && $('ai-model').value);
@@ -29,7 +32,9 @@
     $('ai-pause').textContent = state.paused ? 'Resume my provider calls' : 'Pause my provider calls';
     $('ai-provider').disabled = state.busy || !configured().length;
     $('ai-model').disabled = state.busy || !configured().length;
-    $('ai-fallback').disabled = state.busy || !configured().length || $('ai-provider').value === 'vercel';
+    const noFallback = noAutomaticFallback(selected());
+    if (noFallback) $('ai-fallback').value = '';
+    $('ai-fallback').disabled = state.busy || !configured().length || noFallback;
   }
   function chooseModels() {
     const select = $('ai-model'), old = select.value;
@@ -38,7 +43,7 @@
     if (!provider) option(select, '', 'No model configured');
     else for (const model of provider.models) option(select, model, model);
     if (Array.from(select.options).some(o => o.value === old)) select.value = old;
-    if (provider?.id === 'vercel') $('ai-fallback').value = '';
+    if (noAutomaticFallback(selected())) $('ai-fallback').value = '';
     updateControls();
   }
   function renderAccess() {
@@ -135,12 +140,16 @@
     finally { if (active(version)) { state.pauseBusy = false; renderAccess(); } }
   });
   $('ai-test').addEventListener('click', async () => {
-    const version = state.version, choice = selected(); state.busy = true; updateControls();
+    if ($('ai-test').disabled) return;
+    const version = state.version, choice = selected();
+    if (!confirm(`Send a live test to ${choice.provider} / ${choice.model}? The provider receives “Reply with the word OK.” This uses one attempt and up to 1,024 output tokens plus input, and may incur charges. No fallback is used. Continue only if you accept the provider's pricing and data practices.`)) return;
+    state.busy = true; updateControls();
     $('chat-error').textContent = ''; $('chat-status').textContent = 'Testing provider with a real request…';
     try {
       const data = await api('/api/cloud/providers/test', {method:'POST', body:JSON.stringify(choice)});
       if (!active(version)) return;
-      state.tests.set(`${choice.provider}|${choice.model}`, `Test succeeded for ${choice.model}`); renderProviders();
+      if (data?.ok !== true || data.provider !== choice.provider || data.model !== choice.model) throw new Error('The provider test returned an invalid result.');
+      state.tests.set(`${choice.provider}|${choice.model}`, `Test succeeded for ${choice.model} this session`); renderProviders();
       $('chat-status').textContent = `Provider responded successfully. ${data.remaining_user} request attempt(s) remain today.${data.audit_saved ? '' : ' Warning: usage result could not be saved.'}`;
     } catch (error) { if (active(version)) { state.tests.set(`${choice.provider}|${choice.model}`, 'Last test failed'); renderProviders(); $('chat-error').textContent = error.message; $('chat-status').textContent = 'Provider test failed.'; } }
     finally { if (active(version)) { state.busy = false; updateControls(); loadUsage(version).catch(() => {}); } }

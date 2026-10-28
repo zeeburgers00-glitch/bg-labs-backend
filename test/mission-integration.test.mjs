@@ -100,7 +100,7 @@ test('bridge + simulated PostgREST + real SQL queue + worker + mocked provider',
     const bridge=createBridge({env,fetchImpl:fx.fetch});
     let res=await bridge.fetch(req('/api/cloud/mission/channels',{method:'POST',payload:{...channel,owner_id:other}}));
     assert.equal(res.status,201); const profile=(await res.json()).channel;
-    const key=randomUUID(), payload={channel_id:profile.id,client_key:key,topic:'Original space story',provider:'groq',model:'llama-3.1-8b-instant'};
+    const key=randomUUID(), payload={channel_id:profile.id,client_key:key,topic:'Original space story',provider:'groq',model:'qwen/qwen3.8-27b'};
     res=await bridge.fetch(req('/api/cloud/mission/jobs',{method:'POST',payload})); assert.equal(res.status,201); const job=(await res.json()).job;
     res=await bridge.fetch(req('/api/cloud/mission/jobs',{method:'POST',payload})); assert.equal(res.status,200); assert.equal((await res.json()).job.id,job.id);
     let overview=await (await bridge.fetch(req('/api/cloud/mission'))).json();
@@ -157,7 +157,7 @@ test('worker avoids duplicate paid calls on ambiguous failures and honours backo
   try {
     const bridge=createBridge({env,fetchImpl:fx.fetch});
     const profile=(await (await bridge.fetch(req('/api/cloud/mission/channels',{method:'POST',payload:channel}))).json()).channel;
-    const makeJob=async topic=>(await (await bridge.fetch(req('/api/cloud/mission/jobs',{method:'POST',payload:{channel_id:profile.id,client_key:randomUUID(),topic,provider:'groq',model:'llama-3.1-8b-instant'}}))).json()).job;
+    const makeJob=async topic=>(await (await bridge.fetch(req('/api/cloud/mission/jobs',{method:'POST',payload:{channel_id:profile.id,client_key:randomUUID(),topic,provider:'groq',model:'qwen/qwen3.8-27b'}}))).json()).job;
     const timeout=await makeJob('Timeout test'); fx.setMode('timeout');
     const worker=createPlanningWorker({env:workerEnv,fetchImpl:fx.fetch,logger:quiet}); await worker.tick();
     let detail=await (await bridge.fetch(req(`/api/cloud/mission/jobs/${timeout.id}`))).json();
@@ -183,7 +183,7 @@ test('worker records server and malformed-response outcomes as uncertain and nev
     const profile=(await (await bridge.fetch(req('/api/cloud/mission/channels',{method:'POST',payload:channel}))).json()).channel;
     const worker=createPlanningWorker({env:workerEnv,fetchImpl:fx.fetch,logger:quiet});
     for (const [index,mode] of ['server','http-timeout','invalid','empty'].entries()) {
-      const body={channel_id:profile.id,client_key:randomUUID(),topic:`Uncertain ${mode}`,provider:'groq',model:'llama-3.1-8b-instant'};
+      const body={channel_id:profile.id,client_key:randomUUID(),topic:`Uncertain ${mode}`,provider:'groq',model:'qwen/qwen3.8-27b'};
       const job=(await (await bridge.fetch(req('/api/cloud/mission/jobs',{method:'POST',payload:body}))).json()).job;
       fx.setMode(mode); await worker.tick();
       const detail=await (await bridge.fetch(req(`/api/cloud/mission/jobs/${job.id}`))).json();

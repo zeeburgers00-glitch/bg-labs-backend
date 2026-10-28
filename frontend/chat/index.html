@@ -105,6 +105,11 @@
       <label>Response length<select id="answer-length"><option value="standard">Standard</option><option value="detailed">Detailed</option></select></label>
       <label>Optional fallback<select id="fallback"><option value="">No fallback</option></select></label>
     </div>
+    <p class="hint" id="free-route-hint" hidden>For this free-listed model, automatic fallback is disabled. Prices, account terms and BYOK can change; check the provider before using it.</p>
+    <p class="hint" id="openrouter-privacy" hidden>OpenRouter may route prompts to other providers. Its NVIDIA free endpoint says it logs usage for security and product improvement; do not send confidential or personal information there. Review the selected provider's terms before use.</p>
+    <button class="secondary-button" id="provider-test" type="button" disabled>Test selected provider</button>
+    <p class="hint">An optional live test sends “Reply with the word OK.” It counts as one attempt and can use up to 1,024 output tokens plus input; charges may apply. No fallback is used. A response verifies only that model at that moment.</p>
+    <p class="hint" id="provider-test-message" role="status"></p>
     <p class="hint">Prompts and replies are saved to your account until deleted. The selected provider receives the current prompt and up to three previous turns. A fallback may send them to another provider. Calls may cost money; 10 attempts per account and 50 shared attempts per UTC day are limits, not spending caps.</p>
     <details class="role-plan"><summary>Provider setup status</summary>
       <p class="hint">Configuration checks never reveal or test credentials. Configured does not mean verified or free. Rotate keys exposed in chat and add replacements privately in the deployment's Sensitive environment variables; never paste them here.</p>

@@ -43,9 +43,9 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   const alice='aaaaaaaa-0000-4000-8000-000000000001',bob='bbbbbbbb-0000-4000-8000-000000000002';
   const channelA='12345678-0000-4000-8000-000000000010',channelB='12345678-0000-4000-8000-000000000011';
   let signedIn=false,current=alice,configured=false,gatewayConfigured=false,allowed=true,paused=false,googleConfigured=false,googleAllowed=true,appLoginEnabled=false,fbConfigured=false;
-  let googleStatusFailure=false,sessionFailure=false,usageMode='ok';
+  let googleStatusFailure=false,sessionFailure=false,usageMode='ok',providerTestMode='ok';
   let analyticsEnabled=false,analyticsGranted=false,analyticsMode='ok';
-  let authorizationUrl='https://accounts.google.com/o/oauth2/v2/auth?state=mock',appAuthorizationUrl='https://fake.supabase.co/auth/v1/authorize?provider=google',holdChat=false,holdOAuth=false,holdProviders=false,holdUsage=false,releaseChat,releaseOAuth,releaseProviders,releaseUsage,notifyChat,notifyOAuth,notifyProviders,notifyUsage;
+  let authorizationUrl='https://accounts.google.com/o/oauth2/v2/auth?state=mock',appAuthorizationUrl='https://fake.supabase.co/auth/v1/authorize?provider=google',holdChat=false,holdOAuth=false,holdProviders=false,holdUsage=false,holdProviderTest=false,releaseChat,releaseOAuth,releaseProviders,releaseUsage,releaseProviderTest,notifyChat,notifyOAuth,notifyProviders,notifyUsage,notifyProviderTest;
   const selected={[alice]:null,[bob]:null}, histories={
    [alice]:[{prompt:'Alice private question',reply:'<img src=x onerror=alert(1)> safe answer',provider:'groq',model:'openai/gpt-oss-120b'}],
    [bob]:[{prompt:'Bob private question',reply:'Bob reply',provider:'groq',model:'openai/gpt-oss-120b'}],
@@ -57,7 +57,7 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   };
   const facebookPage='22345678-0000-4000-8000-000000000010';
   const pages={[alice]:[{id:facebookPage,provider:'facebook',external_id:'12345',display_name:'Alice Page',status:'active',is_default:true}],[bob]:[]};
-  const requests=[],posts=[],chatBodies=[],loginBodies=[],resendBodies=[],selections=[],disconnects=[],facebookSelections=[],oauthBodies=[];
+  const requests=[],posts=[],chatBodies=[],providerTestBodies=[],loginBodies=[],resendBodies=[],selections=[],disconnects=[],facebookSelections=[],oauthBodies=[];
   await page.route('**/api/**',async route=>{
    const rq=route.request(),p=new URL(rq.url()).pathname,m=rq.method();let data={},body={};try{body=rq.postDataJSON()||{}}catch{}
    requests.push(p);if(m!=='GET')posts.push(p);
@@ -81,7 +81,13 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
    else if(p==='/api/cloud/logout'){signedIn=false;data={ok:true};}
    else if(p==='/api/cloud/providers'){
     if(holdProviders)await new Promise(resolve=>{releaseProviders=resolve;notifyProviders();});
-    data={providers:configured?[...(gatewayConfigured?[{id:'vercel',label:'Vercel · Reflection Free',state:'configured_unverified',models:['reflection/beam-free']}]:[]),{id:'groq',label:'Groq',state:'configured_unverified',models:['openai/gpt-oss-120b','llama-3.1-8b-instant']},{id:'openai',label:'OpenAI',state:'configured_unverified',models:['gpt-5.4-mini']}]:[],allowed,paused};
+    data={providers:configured?[...(gatewayConfigured?[{id:'vercel',label:'Vercel · Reflection Free',state:'configured_unverified',models:['reflection/beam-free']}]:[]),{id:'groq',label:'Groq',state:'configured_unverified',models:['openai/gpt-oss-120b','qwen/qwen3.8-27b']},{id:'openai',label:'OpenAI',state:'configured_unverified',models:['gpt-5.4-mini']},{id:'zai',label:'Z.ai',state:'configured_unverified',models:['glm-4.7-flash']},{id:'openrouter',label:'OpenRouter',state:'configured_unverified',models:['nvidia/nemotron-3.5-lightning:free','openrouter/free']}]:[],allowed,paused};
+   }
+   else if(p==='/api/cloud/providers/test'){
+    providerTestBodies.push(body);
+    if(holdProviderTest)await new Promise(resolve=>{releaseProviderTest=resolve;notifyProviderTest();});
+    if(providerTestMode==='error')return route.fulfill({status:429,json:{error:'The provider rate limit or quota was reached.'}});
+    data=providerTestMode==='invalid'?{ok:true,provider:'different',model:body.model}:{ok:true,provider:body.provider,model:body.model,remaining_user:9,audit_saved:true};
    }
    else if(p==='/api/cloud/chat/history' && m==='GET')data={turns:[...histories[current]].reverse()};
    else if(p==='/api/cloud/chat/history' && m==='DELETE'){histories[current]=[];data={ok:true};}
@@ -128,7 +134,7 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
     data={authorization_url:authorizationUrl};
    }
    else return route.fulfill({status:404,json:{error:'unexpected mock path'}});
-   try{return await route.fulfill({status:200,json:data});}catch(error){if(!holdChat&&!holdOAuth)throw error;}
+   try{return await route.fulfill({status:200,json:data});}catch(error){if(!holdChat&&!holdOAuth&&!holdProviderTest)throw error;}
   });
   const base=`http://127.0.0.1:${server.address().port}`;
   await page.goto(`${base}/`,{waitUntil:'domcontentloaded'});
@@ -192,6 +198,27 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   await page.waitForFunction(()=>document.getElementById('facebook-status').textContent.includes('Verified this session'));
   assert.deepEqual(facebookSelections,[{owner:alice,id:facebookPage}]);
   await page.locator('#chat-settings').click();
+  assert.equal(providerTestBodies.length,0,'configuration status must not run a provider call');
+  assert.match(await page.locator('#provider-test-message').textContent(),/Not tested/);
+  confirm=false;await page.locator('#provider-test').click();confirm=true;
+  assert.equal(providerTestBodies.length,0,'a declined cost disclosure must not run a test');
+  await page.locator('#provider-test').click();
+  await page.waitForFunction(()=>document.getElementById('provider-test-message').textContent.includes('responded successfully'));
+  assert.deepEqual(providerTestBodies,[{provider:'groq',model:'openai/gpt-oss-120b'}]);
+  assert.match(await page.locator('#provider-status-list').textContent(),/gpt-oss-120b responded once/);
+  await page.locator('#model').selectOption('qwen/qwen3.8-27b');
+  assert.match(await page.locator('#provider-test-message').textContent(),/Not tested/,'one model success must not verify another');
+  providerTestMode='error';await page.locator('#provider-test').click();
+  await page.waitForFunction(()=>document.getElementById('provider-test-message').textContent.includes('quota was reached'));
+  providerTestMode='invalid';await page.locator('#provider-test').click();
+  await page.waitForFunction(()=>document.getElementById('provider-test-message').textContent.includes('invalid result'));
+  providerTestMode='ok';
+  await page.locator('#provider').selectOption('zai');
+  assert.equal(await page.locator('#fallback').isDisabled(),true);assert.equal(await page.locator('#free-route-hint').isVisible(),true);
+  await page.locator('#provider').selectOption('openrouter');
+  assert.equal(await page.locator('#fallback').isDisabled(),true);assert.equal(await page.locator('#openrouter-privacy').isVisible(),true);
+  assert.match(await page.locator('#openrouter-privacy').textContent(),/NVIDIA.*logs usage/);
+  await page.locator('#provider').selectOption('groq');assert.equal(await page.locator('#fallback').isDisabled(),false);
   await page.locator('#usage-refresh').click();await page.waitForFunction(()=>document.getElementById('usage-list').childElementCount===2);
   assert.match(await page.locator('#usage-list').textContent(),/Input tokens: 33 · Output tokens: 12/);
   assert.match(await page.locator('#usage-list').textContent(),/failed; charges may apply/);
@@ -287,9 +314,22 @@ const {chromium}=require(process.env.VIMAX_PLAYWRIGHT_PATH||'playwright-core');
   await page.locator('#account-password').fill('sample-password');await page.locator('#account-form button[value=login]').click();
   await page.waitForFunction(()=>document.getElementById('messages').textContent.includes('Bob private question'));
   assert.doesNotMatch(await page.locator('#messages').textContent(),/Alice private|Private pending/);
-  await page.locator('#chat-settings').click();await page.locator('#usage-refresh').click();
+  await page.locator('#chat-settings').click();
+  assert.match(await page.locator('#provider-test-message').textContent(),/Not tested/,'provider test results must not carry to another account');
+  await page.locator('#usage-refresh').click();
   await page.waitForFunction(()=>document.getElementById('usage-message').textContent.includes('No recorded usage'));
-  assert.equal(await page.locator('#usage-list').textContent(),'');await page.locator('[data-close=settings-dialog]').click();
+  assert.equal(await page.locator('#usage-list').textContent(),'');
+  // A live test that completes after logout must not mark the next session verified.
+  holdProviderTest=true;const testReached=new Promise(resolve=>{notifyProviderTest=resolve;});
+  await page.locator('#provider-test').click();await testReached;
+  await page.locator('[data-close=settings-dialog]').click();await page.locator('#account-button').click();await page.locator('#logout').click();
+  await page.waitForFunction(()=>document.getElementById('account-button').textContent==='Email sign in');
+  releaseProviderTest();await page.waitForTimeout(100);holdProviderTest=false;
+  await page.locator('#account-button').click();await page.locator('#account-email').fill('bob@example.test');
+  await page.locator('#account-password').fill('sample-password');await page.locator('#account-form button[value=login]').click();
+  await page.waitForFunction(()=>document.getElementById('provider').value==='groq' && !document.getElementById('provider-test').disabled);
+  await page.locator('#chat-settings').click();assert.match(await page.locator('#provider-test-message').textContent(),/Not tested/);
+  await page.locator('[data-close=settings-dialog]').click();
   const voicePromptsBeforeBob=voiceConfirmCount;await page.locator('#dictate').click();
   assert.equal(voiceConfirmCount,voicePromptsBeforeBob+1,'voice disclosure must not carry between accounts');
   await page.evaluate(()=>window.dispatchEvent(new Event('pagehide')));

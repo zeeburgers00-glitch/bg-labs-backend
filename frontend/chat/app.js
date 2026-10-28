@@ -5,7 +5,7 @@
     user:null, session:'loading', sessionSequence:0, version:0, controllers:new Set(), authBusy:false,
     deployment:{chat:'checking', youtube:'checking'},
     google:{status:'checking', checking:false, rechecking:false, error:''},
-    chat:{providers:[], pexels:'unknown', allowed:false, paused:false, settingsReady:false, historyReady:false, busy:false, usageLoading:false, turns:[], pending:null, note:'', error:''},
+    chat:{providers:[], pexels:'unknown', allowed:false, paused:false, settingsReady:false, historyReady:false, busy:false, testing:false, tests:new Map(), usageLoading:false, turns:[], pending:null, note:'', error:''},
     channel:{ready:false, configured:false, allowed:false, analyticsConfigured:false, analyticsConnected:false, busy:false, connected:null, connectionId:null, saved:[], autoAttempted:false, sequence:0, notice:'', error:''},
     facebook:{ready:false, configured:false, allowed:false, busy:false, saved:[], verified:null, autoAttempted:false, sequence:0, notice:'', error:''},
     workforce:{loaded:false, loading:false, busy:false, agentsLoaded:false, agentsLoading:false, reviewBusy:false, researchLoaded:false, researchLoading:false, researchReady:false, researchBusy:false},
@@ -42,6 +42,10 @@
   }
   const post = (path, data = {}) => sessionApi(path, {method:'POST', body:JSON.stringify(data)});
   const availableProviders = () => state.chat.providers.filter(p => p?.state === 'configured_unverified' && Array.isArray(p.models) && p.models.length > 0);
+  // The server enforces the same rule; the UI mirrors it for clarity.
+  const noAutomaticFallback = (provider, model) => provider === 'vercel'
+    || (provider === 'openrouter' && (model === 'openrouter/free' || model.endsWith(':free')))
+    || (provider === 'zai' && ['glm-4.7-flash','glm-4.5-flash'].includes(model));
   const makeOption = (select, value, text) => { const option = element('option', text); option.value = value; select.append(option); };
   function setOptions(select, entries, empty) {
     const previous = select.value;
@@ -53,7 +57,7 @@
   function updateModels() {
     const provider = availableProviders().find(item => item.id === $('provider').value);
     setOptions($('model'), provider ? provider.models.map(model => [model, model]) : [], 'No model configured');
-    if (provider?.id === 'vercel') $('fallback').value = '';
+    if (noAutomaticFallback($('provider').value, $('model').value)) $('fallback').value = '';
     updateChatControls();
   }
   function renderProviders() {
@@ -70,7 +74,9 @@
       const states = {not_configured:'Not configured',configured_unverified:'Configured, not verified',invalid_configuration:'Invalid configuration',model_required:'Model list required',unknown:'Unknown'};
       for (const provider of state.chat.providers) {
         if (!provider || typeof provider.label !== 'string' || typeof provider.id !== 'string') continue;
-        status.append(element('li', `${provider.label}: ${states[provider.state] || 'Unknown'}${names[provider.id] ? ` · ${names[provider.id]}` : ''}`));
+        const tested = Array.from(state.chat.tests.entries()).filter(([key]) => key.startsWith(`${provider.id}|`)).at(-1);
+        const result = tested ? ` · ${tested[1].summary}` : '';
+        status.append(element('li', `${provider.label}: ${states[provider.state] || 'Unknown'}${names[provider.id] ? ` · ${names[provider.id]}` : ''}${result}`));
       }
       status.append(element('li', `Pexels stock: ${states[state.chat.pexels] || 'Unknown'} · PEXELS_API_KEY`));
       status.append(element('li', 'Hacker AI: Not implemented'));
@@ -98,7 +104,16 @@
     $('chat-send').disabled = !canChat() || !$('chat-prompt').value.trim();
     $('provider').disabled = chat.busy || !availableProviders().length;
     $('model').disabled = chat.busy || !availableProviders().length;
-    $('fallback').disabled = chat.busy || !availableProviders().length || $('provider').value === 'vercel';
+    const providerId = $('provider').value, model = $('model').value;
+    const noFallback = noAutomaticFallback(providerId, model);
+    if (noFallback) $('fallback').value = '';
+    $('fallback').disabled = chat.busy || !availableProviders().length || noFallback;
+    $('provider-test').disabled = !state.user || !chat.settingsReady || !chat.allowed || chat.paused || chat.busy || !providerId || !model;
+    $('free-route-hint').hidden = !noFallback;
+    $('openrouter-privacy').hidden = providerId !== 'openrouter' && !$('fallback').value.startsWith('openrouter|');
+    const tested = chat.tests.get(`${providerId}|${model}`);
+    $('provider-test-message').textContent = chat.testing ? 'Testing the selected provider…'
+      : tested?.detail || (providerId && model ? 'Not tested in this browser session.' : 'Sign in and configure a provider to test it.');
     $('answer-length').disabled = chat.busy;
     $('clear-history').disabled = !state.user || !chat.historyReady || chat.busy;
     $('usage-refresh').disabled = !state.user || chat.usageLoading;
@@ -118,7 +133,7 @@
     else if (!chat.settingsReady || !chat.historyReady) status = 'Checking chat settings…';
     else if (!chat.allowed) status = 'Chat access is not enabled for this account.';
     else if (chat.paused) status = 'Chat is paused for this account. Resume it in chat settings.';
-    else if (chat.busy) status = 'Waiting for a reply…';
+    else if (chat.busy) status = chat.testing ? 'Testing the selected provider…' : 'Waiting for a reply…';
     else if (analytics && !state.channel.ready && state.channel.error) status = 'Channel status could not be checked. Open Account to try again.';
     else if (analytics && !state.channel.ready) status = 'Checking your channel connection…';
     else if (analytics && !state.channel.configured) status = 'YouTube channel setup is incomplete.';
@@ -306,7 +321,7 @@
     voiceDisclosureAccepted = false;
     state.user = user && typeof user.id === 'string' ? {id:user.id, email:typeof user.email === 'string' ? user.email : ''} : null;
     state.session = state.user ? 'signed-in' : sessionState;
-    state.chat = {providers:[], pexels:'unknown', allowed:false, paused:false, settingsReady:false, historyReady:false, busy:false, usageLoading:false, turns:[], pending:null, note:'', error:''};
+    state.chat = {providers:[], pexels:'unknown', allowed:false, paused:false, settingsReady:false, historyReady:false, busy:false, testing:false, tests:new Map(), usageLoading:false, turns:[], pending:null, note:'', error:''};
     state.channel = {ready:false, configured:false, allowed:false, analyticsConfigured:false, analyticsConnected:false, busy:false, connected:null, connectionId:null, saved:[], autoAttempted:false, sequence:0, notice:'', error:''};
     state.facebook = {ready:false, configured:false, allowed:false, busy:false, saved:[], verified:null, autoAttempted:false, sequence:0, notice:'', error:''};
     state.workforce = {loaded:false, loading:false, busy:false, agentsLoaded:false, agentsLoading:false, reviewBusy:false, researchLoaded:false, researchLoading:false, researchReady:false, researchBusy:false};
@@ -785,6 +800,26 @@
   $('provider').addEventListener('change', updateModels);
   $('model').addEventListener('change', updateChatControls);
   $('fallback').addEventListener('change', updateChatControls);
+  $('provider-test').addEventListener('click', async () => {
+    if ($('provider-test').disabled) return;
+    const provider = $('provider').value, model = $('model').value, version = state.version;
+    const label = availableProviders().find(item => item.id === provider)?.label || provider;
+    if (!confirm(`Send a live test to ${label} / ${model}? The provider receives the nonsensitive text “Reply with the word OK.” This uses one attempt and up to 1,024 output tokens plus input, and may incur charges. No fallback is used. Continue only if you accept its pricing and data practices.`)) return;
+    state.chat.busy = true; state.chat.testing = true; state.chat.error = ''; updateChatControls();
+    const key = `${provider}|${model}`;
+    try {
+      const data = await post('/api/cloud/providers/test', {provider, model});
+      if (!isCurrent(version)) return;
+      if (data?.ok !== true || data.provider !== provider || data.model !== model) throw new Error('The provider test returned an invalid result.');
+      const remaining = Number.isSafeInteger(data.remaining_user) && data.remaining_user >= 0 ? ` ${data.remaining_user} attempt(s) remain today.` : '';
+      const warning = data.audit_saved === true ? '' : ' Warning: the usage result could not be saved.';
+      state.chat.tests.set(key, {summary:`${model} responded once`, detail:`${model} responded successfully in this browser session.${remaining}${warning} Future availability is not guaranteed.`});
+    } catch (error) {
+      if (isCurrent(version)) state.chat.tests.set(key, {summary:`Last test failed for ${model}`, detail:`Test failed: ${error.message}`});
+    } finally {
+      if (isCurrent(version)) { state.chat.busy = false; state.chat.testing = false; renderProviders(); updateChatControls(); }
+    }
+  });
   $('chat-prompt').addEventListener('input', updateChatControls);
   $('chat-prompt').addEventListener('keydown', event => {
     if (event.key === 'Enter' && !event.shiftKey && !event.isComposing && !event.repeat) {
@@ -826,6 +861,11 @@
         const data = await post('/api/cloud/chat', {provider, model, mode:'chat', length:$('answer-length').value, prompt, fallback});
         if (!isCurrent(version)) return;
         if (typeof data?.reply !== 'string' || !data.reply.trim()) throw new Error('The provider returned no text.');
+        const responding = availableProviders().find(item => item.id === data.provider && item.models.includes(data.model));
+        if (responding) {
+          state.chat.tests.set(`${data.provider}|${data.model}`, {summary:`${data.model} responded once`, detail:`${data.model} responded to chat in this browser session. Future availability is not guaranteed.`});
+          renderProviders();
+        }
         state.chat.turns.push({prompt, reply:data.reply}); state.chat.pending = null;
         if ($('chat-prompt').value.trim() === prompt) $('chat-prompt').value = '';
         const notices = [];
