@@ -545,7 +545,15 @@
         if (sidebar && window.innerWidth <= 760) sidebar.classList.remove('mobile-open');
 
         const content = document.getElementById('contentArea');
-        document.getElementById('pageTitle').textContent = page.charAt(0).toUpperCase() + page.slice(1);
+        const pageTitles = {
+            dashboard:'Command Center', hub:'JARVIS Hub', 'course-ai':'Course-trained YouTube AI',
+            planner:'Creator Calendar', youtube:'YouTube Automation', agents:'AI Agents',
+            skills:'Skills & Research', vimax:'ViMax Video Studio', models:'Models & Providers',
+            studio:'AI Studio', voices:'Voice Library', image:'Image Generator',
+            script:'Script Writer', avatar:'Avatar Studio', billing:'Billing & Usage',
+            referral:'Referral Program', admin:'Admin Panel'
+        };
+        document.getElementById('pageTitle').textContent = pageTitles[page] || (page.charAt(0).toUpperCase() + page.slice(1));
 
         content.innerHTML = '<div class="animate-pulse flex items-center justify-center h-64"><div class="loader"></div></div>';
 
