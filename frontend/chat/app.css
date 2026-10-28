@@ -156,3 +156,11 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 }
 @media (max-width: 370px) { .settings-grid { grid-template-columns: 1fr; } .signin-status { max-width: 150px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: .01ms !important; } }
+
+
+.quick-prompts { display: flex; flex-wrap: wrap; justify-content: center; gap: 9px; max-width: 650px; margin: 25px auto 0; }
+.quick-prompt { min-height: 39px; display: inline-flex; align-items: center; gap: 8px; padding: 9px 12px; border: 1px solid #3b394b; border-radius: 12px; color: #d9d4e9; background: #1b1b28; font-size: 11px; transition: border-color .15s ease, background .15s ease, transform .15s ease; }
+.quick-prompt span { color: #b9a8ff; font-size: 14px; }
+.quick-prompt:hover { border-color: #8170b7; background: #272438; transform: translateY(-1px); }
+.quick-prompt:active { transform: translateY(0); }
+@media (max-width: 560px) { .quick-prompts { gap: 7px; margin-top: 20px; } .quick-prompt { font-size: 10px; padding: 8px 10px; } }
