@@ -820,6 +820,13 @@
       if (isCurrent(version)) { state.chat.busy = false; state.chat.testing = false; renderProviders(); updateChatControls(); }
     }
   });
+  document.querySelectorAll('.quick-prompt').forEach(button => button.addEventListener('click', () => {
+    if (state.chat.busy) return;
+    const prompt = button.dataset.prompt || '';
+    $('chat-prompt').value = prompt;
+    $('chat-prompt').focus();
+    updateChatControls();
+  }));
   $('chat-prompt').addEventListener('input', updateChatControls);
   $('chat-prompt').addEventListener('keydown', event => {
     if (event.key === 'Enter' && !event.shiftKey && !event.isComposing && !event.repeat) {
