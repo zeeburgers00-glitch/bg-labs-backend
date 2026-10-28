@@ -4,7 +4,7 @@
   const state = {
     user:null, session:'loading', sessionSequence:0, version:0, controllers:new Set(), authBusy:false,
     deployment:{chat:'checking', youtube:'checking'},
-    google:{status:'checking', busy:false, error:''},
+    google:{status:'checking', checking:false, rechecking:false, error:''},
     chat:{providers:[], pexels:'unknown', allowed:false, paused:false, settingsReady:false, historyReady:false, busy:false, usageLoading:false, turns:[], pending:null, note:'', error:''},
     channel:{ready:false, configured:false, allowed:false, analyticsConfigured:false, analyticsConnected:false, busy:false, connected:null, connectionId:null, saved:[], autoAttempted:false, sequence:0, notice:'', error:''},
     facebook:{ready:false, configured:false, allowed:false, busy:false, saved:[], verified:null, autoAttempted:false, sequence:0, notice:'', error:''},
@@ -270,7 +270,12 @@
     // Email fallback remains available if either check failed.
     const help = state.session === 'error' || (state.session === 'signed-out' && ['disabled','unknown'].includes(state.google.status));
     const ready = state.session === 'signed-out' && state.google.status === 'enabled';
-    $('account-button').hidden = !state.user && state.session !== 'error' && state.google.status === 'enabled' && !state.google.error;
+    // Keep email sign-in reachable even when Google is enabled or fails.
+    $('account-button').hidden = false;
+    $('account-google').hidden = !ready;
+    $('account-google-signin').disabled = state.authBusy || !ready;
+    $('google-setup-help').hidden = Boolean(state.user) || (state.session !== 'error' && state.google.status === 'enabled');
+    $('google-recheck').disabled = state.authBusy || state.google.checking || state.google.rechecking || state.session === 'loading';
     $('google-signin-label').textContent = help ? 'Google sign-in help' : 'Continue with Google';
     $('google-signin').disabled = state.authBusy || !(help || ready);
     $('google-signin-status').textContent = state.session === 'error' ? 'Account service unavailable. Tap for help.'
@@ -464,13 +469,35 @@
   }
 
   async function checkGoogleSignIn() {
+    if (state.google.checking) return;
+    const previous = state.google.status, controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15_000);
+    state.google.checking = true; state.google.status = 'checking'; updateGoogleControls();
     try {
-      const data = await api('/api/cloud/google/status');
+      const data = await api('/api/cloud/google/status', {signal:controller.signal});
       state.google.status = data?.enabled === true ? 'enabled' : 'disabled';
     } catch { state.google.status = 'unknown'; }
-    updateGoogleControls();
+    finally { clearTimeout(timer); state.google.checking = false; updateGoogleControls(); }
+    if (previous !== 'enabled' && state.google.status === 'enabled' && state.session === 'signed-out'
+        && !state.authBusy && $('account-dialog').open) {
+      $('account-message').textContent = 'Google setup is enabled. Choose Continue with Google to try signing in.';
+    }
   }
-  $('google-signin').addEventListener('click', async () => {
+  $('google-recheck').addEventListener('click', async () => {
+    if (state.user || state.authBusy || state.google.checking || state.google.rechecking) return;
+    state.google.rechecking = true; state.google.error = ''; $('account-error').textContent = '';
+    $('account-message').textContent = 'Checking Google sign-in…'; updateGoogleControls();
+    try {
+      if (state.session === 'error') await checkSession();
+      await checkGoogleSignIn();
+      if (state.user) return;
+      $('account-message').textContent = state.session === 'error' ? 'The account service is still unavailable. Try again later.'
+        : state.google.status === 'enabled' ? 'Google setup is enabled. Choose Continue with Google to try signing in.'
+        : state.google.status === 'unknown' ? 'Google sign-in could not be checked. Try again later.'
+        : 'Google sign-in still needs setup by the app owner. Email sign-in remains available.';
+    } finally { state.google.rechecking = false; updateGoogleControls(); }
+  });
+  async function beginGoogleSignIn() {
     if (state.user || state.authBusy) return;
     if (state.session === 'error' || (state.session === 'signed-out' && ['disabled','unknown'].includes(state.google.status))) {
       $('account-error').textContent = '';
@@ -478,13 +505,13 @@
         ? 'The account service could not be checked. Refresh and try again, or try email sign-in below.'
         : state.google.status === 'unknown'
           ? 'Google sign-in could not be checked. Refresh and try again, or use email sign-in below.'
-          : 'Google sign-in is not set up yet. To confirm your existing account, enter your email and choose Resend confirmation email. No password is needed for that step. The app owner must still complete Google setup.';
+          : 'Google sign-in is not set up yet. The app owner must finish the Google and Supabase setup. You can use email sign-in below or resend a confirmation if needed. No password is needed to resend confirmation.';
       showDialog('account-dialog');
       $('account-email').focus();
       return;
     }
     if (state.session !== 'signed-out' || state.google.status !== 'enabled') return;
-    state.authBusy = true; state.google.error = '';
+    state.authBusy = true; state.google.error = ''; $('account-error').textContent = '';
     const sequence = ++state.sessionSequence; updateGoogleControls();
     try {
       const data = await api('/api/cloud/google/start', {method:'POST', body:'{}'});
@@ -498,9 +525,14 @@
       try { sessionStorage.setItem('vimax-google-channel-intent', String(Date.now())); } catch {}
       window.location.assign(url.href);
     } catch (error) {
-      if (sequence === state.sessionSequence) state.google.error = error.message;
+      if (sequence === state.sessionSequence) {
+        state.google.error = error.message;
+        if ($('account-dialog').open) $('account-error').textContent = error.message;
+      }
     } finally { state.authBusy = false; updateGoogleControls(); }
-  });
+  }
+  $('google-signin').addEventListener('click', beginGoogleSignIn);
+  $('account-google-signin').addEventListener('click', beginGoogleSignIn);
   function renderWorkforceRegistry(data) {
     if (!Array.isArray(data?.skills) || data.skills.length > 100) throw new Error('The skill registry response is invalid.');
     const list = $('registry-list'); list.replaceChildren();
@@ -1035,8 +1067,12 @@
   $('dictate').disabled = !Recognition;
   if (synthesis) { refreshVoices(); synthesis.addEventListener?.('voiceschanged', refreshVoices); }
   // Stop microphone and playback when the tab is backgrounded or leaves; they
-  // never restart automatically on return.
-  document.addEventListener('visibilitychange', () => { if (document.hidden) stopAllSpeech(); });
+  // never restart automatically on return. When the owner returns from setup,
+  // recheck availability without starting an OAuth request or signing anyone in.
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stopAllSpeech();
+    else if (!state.user && !state.authBusy && ['disabled','unknown'].includes(state.google.status)) void checkGoogleSignIn();
+  });
   window.addEventListener('pagehide', stopAllSpeech);
 
   // The callback contains no tokens; only show success after the owner-scoped

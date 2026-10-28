@@ -72,6 +72,14 @@
     <div class="dialog-heading"><div><p class="eyebrow">YOUR ACCOUNT</p><h2 id="account-title">Sign in to ViMax</h2></div><button class="icon-button close-dialog" type="button" data-close="account-dialog" aria-label="Close">×</button></div>
     <p class="dialog-intro">Your ViMax account keeps your chat and connections private. Google sign-in identifies your account; each channel needs separate permission.</p>
     <p id="account-message" class="hint account-message" role="status"></p>
+    <div id="account-google" class="account-google" hidden>
+      <button id="account-google-signin" class="google-button" type="button">Continue with Google</button>
+      <p class="hint">Google sign-in identifies your ViMax account. YouTube access needs separate consent.</p>
+    </div>
+    <div id="google-setup-help" class="google-setup-help" hidden>
+      <p class="hint">If Google sign-in is not configured, the site owner must finish the Google and Supabase setup. Email sign-in remains available.</p>
+      <button id="google-recheck" class="text-button" type="button">Check Google sign-in again</button>
+    </div>
     <form id="account-form">
       <label>Email<input id="account-email" name="email" type="email" autocomplete="username" maxlength="254" required></label>
       <label>Password<input id="account-password" name="password" type="password" autocomplete="current-password" minlength="6" maxlength="128" required></label>
