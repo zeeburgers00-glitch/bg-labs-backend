@@ -3,7 +3,9 @@
 const SPECS = Object.freeze([
   {id:'openai', label:'OpenAI', key:'OPENAI_API_KEY', models:'OPENAI_MODELS', defaults:['gpt-5.4-mini','gpt-5.4'], url:'https://api.openai.com/v1/chat/completions', maxTokenField:'max_completion_tokens'},
   {id:'groq', label:'Groq', key:'GROQ_API_KEY', models:'GROQ_MODELS', defaults:['openai/gpt-oss-120b','llama-3.1-8b-instant'], url:'https://api.groq.com/openai/v1/chat/completions'},
-  {id:'gemini', label:'Gemini', key:'GEMINI_API_KEY', models:'GEMINI_MODELS', defaults:['gemini-2.5-flash','gemini-3.8-flash','gemini-4-argon'], url:'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'},
+  // Google limits 2.5 Flash for new projects; prefer its current Flash model.
+  // Actual model availability and pricing still depend on the owner's account.
+  {id:'gemini', label:'Gemini', key:'GEMINI_API_KEY', models:'GEMINI_MODELS', defaults:['gemini-3.8-flash','gemini-2.5-flash','gemini-4-argon'], url:'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'},
   {id:'mistral', label:'Mistral', key:'MISTRAL_API_KEY', models:'MISTRAL_MODELS', defaults:['mistral-small-latest'], url:'https://api.mistral.ai/v1/chat/completions'},
   {id:'zai', label:'Z.ai (general API)', key:'ZAI_API_KEY', models:'ZAI_MODELS', defaults:['glm-4.5-flash'], url:'https://api.z.ai/api/paas/v4/chat/completions'},
   {id:'openrouter', label:'OpenRouter', key:'OPENROUTER_API_KEY', models:'OPENROUTER_MODELS', defaults:['openrouter/free'], url:'https://openrouter.ai/api/v1/chat/completions'},

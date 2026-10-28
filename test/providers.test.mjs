@@ -81,6 +81,15 @@ test('fixed-host chat adapters use server-only credentials and enforce model all
   assert.throws(() => validateSelection({GROQ_API_KEY:'key with spaces'},'groq','llama-3.1-8b-instant'), /not configured/);
 });
 
+test('Gemini prefers current Flash while preserving owner-selected model overrides', () => {
+  const initial = providerStatus({GEMINI_API_KEY:'test-only-key'}).find(provider => provider.id === 'gemini');
+  assert.equal(initial.state, 'configured_unverified');
+  assert.deepEqual(initial.models, ['gemini-3.8-flash','gemini-2.5-flash','gemini-4-argon']);
+  const override = providerStatus({GEMINI_API_KEY:'test-only-key', GEMINI_MODELS:'gemini-2.5-flash'}).find(provider => provider.id === 'gemini');
+  assert.deepEqual(override.models, ['gemini-2.5-flash']);
+  assert.equal(JSON.stringify(initial).includes('test-only-key'), false);
+});
+
 test('stronger documented models use bounded, provider-specific reasoning parameters', async () => {
   for (const [id,keyName,model,expected] of [
     ['groq','GROQ_API_KEY','openai/gpt-oss-120b',{reasoning_effort:'low',reasoning_format:'hidden'}],
