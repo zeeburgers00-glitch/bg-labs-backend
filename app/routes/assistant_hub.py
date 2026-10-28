@@ -127,9 +127,9 @@ PROVIDERS = {
         "name": "Google Gemini (free tier)",
         "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
         "key_env": "GEMINI_API_KEY",
-        "default_model": "gemini-3.6-flash",
-        "models": ["gemini-3.6-flash"],
-        "free_note": "Free-tier models and quota only; limits vary by model and account.",
+        "default_model": "gemini-3.8-flash",
+        "models": ["gemini-3.8-flash"],
+        "free_note": "Free-tier tokens for eligible models; quotas apply. Check that your Google project stays on Free tier.",
     },
     "mistral": {
         "name": "Mistral (free mode)",
@@ -137,7 +137,7 @@ PROVIDERS = {
         "key_env": "MISTRAL_API_KEY",
         "default_model": "mistral-small-latest",
         "models": ["mistral-small-latest"],
-        "free_note": "Mistral Free mode and rate limits apply.",
+        "free_note": "Included Free-mode quota only; disable pay-as-you-go to avoid extra charges.",
     },
     "openrouter": {
         "name": "OpenRouter (free router)",
@@ -153,7 +153,7 @@ PROVIDERS = {
         "key_env": "HF_TOKEN",
         "default_model": "deepseek-ai/DeepSeek-R1:fastest",
         "models": ["deepseek-ai/DeepSeek-R1:fastest"],
-        "free_note": "Free-user Inference Providers credit is limited (currently $0.10/month) and is not unlimited.",
+        "free_note": "Limited monthly credit only; disable paid/top-up usage. Not suitable as an unlimited free provider.",
     },
 }
 
