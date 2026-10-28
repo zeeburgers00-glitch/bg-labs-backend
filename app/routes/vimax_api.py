@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 from typing import Any, Dict
+from datetime import datetime, timezone
+import os
 
 from fastapi import APIRouter, HTTPException, Request
 
@@ -40,13 +42,60 @@ def _find_shot(result: Dict[str, Any], shot_id: str):
     return None
 
 
+
+DEFAULT_DAILY_ATTEMPT_CAP = 10
+DAILY_ATTEMPT_SCAN_LIMIT = 100
+
+
+def _daily_cap() -> int:
+    """Fail closed to a modest daily cap; a bad setting cannot disable it."""
+    try:
+        return max(1, min(50, int(os.getenv("VIMAX_DAILY_ATTEMPT_CAP", str(DEFAULT_DAILY_ATTEMPT_CAP)))))
+    except (TypeError, ValueError):
+        return DEFAULT_DAILY_ATTEMPT_CAP
+
+
+async def _daily_usage(store, user_id: int):
+    """Count this user's ViMax attempts created today (UTC), including failed/running attempts."""
+    today = datetime.now(timezone.utc).date().isoformat()
+    rows = await store.list_projects(user_id, project_type=PROJECT_TYPE, limit=DAILY_ATTEMPT_SCAN_LIMIT)
+    used = 0
+    for row in rows:
+        settings = row.get("settings") or {}
+        attempt_day = settings.get("attempt_date") or str(row.get("created_at") or "")[:10]
+        if str(attempt_day)[:10] == today:
+            used += 1
+    return today, used
+
+
+async def _reserve_daily_attempt(store, user_id: int, pipeline: str):
+    today, used = await _daily_usage(store, user_id)
+    cap = _daily_cap()
+    if used >= cap:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Daily ViMax attempt cap reached ({used}/{cap} UTC). Try again after midnight UTC.",
+        )
+    reservation = await store.add_project(
+        user_id=user_id,
+        name=f"{pipeline} attempt",
+        project_type=PROJECT_TYPE,
+        settings={"pipeline": pipeline, "status": "running", "attempt": True, "attempt_date": today, "version": 1},
+    )
+    return reservation, today, used + 1
+
+
 @router.get("")
 async def vimax_home(request: Request):
     user, store, keys = await _ctx(request)
+    today, used = await _daily_usage(store, user["id"])
+    cap = _daily_cap()
     return {"pipelines": vimax.pipelines(), "defaults": vimax.DEFAULTS,
-            "models": {cap: providers.catalog(cap, keys) for cap in ("chat", "image", "tts", "video", "render")},
+            "models": {capability: providers.catalog(capability, keys) for capability in ("chat", "image", "tts", "video", "render")},
+            "daily_attempts": {"limit": cap, "used_today": used, "remaining": max(0, cap - used),
+                               "day_utc": today, "reset": "00:00 UTC"},
             "source": "https://github.com/HKUDS/ViMax",
-            "note": "Planning runs on Vercel. GPU generation is delegated to the selected hosted/self-hosted repo model."}
+            "note": "A daily attempt cap is enforced. Planning can use the built-in engine; hosted provider quotas and billing still apply."}
 
 
 @router.post("/{pipeline}/run")
@@ -57,11 +106,14 @@ async def run_pipeline(pipeline: str, request: Request):
     if not check_rate_limit(get_client_ip(request), f"vimax:{pipeline}", max(4, RATE_LIMIT_GENERATE // 3), 60):
         raise HTTPException(status_code=429, detail="ViMax rate limit reached")
     body = await request.json()
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="ViMax request body must be a JSON object.")
     # A full project is expensive; explicit flags control GPU work. Planning,
     # script and storyboard always run and remain useful with zero keys.
     body.setdefault("generate_images", False)
     body.setdefault("render_video", False)
     body.setdefault("generate_voiceover", False)
+    attempt_row, attempt_day, used_today = await _reserve_daily_attempt(store, user["id"], pipeline)
     try:
         if pipeline == "idea2video":
             result = await vimax.idea2video(body, keys)
@@ -70,12 +122,23 @@ async def run_pipeline(pipeline: str, request: Request):
         else:
             result = await vimax.novel2movie(body, keys)
     except Exception as exc:
+        safe_error = getattr(exc, "message", None) or "Pipeline failed. Check selected providers and their quota."
+        try:
+            await store.update_project(
+                attempt_row["id"], user["id"],
+                settings={"pipeline": pipeline, "request": body, "status": "failed",
+                          "attempt": True, "attempt_date": attempt_day, "error": str(safe_error)[:500], "version": 1},
+            )
+        except Exception:
+            pass
         _error(exc)
     title = str(body.get("title") or (result.get("plan") or {}).get("title") or result.get("title") or pipeline)[:120]
-    row = await store.add_project(user_id=user["id"], name=title, project_type=PROJECT_TYPE,
-                                  settings={"pipeline": pipeline, "request": body, "result": result,
-                                            "status": "ready", "version": 1})
-    return {"project_id": row["id"], "status": "ready", **result}
+    await store.update_project(
+        attempt_row["id"], user["id"], name=title,
+        settings={"pipeline": pipeline, "request": body, "result": result, "status": "ready",
+                  "attempt": True, "attempt_date": attempt_day, "version": 1},
+    )
+    return {"project_id": attempt_row["id"], "status": "ready", **result}
 
 
 @router.get("/projects/list")
