@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BG LABS — JARVIS Creator OS</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tus-js-client@4/dist/tus.min.js"></script>
 
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -4030,6 +4031,20 @@
             <section class="xl:col-span-3 glass-panel rounded-2xl p-5 md:p-6">
               <div class="flex items-center gap-3 mb-5"><div class="w-10 h-10 rounded-xl bg-cyan-500/15 text-cyan-200 flex items-center justify-center"><i class="fa-solid fa-wand-magic-sparkles text-lg"></i></div><div><h3 class="text-lg font-bold text-white">Create a Shorts project</h3><p class="text-xs text-slate-400">One long video → multiple edited clips</p></div></div>
               <form id="shortsMakerForm" class="space-y-5" onsubmit="createShortsProject(event)">
+                <div class="rounded-xl border border-cyan-400/20 bg-cyan-500/5 p-4">
+                  <div class="flex items-start gap-3 mb-3">
+                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-cyan-500/15 text-cyan-200"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+                    <div><div class="font-semibold text-white text-sm">Or upload a long video from this PC</div><p class="text-xs text-slate-400 mt-1 leading-relaxed">Uploads directly to your configured Supabase Storage using a short-lived signed token, not through the Vercel function. MP4, MOV, AVI or 3GP · maximum 2 GB, subject to your Storage plan limit.</p></div>
+                  </div>
+                  <input id="shortsLocalFile" type="file" accept="video/mp4,video/quicktime,video/x-msvideo,video/3gpp,.mp4,.mov,.avi,.3gp" class="block w-full text-sm text-slate-300 file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-500/15 file:px-4 file:py-2.5 file:text-cyan-100 hover:file:bg-cyan-500/25">
+                  <label class="mt-3 flex items-start gap-2 text-xs leading-relaxed text-slate-400"><input id="shortsUploadConsent" type="checkbox" class="mt-0.5 accent-cyan-400"><span>I understand the video will be stored in the configured public media bucket and shared with Vizard for clipping. I have the rights to upload it.</span></label>
+                  <div class="mt-3 flex flex-wrap items-center gap-3">
+                    <button id="shortsUploadButton" type="button" onclick="uploadShortsLocalFile()" class="rounded-lg border border-cyan-400/25 bg-cyan-500/10 px-3 py-2.5 text-xs font-bold text-cyan-100 hover:bg-cyan-500/20"><i class="fa-solid fa-upload mr-1"></i> Upload video & use it</button>
+                    <span id="shortsUploadStatus" class="text-xs text-slate-500">Choose a video file first.</span>
+                  </div>
+                  <div id="shortsUploadProgress" class="hidden mt-3 h-2 overflow-hidden rounded-full bg-slate-800"><div id="shortsUploadProgressBar" class="h-full w-0 rounded-full bg-gradient-to-r from-cyan-400 to-indigo-500 transition-all"></div></div>
+                </div>
+                <div class="flex items-center gap-3 text-xs uppercase tracking-widest text-slate-600"><span class="h-px flex-1 bg-slate-800"></span><span>or paste a link</span><span class="h-px flex-1 bg-slate-800"></span></div>
                 <div>
                   <label for="shortsVideoUrl" class="block mb-2 text-sm font-semibold text-slate-200">Long video link <span class="text-rose-300">*</span></label>
                   <input id="shortsVideoUrl" type="url" required maxlength="3000" placeholder="https://www.youtube.com/watch?v=…" class="w-full rounded-xl border border-slate-700 bg-slate-950/70 p-3.5 text-white placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none">
@@ -4102,6 +4117,70 @@
         }catch(e){
             const el=document.getElementById('shortsProviderStatus');
             if(el)el.innerHTML='<i class="fa-solid fa-triangle-exclamation mr-2 text-amber-300"></i>Could not check the cloud engine. Check backend health or use the Windows local option below.';
+        }
+    }
+
+    async function uploadShortsLocalFile(){
+        const file=document.getElementById('shortsLocalFile')?.files?.[0];
+        const status=document.getElementById('shortsUploadStatus');
+        const progress=document.getElementById('shortsUploadProgress');
+        const progressBar=document.getElementById('shortsUploadProgressBar');
+        const button=document.getElementById('shortsUploadButton');
+        if(!file){toast('Choose a local video file first.','error');return;}
+        if(!document.getElementById('shortsUploadConsent')?.checked){toast('Confirm the Storage/privacy notice before uploading.','error');return;}
+        if(file.size>2*1024*1024*1024){toast('Maximum local upload size is 2 GB (Storage plan limits also apply).','error');return;}
+        const ext=(file.name.split('.').pop()||'').toLowerCase();
+        const types={mp4:'video/mp4',mov:'video/quicktime',avi:'video/x-msvideo','3gp':'video/3gpp'};
+        if(!types[ext]){toast('Use MP4, MOV, AVI or 3GP.','error');return;}
+        if(typeof tus==='undefined'||!tus.Upload){toast('The resumable upload helper did not load. Refresh the page and try again.','error');return;}
+        if(status)status.textContent='Preparing a secure upload…';
+        if(progress)progress.classList.remove('hidden');
+        if(progressBar)progressBar.style.width='0%';
+        busy3('shortsUploadButton',true,'Preparing upload…');
+        try{
+          const signed=await aiRequest('/api/shorts/upload-url','POST',{
+            filename:file.name,size:file.size,content_type:file.type||types[ext]
+          });
+          if(status)status.textContent='Uploading 0%…';
+          const uploader=new tus.Upload(file,{
+            endpoint:signed.endpoint,
+            headers:{'x-signature':signed.token},
+            metadata:{
+              bucketName:signed.bucket,
+              objectName:signed.path,
+              contentType:signed.content_type||types[ext],
+              cacheControl:'3600'
+            },
+            chunkSize:6*1024*1024,
+            retryDelays:[0,1000,3000,5000,10000],
+            onError:function(error){
+              if(status)status.innerHTML='<span class="text-rose-300">Upload failed: '+hubEscape(error?.message||'Storage upload error')+'</span>';
+              busy3('shortsUploadButton',false,'Upload video & use it');
+              toast('Video upload failed. Check Supabase Storage/CORS settings and retry.','error');
+            },
+            onProgress:function(uploaded,total){
+              const pct=total?Math.min(100,Math.round(uploaded/total*100)):0;
+              if(progressBar)progressBar.style.width=pct+'%';
+              if(status)status.textContent='Uploading '+pct+'% · '+(uploaded/1024/1024).toFixed(1)+' / '+(total/1024/1024).toFixed(1)+' MB';
+              busy3('shortsUploadButton',true,'Uploading '+pct+'%…');
+            },
+            onSuccess:function(){
+              const link=document.getElementById('shortsVideoUrl');
+              const source=document.getElementById('shortsSourceType');
+              if(link)link.value=signed.public_url;
+              if(source)source.value='remote';
+              if(progressBar)progressBar.style.width='100%';
+              if(status)status.innerHTML='<span class="text-emerald-300"><i class="fa-solid fa-circle-check mr-1"></i>Upload complete. Source link filled in below.</span>';
+              busy3('shortsUploadButton',false,'Upload complete');
+              toast('Video uploaded. Click Find & Edit Shorts to generate clips.','success');
+            }
+          });
+          uploader.start();
+        }catch(e){
+          if(status)status.innerHTML='<span class="text-rose-300">'+hubEscape(e.message||'Could not prepare Storage upload')+'</span>';
+          busy3('shortsUploadButton',false,'Upload video & use it');
+          if(progressBar)progressBar.style.width='0%';
+          toast(e.message||'Could not prepare video upload.','error');
         }
     }
 
