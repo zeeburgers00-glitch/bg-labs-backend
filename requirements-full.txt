@@ -1,0 +1,31 @@
+# BG LABS - optional "full" stack
+#
+# Install this *in addition to* requirements.txt only when you want the extra
+# SQLAlchemy based routers (YouTube agent, workflow engine, MCP, browser
+# automation, vector memory, ...) or local XTTS voice cloning.
+#
+#   pip install -r requirements.txt -r requirements-full.txt
+#   ENABLE_EXTRA_ROUTERS=1 python main.py
+#
+# NOTE: torch + XTTS are multi-gigabyte and will NOT fit in a Vercel serverless
+# function. Use these on Render / Docker / a GPU box instead.
+
+-r requirements.txt
+
+# SQLAlchemy routers (app/routes/youtube_agent.py, workflow.py, mcp.py, ...)
+sqlalchemy==2.1.6
+greenlet==3.5.6
+pydantic-settings==2.16.2
+passlib[bcrypt]==1.7.4
+
+# billing (app/routes/billing.py)
+stripe==16.0.1
+
+# background jobs (app/celery_app.py, app/tasks.py)
+celery==5.5.3
+redis==7.1.0
+
+# local XTTS voice cloning (app/services/tts_engine.py) - heavy!
+numpy==2.4.6
+torch==2.14.1
+# TTS==0.22.0  # coqui XTTS, uncomment on a GPU/CPU box with several GB of disk

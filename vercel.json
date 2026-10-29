@@ -1,18 +1,51 @@
 {
-  "version": 2,
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "builds": [
     {
       "src": "main.py",
-      "use": "@vercel/python"
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "50mb"
+      }
+    },
+    {
+      "src": "index.html",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
     {
-      "src": "/(.*)",
+      "src": "/api/.*",
       "dest": "main.py"
+    },
+    {
+      "src": "/(health|keep-alive|docs|redoc|openapi\\.json)",
+      "dest": "main.py"
+    },
+    {
+      "src": "/(yt-[a-z]+|skills(/.*)?)",
+      "dest": "main.py"
+    },
+    {
+      "src": "/",
+      "dest": "/index.html"
+    },
+    {
+      "src": "/favicon\\.ico",
+      "dest": "/index.html",
+      "status": 204
+    },
+    {
+      "src": "/.*",
+      "dest": "/index.html"
     }
   ],
   "env": {
-    "PYTHON_VERSION": "3.11"
+    "PYTHON_VERSION": "3.11",
+    "PYTHONUNBUFFERED": "1"
+  },
+  "regions": ["iad1"],
+  "github": {
+    "silent": true
   }
 }
