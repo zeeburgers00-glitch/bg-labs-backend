@@ -4111,9 +4111,11 @@
             const d=await aiRequest('/api/shorts/status');
             const el=document.getElementById('shortsProviderStatus');
             if(!el)return;
-            el.innerHTML=d.configured
-              ? '<i class="fa-solid fa-circle-check mr-2 text-emerald-300"></i><b>Vizard cloud engine ready.</b> Submit a project to find high-potential clips. API processing uses your Vizard plan minutes.'
-              : '<i class="fa-solid fa-triangle-exclamation mr-2 text-amber-300"></i><b>Cloud engine needs setup.</b> Add <code>VIZARDAI_API_KEY</code> to Vercel Environment Variables and redeploy. <a class="underline text-cyan-200" href="https://docs.vizard.ai/docs/quickstart" target="_blank" rel="noopener noreferrer">Official API setup</a> · <a class="underline text-cyan-200" href="https://vizard.ai/pricing" target="_blank" rel="noopener noreferrer">Plans</a>';
+            el.innerHTML=d.valid
+              ? '<i class="fa-solid fa-circle-check mr-2 text-emerald-300"></i><b>Vizard cloud engine verified.</b> '+hubEscape(d.message||'Ready to create Shorts.')+' '+(Number.isFinite(Number(d.connected_social_accounts))?'Connected accounts: '+Number(d.connected_social_accounts)+'. ':'')+'Video processing uses your Vizard plan minutes.'
+              : d.configured
+                ? '<i class="fa-solid fa-triangle-exclamation mr-2 text-amber-300"></i><b>Vizard key saved; verification needs attention.</b> '+hubEscape(d.message||'Check the Vizard API key and plan.')+' <a class="underline text-cyan-200" href="https://docs.vizard.ai/docs/quickstart" target="_blank" rel="noopener noreferrer">API setup</a>'
+                : '<i class="fa-solid fa-triangle-exclamation mr-2 text-amber-300"></i><b>Cloud engine needs setup.</b> Add <code>VIZARDAI_API_KEY</code> to Vercel Environment Variables and redeploy. <a class="underline text-cyan-200" href="https://docs.vizard.ai/docs/quickstart" target="_blank" rel="noopener noreferrer">Official API setup</a> · <a class="underline text-cyan-200" href="https://vizard.ai/pricing" target="_blank" rel="noopener noreferrer">Plans</a>';
         }catch(e){
             const el=document.getElementById('shortsProviderStatus');
             if(el)el.innerHTML='<i class="fa-solid fa-triangle-exclamation mr-2 text-amber-300"></i>Could not check the cloud engine. Check backend health or use the Windows local option below.';
