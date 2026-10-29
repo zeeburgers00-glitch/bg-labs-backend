@@ -194,8 +194,9 @@ def _normalize_videos(data: dict) -> list[dict]:
 
 @router.get("/status")
 async def shorts_status():
-    return {
+    status = {
         "configured": bool(VIZARD_API_KEY),
+        "valid": False,
         "provider": "Vizard AI",
         "mode": "cloud_ai_clipping",
         "supports": [
@@ -209,8 +210,33 @@ async def shorts_status():
         "local_upload_max_bytes": 2 * 1024 * 1024 * 1024,
         "local_upload_requires": "Supabase Storage with a public media bucket",
         "setup_url": "https://docs.vizard.ai/docs/quickstart",
-        "message": "Ready" if VIZARD_API_KEY else "Add VIZARDAI_API_KEY to Vercel to enable the cloud clipping API.",
+        "message": "Add VIZARDAI_API_KEY to Vercel to enable the cloud clipping API.",
     }
+    if not VIZARD_API_KEY:
+        return status
+    try:
+        # Read-only provider check. It does not submit a video or consume video minutes.
+        response = await _vizard("GET", "/project/social-accounts")
+        error = _provider_error(response)
+        if error:
+            status.update({"valid": False, "message": error})
+            return status
+        accounts = response.get("publishAccounts") or []
+        status.update({
+            "valid": True,
+            "connected_social_accounts": int(response.get("total") or len(accounts)),
+            "message": "Vizard API key verified. Ready to create Shorts.",
+        })
+    except HTTPException as exc:
+        detail = str(exc.detail or "")
+        if "api key" in detail.lower() or "401" in detail:
+            message = "Vizard rejected this API key. Check that it was copied correctly and that API access is enabled on your paid plan."
+        elif "minutes" in detail.lower() or exc.status_code == 402:
+            message = "Vizard API is responding, but the account or plan needs attention before creating Shorts."
+        else:
+            message = "Vizard API key is saved, but its read-only verification request failed. Check the Vizard API/plan status."
+        status.update({"valid": False, "message": message})
+    return status
 
 
 @router.post("/upload-url")
