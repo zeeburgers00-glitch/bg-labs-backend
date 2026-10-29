@@ -81,7 +81,10 @@ jobs:
               assert route in course, f"Missing course/creator route: {route}"
           vimax = Path("app/routes/vimax_api.py").read_text(encoding="utf-8")
           assert "Daily ViMax attempt cap reached" in vimax
-          print(f"Parsed {parsed} Python files; API routes, course retrieval, calendar and Vercel config validated.")
+          registry = Path("app/integrations.py").read_text(encoding="utf-8")
+          for tool in ["Rakazo", "OpenAI Agents SDK", "MCP Python SDK", "Open Dots", "Ollama", "Browser Use", "n8n"]:
+              assert f'("{tool}"' in registry, f"Missing integration registry item: {tool}"
+          print(f"Parsed {parsed} Python files; AI Tools Hub, integrations catalog, API routes and Vercel config validated.")
           PY
 
       - name: Set up Node.js
@@ -124,7 +127,14 @@ jobs:
             "tus-js-client@4",
             "/api/shorts/upload-url",
             "shortsUploadConsent",
-            "x-signature"
+            "x-signature",
+            "AI Tools Hub",
+            "function renderAiToolsHub",
+            "function drawAiToolsHub",
+            "filterAiToolsTab",
+            "AI_TOOLS_DISCOVERY",
+            "Rakazo",
+            "OpenDots"
           ]) {
             if (!html.includes(required)) throw new Error("Missing UI hook: " + required);
           }
