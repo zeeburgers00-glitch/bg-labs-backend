@@ -65,7 +65,7 @@ jobs:
               '@router.get("/projects/{project_id}")'
           ]:
               assert route in shorts, f"Missing AI Shorts API route: {route}"
-          for feature in ["maxClipNumber", "ratioOfClip", "subtitleSwitch", "headlineSwitch", "highlightSwitch", "autoBrollSwitch", "removeSilenceSwitch", "viralScore", "VIZARDAI_API_KEY", "payload[\"keyword\"]", "upload/resumable", ".storage.supabase.co"]:
+          for feature in ["maxClipNumber", "ratioOfClip", "subtitleSwitch", "headlineSwitch", "highlightSwitch", "autoBrollSwitch", "removeSilenceSwitch", "viralScore", "VIZARDAI_API_KEY", "payload[\"keyword\"]", "project/social-accounts", "valid", "upload/resumable", ".storage.supabase.co"]:
               assert feature in shorts, f"Missing AI Shorts integration hook: {feature}"
           course = Path("app/routes/course_ai.py").read_text(encoding="utf-8")
           for route in [
