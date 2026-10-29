@@ -12,6 +12,7 @@ for name in ("SUPABASE_URL","SUPABASE_SERVICE_KEY","DATABASE_URL","OPENAI_API_KE
 from fastapi.testclient import TestClient
 import main
 from app import store as stores, integrations
+from app.skills import marketplace as skill_marketplace
 
 
 def run():
@@ -44,6 +45,28 @@ def run():
         checks+=1
     finally:
         integrations.discover_github=original_discover
+    market=call('get','/api/skills/marketplace?page_size=10')
+    assert market['catalog_total']==3361 and len(market['skills'])==10
+    anthology=call('get','/api/skills/marketplace?source=anthropic&page_size=50')
+    assert anthology['total']==19
+    checks+=2
+    skill_id='anthropic:skills/doc-coauthoring/SKILL.md'
+    original_fetch=skill_marketplace.fetch
+    async def fake_skill_fetch(requested_id):
+        row=skill_marketplace.entry(requested_id)
+        return {**row,'upstream_name':'Doc Coauthoring','description':'Help draft documents',
+                'instructions':'Help create {{document}} with an outline and review checklist.',
+                'importable':True,'review_notice':'Prompt only.'}
+    skill_marketplace.fetch=fake_skill_fetch
+    try:
+        detail=call('get','/api/skills/marketplace/detail?skill_id=anthropic%3Askills%2Fdoc-coauthoring%2FSKILL.md')
+        assert detail['upstream_name']=='Doc Coauthoring'
+        imported=call('post','/api/skills/marketplace/import',json={'skill_id':skill_id})
+        assert imported['saved'] and imported['source']['license']=='Apache-2.0'
+        assert imported['skill']['name']=='Doc Coauthoring'
+        checks+=2
+    finally:
+        skill_marketplace.fetch=original_fetch
 
     call('put','/api/providers/keys/GROQ_API_KEY',json={'value':'gsk_test_secret_1234'})
     status=call('get','/api/providers/keys')

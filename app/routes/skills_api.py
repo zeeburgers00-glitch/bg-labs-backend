@@ -27,11 +27,13 @@ from typing import Any, Dict, List, Optional
 import re
 
 from fastapi import APIRouter, HTTPException, Query, Request
+import httpx
 
 from app import agents as agent_core
 from app.deps import check_rate_limit, get_client_ip, get_current_user, get_optional_user
 from app.store import get_store
 from app.skills import engine as skills_engine
+from app.skills import marketplace as skills_marketplace
 
 logger = logging.getLogger("bglabs.skills.api")
 
@@ -107,6 +109,81 @@ CUSTOM_SKILL_LIMIT = 5000
 _CUSTOM_SLUG = re.compile(r"^[a-z0-9][a-z0-9-]{1,47}$")
 
 
+@router.get("/api/skills/marketplace")
+async def marketplace_search(request: Request, q: str = "", source: str = "", page: int = 1,
+                             page_size: int = 25) -> Dict[str, Any]:
+    await get_current_user(request)
+    if len(q) > 100:
+        raise HTTPException(400, "Search text must be at most 100 characters")
+    return skills_marketplace.search(q, source, page, page_size)
+
+
+@router.get("/api/skills/marketplace/detail")
+async def marketplace_detail(request: Request, skill_id: str = Query(..., min_length=4, max_length=800)) -> Dict[str, Any]:
+    await get_current_user(request)
+    if not check_rate_limit(get_client_ip(request), "skill-marketplace-upstream", 50, 3600):
+        raise HTTPException(429, "Upstream skill fetch limit reached; try again later")
+    try:
+        return await skills_marketplace.fetch(skill_id)
+    except KeyError as exc:
+        raise HTTPException(404, str(exc).strip("'")) from None
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from None
+    except httpx.HTTPError:
+        raise HTTPException(502, "Could not fetch the upstream skill; retry shortly") from None
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc)) from None
+
+
+@router.post("/api/skills/marketplace/import")
+async def marketplace_import(request: Request) -> Dict[str, Any]:
+    user = await get_current_user(request)
+    if not check_rate_limit(get_client_ip(request), "skill-marketplace-upstream", 50, 3600):
+        raise HTTPException(429, "Upstream skill fetch limit reached; try again later")
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    skill_id = str((body or {}).get("skill_id") or "") if isinstance(body, dict) else ""
+    row = skills_marketplace.entry(skill_id)
+    if not row:
+        raise HTTPException(404, "Marketplace skill not found")
+    try:
+        source = await skills_marketplace.fetch(skill_id)
+    except KeyError as exc:
+        raise HTTPException(404, str(exc).strip("'")) from None
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from None
+    except httpx.HTTPError:
+        raise HTTPException(502, "Could not fetch the upstream skill; retry shortly") from None
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc)) from None
+    if row.get("license") not in {"MIT", "Apache-2.0"}:
+        raise HTTPException(422, "This catalog source is not allowlisted for import")
+    instructions = str(source.get("instructions") or "").strip()
+    if not instructions or len(instructions) > 12000:
+        raise HTTPException(422, "Skill instructions are empty or exceed the 12000-character import limit")
+    store = await get_store()
+    projects = await store.list_projects(user_id=int(user["id"]), project_type=CUSTOM_SKILL_TYPE,
+                                        limit=CUSTOM_SKILL_LIMIT)
+    if len(projects) >= CUSTOM_SKILL_LIMIT:
+        raise HTTPException(429, f"Your account reached the {CUSTOM_SKILL_LIMIT}-skill limit")
+    name = str(source.get("upstream_name") or row["name"]).strip()[:80]
+    slug = re.sub(r"[^a-z0-9]+", "-", str(source.get("upstream_name") or row["slug"]).lower()).strip("-")[:48].strip("-")
+    if len(slug) < 2:
+        slug = row["source_id"] + "-skill"
+    description = str(source.get("description") or f"Imported from {row['repo']}").strip()[:240]
+    project = await store.add_project(
+        user_id=int(user["id"]), name=name or row["name"], project_type=CUSTOM_SKILL_TYPE,
+        settings={"slug": slug, "description": description, "instructions": instructions,
+                  "category": "imported-" + row["source_id"], "version": 1,
+                  "source": {"repo": row["repo"], "path": row["path"], "ref": row["ref"],
+                             "license": row["license"], "url": row["url"]}},
+    )
+    return {"saved": True, "skill": _custom_public(project), "source": row,
+            "notice": "Imported as prompt text only. No code or shell command was run."}
+
+
 def _custom_public(project: Dict[str, Any]) -> Dict[str, Any]:
     settings = project.get("settings") or {}
     return {
@@ -114,6 +191,7 @@ def _custom_public(project: Dict[str, Any]) -> Dict[str, Any]:
         "slug": settings.get("slug", ""), "description": settings.get("description", ""),
         "category": settings.get("category", "custom"),
         "instructions": settings.get("instructions", ""),
+        "source": settings.get("source") or None,
         "created_at": project.get("created_at", ""),
         "updated_at": project.get("updated_at", ""),
         "kind": "custom",

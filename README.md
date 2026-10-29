@@ -12,6 +12,9 @@
 - **Video**: FFmpeg-based text-to-video
 - **Admin Panel**: Stats, user management
 - **Keep-Alive**: Self-ping system for 24/7 uptime
+- **AI Tools Hub**: model/provider routing, integrations directory, and live GitHub repository discovery
+- **Open Skills Marketplace**: 3,361 indexed `SKILL.md` entries from three license-labelled upstream sources; inspect and selectively import prompt text
+- **Skill Forge**: save/run account-private custom skills (up to 5,000 per account); generation uses a configured LLM provider, with safe placeholder-only offline mode
 
 ## Stack
 
@@ -74,6 +77,13 @@ The backend has a built-in keep-alive system that pings itself every 10 minutes.
 | PUT | `/api/admin/users/{id}` | Update user |
 | GET | `/api/billing/plans` | Billing plans |
 | GET | `/api/referral/code` | Referral code |
+| GET | `/api/skills/marketplace` | Search the indexed open-source skill marketplace |
+| GET | `/api/skills/marketplace/detail?skill_id=...` | Preview a pinned upstream `SKILL.md` |
+| POST | `/api/skills/marketplace/import` | Import reviewed prompt instructions to private skills |
+| GET/POST | `/api/skills/custom` | List or create private custom skills |
+| POST | `/api/skills/custom/{id}/run` | Run a saved skill with an available LLM provider |
+| DELETE | `/api/skills/custom/{id}` | Delete a private custom skill |
+| GET | `/api/integrations/discover?q=...` | Search public GitHub repositories live |
 
 ## Environment Variables
 
