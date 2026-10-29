@@ -4074,7 +4074,7 @@
                     <label class="flex gap-3 items-start text-slate-300"><input id="shortsSilence" type="checkbox" checked class="mt-1 accent-cyan-400"><span><b>Remove silence + fillers</b><small class="block text-xs text-slate-500 mt-0.5">Tighten pacing automatically</small></span></label>
                   </div>
                 </div>
-                <div class="rounded-xl border border-amber-400/20 bg-amber-500/5 p-3 text-xs leading-relaxed text-slate-300"><i class="fa-solid fa-music mr-2 text-amber-300"></i><b>Music / SFX:</b> This API request supports the editing controls above but not a documented independent music/SFX switch. Use each finished clip’s Vizard editor link to finish soundtrack or effects, or apply a configured custom template. The original audio is not silently replaced.</div>
+                <div class="rounded-xl border border-amber-400/20 bg-amber-500/5 p-3 text-xs leading-relaxed text-slate-300"><i class="fa-solid fa-music mr-2 text-amber-300"></i><b>Music / SFX:</b> This API request supports the editing controls above but not a documented independent music/SFX switch. Use each finished clip’s Vizard editor link to add soundtrack or effects after generation; custom templates can be used for supported visual branding. The original audio is not silently replaced.</div>
                 <button id="shortsCreateBtn" type="submit" class="w-full rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-500 px-5 py-4 font-bold text-white shadow-lg shadow-cyan-950/20 transition hover:brightness-110 disabled:opacity-50"><i class="fa-solid fa-wand-magic-sparkles mr-2"></i> Find & Edit Shorts</button>
                 <p class="text-xs text-slate-500">Cloud API uses Vizard video minutes from a paid plan. Check its remaining minutes before submitting large videos.</p>
               </form>
@@ -4092,7 +4092,7 @@
               </section>
               <section class="rounded-2xl border border-slate-700/70 bg-slate-950/35 p-5">
                 <h3 class="text-sm font-bold text-slate-200 mb-3"><i class="fa-solid fa-laptop mr-2 text-purple-300"></i>Have a local video file?</h3>
-                <p class="text-xs text-slate-400 leading-relaxed mb-3">This hosted page accepts public video links; it does not upload large local video files to the cloud. For drag-and-drop local processing on Windows, ClipMint is an open-source option with local transcription, ranked clip candidates, speaker-aware crops and caption export.</p>
+                <p class="text-xs text-slate-400 leading-relaxed mb-3">Upload a local MP4/MOV/AVI/3GP directly to your configured Supabase Storage bucket (up to 2 GB in this UI, subject to storage plan limits). If you prefer a separate local-first workflow, ClipMint is an open-source Windows option with local transcription, ranked clip candidates, speaker-aware crops and caption export.</p>
                 <a href="https://github.com/kleZ799/clipmint/releases" target="_blank" rel="noopener noreferrer" class="text-sm font-semibold text-purple-300 hover:text-purple-200">Open ClipMint Windows releases <i class="fa-solid fa-arrow-up-right-from-square ml-1"></i></a>
               </section>
             </aside>
