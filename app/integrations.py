@@ -1,6 +1,12 @@
 """Registry of repositories requested for BG Labs and their real deployment mode."""
 from __future__ import annotations
 
+import asyncio
+import time
+from typing import Any, Dict
+
+import httpx
+
 # status: active = executable in this deploy; adapter = API wiring exists and needs key/URL;
 # ported = useful pure-Python logic incorporated; reference = docs/examples used, not executed.
 # Vercel cannot run GPU repos or desktop/browser binaries, so those are adapters to a GPU worker.
@@ -132,4 +138,59 @@ def summary():
     return {"total":len(rows),"categories":cats,"by_status":{s:sum(r["status"]==s for r in rows)
             for s in ("active","ported","adapter","reference")}}
 
-__all__=["catalog","summary"]
+
+_DISCOVERY_CACHE: Dict[str, tuple[float, Dict[str, Any]]] = {}
+_DISCOVERY_LOCK = asyncio.Lock()
+_DISCOVERY_TTL = 600
+
+
+async def discover_github(query: str, page: int = 1) -> Dict[str, Any]:
+    """Search public GitHub repos live; discovery never implies installation/execution."""
+    q = " ".join(str(query or "").split())[:120]
+    if len(q) < 2:
+        raise ValueError("Search query must be at least 2 characters")
+    page = max(1, min(int(page or 1), 10))
+    cache_key = f"{q.lower()}:{page}"
+    now = time.monotonic()
+    cached = _DISCOVERY_CACHE.get(cache_key)
+    if cached and now - cached[0] < _DISCOVERY_TTL:
+        return dict(cached[1])
+    async with _DISCOVERY_LOCK:
+        cached = _DISCOVERY_CACHE.get(cache_key)
+        if cached and time.monotonic() - cached[0] < _DISCOVERY_TTL:
+            return dict(cached[1])
+        async with httpx.AsyncClient(timeout=httpx.Timeout(12.0, connect=5.0), headers={
+            "Accept": "application/vnd.github+json", "User-Agent": "BG-LABS-Open-Source-Discovery"
+        }) as client:
+            response = await client.get("https://api.github.com/search/repositories", params={
+                "q": q + " in:name,description,readme", "sort": "stars", "order": "desc",
+                "per_page": 30, "page": page,
+            })
+        if response.status_code == 403:
+            raise RuntimeError("GitHub search rate limit reached; wait a few minutes and retry")
+        response.raise_for_status()
+        raw = response.json()
+        items = []
+        for repo in raw.get("items", []):
+            license_info = repo.get("license") or {}
+            items.append({
+                "id": repo.get("full_name", ""), "name": repo.get("name", ""),
+                "owner": (repo.get("owner") or {}).get("login", ""),
+                "url": repo.get("html_url", ""), "description": repo.get("description") or "",
+                "stars": int(repo.get("stargazers_count") or 0), "language": repo.get("language") or "",
+                "topics": (repo.get("topics") or [])[:12], "license": license_info.get("spdx_id") or "unknown",
+                "updated_at": repo.get("updated_at", ""), "archived": bool(repo.get("archived")),
+                "fork": bool(repo.get("fork")), "kind": "discovered", "status": "not-installed",
+            })
+        result = {"query": q, "page": page, "total_count": int(raw.get("total_count") or 0),
+                  "count": len(items), "repositories": items,
+                  "notice": "Public GitHub search results only. These are discovered, not installed, vetted, or executable in BG LABS."}
+        _DISCOVERY_CACHE[cache_key] = (time.monotonic(), result)
+        # Bound cache memory in serverless workers.
+        if len(_DISCOVERY_CACHE) > 128:
+            for key, _ in sorted(_DISCOVERY_CACHE.items(), key=lambda item: item[1][0])[:32]:
+                _DISCOVERY_CACHE.pop(key, None)
+        return dict(result)
+
+
+__all__=["catalog","summary","discover_github"]

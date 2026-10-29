@@ -11,7 +11,7 @@ for name in ("SUPABASE_URL","SUPABASE_SERVICE_KEY","DATABASE_URL","OPENAI_API_KE
 
 from fastapi.testclient import TestClient
 import main
-from app import store as stores
+from app import store as stores, integrations
 
 
 def run():
@@ -33,6 +33,17 @@ def run():
     assert len(models['models'])>=70 and len(models['status']['repos'])>=40
     assert {'chat','tts','image','video','avatar','render'} <= set(models['capabilities'])
     checks+=2
+    original_discover=integrations.discover_github
+    async def fake_discover(query,page=1):
+        return {'query':query,'page':page,'total_count':1,'count':1,'repositories':[{'id':'demo/tool','url':'https://github.com/demo/tool'}],
+                'notice':'Discovered only; not installed.'}
+    integrations.discover_github=fake_discover
+    try:
+        discovered=call('get','/api/integrations/discover?q=agent%20skills&page=2')
+        assert discovered['repositories'][0]['id']=='demo/tool' and discovered['page']==2
+        checks+=1
+    finally:
+        integrations.discover_github=original_discover
 
     call('put','/api/providers/keys/GROQ_API_KEY',json={'value':'gsk_test_secret_1234'})
     status=call('get','/api/providers/keys')
@@ -72,6 +83,18 @@ def run():
     skill=call('post','/api/skills/command',json={'command':'/yt-script Why most channels die --length short'})
     assert skill['gate']=='ship it, or change it?' and len(skill['best_two'])==2
     checks+=1
+    forged=call('post','/api/skills/custom',json={'name':'Launch Planner','category':'marketing',
+        'description':'Create a practical launch checklist','instructions':'Plan a launch for {{product}}. Return steps and metrics.'})
+    custom_id=forged['skill']['id']
+    assert forged['saved'] and forged['skill']['slug']=='launch-planner'
+    custom=call('get','/api/skills/custom')
+    assert any(row['id']==custom_id for row in custom['skills'])
+    run_custom=call('post',f'/api/skills/custom/{custom_id}/run',json={'inputs':{'product':'test app'}})
+    assert run_custom['engine']=='template' and 'test app' in run_custom['result']
+    deleted=call('delete',f'/api/skills/custom/{custom_id}')
+    assert deleted['deleted']
+    call('get','/api/skills/custom')
+    checks+=5
     call('post','/api/generate/video',code=503,json={'prompt':'cat','model':'veo-3'})
     call('post','/api/vimax/bad/run',code=404,json={})
     print(f"PHASE 3: {checks} checks / 0 failures")

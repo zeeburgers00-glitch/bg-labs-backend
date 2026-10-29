@@ -5,6 +5,8 @@ import json
 import mimetypes
 import os
 import uuid
+
+import httpx
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, HTTPException, Request
@@ -91,6 +93,23 @@ async def models(request: Request, capability: Optional[str] = None):
     return {"models": providers.catalog(capability, keys), "status": providers.provider_status(keys),
             "capabilities": list(providers.CAPABILITIES), "keys": vault,
             "defaults": {c: providers.default_id(c, keys) for c in providers.CAPABILITIES}}
+
+
+@router.get("/integrations/discover")
+async def discover_integrations(request: Request, q: str, page: int = 1):
+    await get_current_user(request)
+    if not check_rate_limit(get_client_ip(request), "github-repository-discovery", 10, 60):
+        raise HTTPException(status_code=429, detail="GitHub discovery is limited to 10 searches per minute")
+    if len(q.strip()) < 2 or len(q) > 120:
+        raise HTTPException(status_code=400, detail="Search query must be 2-120 characters")
+    try:
+        return await integrations.discover_github(q, page)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=f"GitHub search unavailable: {exc}") from None
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from None
 
 
 @router.get("/integrations")
