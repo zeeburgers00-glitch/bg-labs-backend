@@ -59,6 +59,14 @@ Configure `FAL_KEY` in Vercel Project Settings → Environment Variables for **P
 
 Use only a face image and voice sample you own or have permission to use. Image and each uploaded audio file are limited to 2 MB in the web flow; a script can be up to 5,000 characters. Video generation is queued, so keep the Avatar Studio open to watch status and get the final video URL.
 
+## AI Shorts Maker (long video → edited Shorts)
+
+ViMax Video Studio now includes an **AI Shorts Maker** tab powered by Vizard's official API. It supports public YouTube/social video links, public Google Drive links and direct HTTPS video-file URLs. The workflow can rank/select clips with a viral score/reason, prefer 20–180 second clip lengths, output vertical 9:16/square/portrait/landscape, burn in subtitles, add hooks/headlines and highlighted words, add optional emojis/B-roll, remove silence/filler words, and return clip previews/download links plus the Vizard editor link. Use the editor link for final soundtrack/SFX finishing or a configured template; the clipping API used here does not expose a documented standalone music/SFX switch.
+
+Set `VIZARDAI_API_KEY` in Vercel Project Settings → Environment Variables for **Production and Preview**, then redeploy. Generate it in your Vizard workspace under Workspace Settings → API. **Vizard API access requires a paid Creator or Business plan**, and each submission consumes video minutes based on source length. The official docs state a 600-minute maximum source length and temporary output clip download links last 7 days: [API quickstart](https://docs.vizard.ai/docs/quickstart), [pricing/API minutes](https://docs.vizard.ai/docs/pricing), [clip output fields](https://docs.vizard.ai/docs/retrieve-video-clips).
+
+Local large-file uploads are not sent through the Vercel function (serverless request-body constraints). For drag/drop local-video processing on Windows, the UI links to [ClipMint releases](https://github.com/kleZ799/clipmint/releases); that is a separate local tool and is not silently launched by the cloud web app.
+
 ## Known account setting: Deployment Protection
 
 This Vercel account has **Vercel Authentication** (`all_except_custom_domains`) enabled by
@@ -95,7 +103,7 @@ Pollinations image route, timeline builder). Unlock stronger providers from the
 **Models & Providers → AI Keys / Server URLs** screen, or set them in Vercel:
 
 - Chat/images/voice: `OPENAI_API_KEY`, `GEMINI_API_KEY`, `ANTHROPIC_API_KEY`,
-  `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `ELEVENLABS_API_KEY`, `HF_TOKEN`
+  `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `ELEVENLABS_API_KEY`, `HF_TOKEN`, `VIZARDAI_API_KEY` (Vizard cloud Shorts clipping)
 - Hosted GPU: `FAL_KEY`, `REPLICATE_API_TOKEN`
 - YouTube OAuth: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`; redirect URI is
   `https://bg-labs-backend.vercel.app/api/youtube/auth/callback`
