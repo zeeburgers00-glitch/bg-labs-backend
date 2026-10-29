@@ -11,7 +11,7 @@ import os
 import os
 import re
 import uuid
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 from urllib.parse import urlparse
 
 import httpx
@@ -205,6 +205,9 @@ async def shorts_status():
             "remove_silence_and_fillers", "20_to_180_second_clip_preferences",
         ],
         "requires_paid_plan": True,
+        "supports_local_upload": True,
+        "local_upload_max_bytes": 2 * 1024 * 1024 * 1024,
+        "local_upload_requires": "Supabase Storage with a public media bucket",
         "setup_url": "https://docs.vizard.ai/docs/quickstart",
         "message": "Ready" if VIZARD_API_KEY else "Add VIZARDAI_API_KEY to Vercel to enable the cloud clipping API.",
     }
@@ -269,8 +272,13 @@ async def create_shorts_upload_url(request: Request):
     if not token:
         raise HTTPException(502, "Storage did not return an upload token.")
     public_url = f"{store.storage}/object/public/{store.bucket}/{path}"
+    endpoint_base = store.storage
+    parsed_base = urlparse(str(getattr(store, "base", "")))
+    if parsed_base.hostname and parsed_base.hostname.endswith(".supabase.co"):
+        direct_host = parsed_base.hostname[:-len(".supabase.co")] + ".storage.supabase.co"
+        endpoint_base = f"{parsed_base.scheme}://{direct_host}/storage/v1"
     return {
-        "endpoint": f"{store.storage}/upload/resumable",
+        "endpoint": f"{endpoint_base}/upload/resumable",
         "token": token,
         "bucket": str(store.bucket),
         "path": path,
