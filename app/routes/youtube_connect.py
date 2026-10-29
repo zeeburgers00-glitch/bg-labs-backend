@@ -23,6 +23,7 @@ Vercel caps request bodies at 4.5 MB and videos are bigger.
 """
 from __future__ import annotations
 
+import json
 import logging
 import os
 import urllib.parse
@@ -551,6 +552,127 @@ def _manager_config(settings: Dict[str, Any]) -> Dict[str, Any]:
         },
         "last_run": saved.get("last_run"),
     }
+
+
+def _youtube_chat_agent(message: str, requested: str = "") -> str:
+    """Route plain-language YouTube requests to the right specialist."""
+    known = {"strategist", "scriptwriter", "seo", "thumbnail", "voice_director",
+             "comment_responder", "analytics", "title_ab"}
+    if requested in known:
+        return requested
+    text = (message or "").lower()
+    if any(word in text for word in ("analytics", "views", "retention", "ctr", "watch time", "performance")):
+        return "analytics"
+    if any(word in text for word in ("reply", "comment", "community")):
+        return "comment_responder"
+    if any(word in text for word in ("thumbnail", "cover", "clickable image")):
+        return "thumbnail"
+    if any(word in text for word in ("title", "a/b", "ab test")):
+        return "title_ab"
+    if any(word in text for word in ("seo", "keyword", "tags", "description")):
+        return "seo"
+    if any(word in text for word in ("script", "hook", "intro", "write video")):
+        return "scriptwriter"
+    if any(word in text for word in ("voice", "narration", "voiceover")):
+        return "voice_director"
+    return "strategist"
+
+
+def _youtube_chat_reply(agent_name: str, result: Dict[str, Any], connected: bool,
+                        channel_title: str = "") -> str:
+    payload = result.get("result") if isinstance(result.get("result"), dict) else result
+    heading = f"YouTube {agent_name.replace('_', ' ').title()}"
+    if connected and channel_title:
+        heading += f" for {channel_title}"
+    note = "Using your connected channel context." if connected else \
+        "No channel is connected yet, so this answer uses general YouTube best practices."
+    return f"{heading}\n{note}\n\n{json.dumps(payload, ensure_ascii=False, indent=2)}"
+
+
+@router.get("/api/youtube/agent/status")
+async def youtube_agent_status(request: Request) -> Dict[str, Any]:
+    user = await get_current_user(request)
+    store = await get_store()
+    connections = await _load_connections(store, user["id"])
+    auth = google.status()
+    return {
+        "ready": True,
+        "connected": bool(connections),
+        "channels": [google.public_channel(row["settings"]) for row in connections],
+        "oauth_configured": auth["oauth_configured"],
+        "redirect_uri": google.default_redirect_uri(request),
+        "agents": ["strategist", "scriptwriter", "seo", "thumbnail", "voice_director",
+                   "comment_responder", "analytics", "title_ab"],
+        "safe_mode": "Drafts and advice only. Replies, uploads and publishing require explicit approval.",
+    }
+
+
+@router.post("/api/youtube/agent/chat")
+async def youtube_agent_chat(request: Request) -> Dict[str, Any]:
+    """Conversational router for all YouTube specialists, enriched by a connected channel."""
+    user = await get_current_user(request)
+    if not check_rate_limit(get_client_ip(request), "youtube-agent-chat", 20, 60):
+        raise HTTPException(429, "YouTube Agent chat limit reached. Please wait a minute.")
+    body = await request.json()
+    message = str(body.get("message") or body.get("prompt") or "").strip()
+    if not message and isinstance(body.get("messages"), list):
+        message = next((str(m.get("content") or "") for m in reversed(body["messages"])
+                        if isinstance(m, dict) and m.get("role") == "user"), "").strip()
+    if not message:
+        raise HTTPException(400, "Send a YouTube question in 'message' or 'prompt'.")
+
+    store = await get_store()
+    connections = await _load_connections(store, user["id"])
+    channel_id = str(body.get("channel_id") or "").strip()
+    target = await _find_connection(connections, channel_id) if channel_id else (connections[0] if connections else None)
+    connected = bool(target)
+    channel = google.public_channel(target["settings"]) if target else {}
+    stats = channel.get("stats") or {}
+    recent: List[Dict[str, Any]] = []
+    warning = ""
+    if target:
+        try:
+            access_token, fresh, mode = await _usable_tokens(target)
+            channel = google.public_channel(fresh)
+            stats = channel.get("stats") or stats
+            recent = await google.fetch_uploads(access_token, fresh.get("uploads_playlist", ""),
+                                                 max_results=8, api_key_override=_key_for(mode))
+        except Exception as exc:  # Chat must remain useful if Google has a temporary error.
+            warning = f"Live channel refresh was unavailable; stored channel data was used ({str(exc)[:120]})."
+
+    agent_id = _youtube_chat_agent(message, str(body.get("agent") or "").strip().lower())
+    recent_titles = [str(video.get("title") or "") for video in recent]
+    context = {
+        "topic": message,
+        "goal": message,
+        "audience": str(body.get("audience") or "general YouTube viewers"),
+        "channel": channel,
+        "data": {"channel": stats, "recent_videos": recent},
+        "context": "Connected channel: " + (channel.get("title") or "none") +
+                   ". Recent videos: " + "; ".join(recent_titles[:8]),
+        "script": str(body.get("script") or ""),
+        "comments": str(body.get("comments") or message),
+        "video_topic": str(body.get("video_topic") or message),
+        "keyword": str(body.get("keyword") or ""),
+        "tone": str(body.get("tone") or "friendly"),
+        "language": str(body.get("language") or "english"),
+    }
+    try:
+        output = await agent_core.run_agent(agent_id, context,
+                                            provider=str(body.get("provider") or "") or None,
+                                            model=str(body.get("model") or "") or None)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from None
+    reply = _youtube_chat_reply(agent_id, output, connected, channel.get("title") or "")
+    run = await store.add_project(
+        user_id=user["id"], name=f"YouTube Chat: {message[:70]}", project_type="youtube_agent_chat",
+        settings={"message": message, "agent": agent_id, "channel_id": channel.get("channel_id"),
+                  "connected": connected, "output": output, "created_at": _now()},
+    )
+    return {"reply": reply, "agent": agent_id, "connected": connected, "channel": channel,
+            "channel_context": {"stats": stats, "recent_videos": recent}, "result": output,
+            "run_id": run.get("id"), "warning": warning,
+            "approval_required": True, "public_actions_taken": 0}
 
 
 @router.get("/api/youtube/manager/status")
