@@ -87,6 +87,38 @@ RAW = [
 ("FastSD CPU","https://github.com/rupeshs/fastsdcpu","image","adapter","Self-hosted CPU endpoint"),
 ("ControlNet","https://github.com/lllyasviel/ControlNet","image","adapter","SD-WebUI/ComfyUI workflow support"),
 ("Real-ESRGAN","https://github.com/xinntao/Real-ESRGAN","upscale","adapter","fal/Replicate/self-hosted routes"),
+# Agent frameworks and coding assistants
+("OpenAI Agents SDK","https://github.com/openai/openai-agents-python","agents","adapter","Python agent SDK reference; add an explicit app adapter before execution"),
+("PydanticAI","https://github.com/pydantic/pydantic-ai","agents","reference","Typed agent framework reference"),
+("Microsoft AutoGen","https://github.com/microsoft/autogen","agents","reference","Multi-agent framework reference; requires separate worker/dependency setup"),
+("OpenHands","https://github.com/All-Hands-AI/OpenHands","coding","reference","Coding-agent platform; not executed inside this serverless app"),
+("Open Interpreter","https://github.com/OpenInterpreter/open-interpreter","desktop","adapter","Local computer/file execution requires the paired Windows agent and approvals"),
+("Agent Zero","https://github.com/frdel/agent-zero","agents","reference","Self-hosted agent framework reference"),
+("Continue","https://github.com/continuedev/continue","coding","reference","Open-source coding assistant extension"),
+("Aider","https://github.com/Aider-AI/aider","coding","reference","Terminal coding assistant; local CLI, separate from cloud app"),
+# MCP and tool connectors
+("MCP Python SDK","https://github.com/modelcontextprotocol/python-sdk","mcp","adapter","MCP client/server SDK; configure allowed servers and tools explicitly"),
+("MCP Servers","https://github.com/modelcontextprotocol/servers","mcp","adapter","Community MCP server examples; individual servers need secure setup"),
+("Composio","https://github.com/ComposioHQ/composio","mcp","adapter","External app/tool integrations require Composio account and action configuration"),
+("Browser Use","https://github.com/browser-use/browser-use","browser","adapter","Needs a separate controlled browser worker; not direct cloud desktop control"),
+("Playwright","https://github.com/microsoft/playwright","browser","adapter","Browser automation library; run in a worker or the paired local agent"),
+# Workflow and local-model runtimes
+("n8n","https://github.com/n8n-io/n8n","workflow","adapter","Workflow automation requires a self-hosted URL or cloud account"),
+("Flowise","https://github.com/FlowiseAI/Flowise","workflow","adapter","Visual LLM workflow platform; configure a separate deployment endpoint"),
+("Dify","https://github.com/langgenius/dify","workflow","adapter","LLM app/workflow platform; separate deployment and credentials required"),
+("LangChain","https://github.com/langchain-ai/langchain","agents","reference","LLM application framework reference"),
+("LlamaIndex","https://github.com/run-llama/llama_index","memory","reference","RAG and document retrieval framework reference"),
+("RAGFlow","https://github.com/infiniflow/ragflow","memory","adapter","Self-hosted retrieval-augmented generation service"),
+("Ollama","https://github.com/ollama/ollama","local-models","adapter","Local model runtime; connect through a secure Windows bridge"),
+("Open WebUI","https://github.com/open-webui/open-webui","local-models","reference","Self-hosted local-model UI; separate service"),
+("AnythingLLM","https://github.com/Mintplex-Labs/anything-llm","local-models","reference","Local knowledge assistant; separate deployment"),
+("Open Dots","https://github.com/CopilotKit/OpenDots","agents","reference","Agent UI/reference project; not a running connector by itself"),
+# User-requested bot starter
+("Rakazo","https://github.com/elie222/rakazo","bots","reference","Groq-bot starter requested for this project; secure token/webhook and runtime wiring still required"),
+# Developer SDK and testing
+("Vercel AI SDK","https://github.com/vercel/ai","developer-tools","reference","Streaming UI and model integration SDK reference"),
+("Promptfoo","https://github.com/promptfoo/promptfoo","testing","reference","Prompt/model evaluation framework; CI setup required"),
+("LiteLLM Proxy","https://github.com/BerriAI/litellm","routing","adapter","OpenAI-compatible gateway; configure an external proxy or worker"),
 ]
 
 
