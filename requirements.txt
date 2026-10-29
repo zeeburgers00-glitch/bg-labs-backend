@@ -6,13 +6,11 @@ aiofiles==25.1.0
 PyJWT==2.15.1
 httpx==0.28.1
 asyncpg==0.32.0
-python-dotenv==1.0.1
+python-dotenv>=1.2.2,<2
 sqlalchemy==2.1.6
 pydantic-settings==2.16.2
 passlib[bcrypt]==1.7.4
 stripe==16.0.1
 email-validator==2.3.0
 dnspython==2.9.0
-torch==2.14.1
-numpy==2.4.6
 greenlet==3.5.6
