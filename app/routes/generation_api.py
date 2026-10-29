@@ -7,7 +7,7 @@ import os
 import uuid
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse
 
 from app import browse, integrations, keyvault, providers
@@ -82,6 +82,53 @@ async def _save_result(store, user, result, capability, prompt=""):
     except Exception:
         pass
     return result
+
+
+@router.post("/talking-avatar/assets")
+async def talking_avatar_assets(
+    request: Request,
+    portrait: UploadFile = File(...),
+    voice_sample: UploadFile = File(...),
+):
+    """Upload a user's portrait and consented voice reference for avatar generation.
+
+    The files are stored through the configured media backend. On production this
+    yields public Supabase URLs that hosted GPU providers such as fal.ai can read.
+    """
+    user, store, _ = await _context(request)
+    image_data = await portrait.read()
+    voice_data = await voice_sample.read()
+    if not image_data or not voice_data:
+        raise HTTPException(status_code=400, detail="Both a portrait and voice sample are required")
+    if len(image_data) > 12 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Portrait is too large (maximum 12 MB)")
+    if len(voice_data) > 30 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Voice sample is too large (maximum 30 MB)")
+    image_mime = portrait.content_type or "image/jpeg"
+    voice_mime = voice_sample.content_type or "audio/mpeg"
+    if not image_mime.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Portrait must be an image file")
+    if not voice_mime.startswith("audio/"):
+        raise HTTPException(status_code=400, detail="Voice sample must be an audio file")
+    image_ext = mimetypes.guess_extension(image_mime) or ".jpg"
+    voice_ext = mimetypes.guess_extension(voice_mime) or ".mp3"
+    portrait_saved = await save_media(store, "avatars", f"portrait-{uuid.uuid4().hex}{image_ext}",
+                                      image_data, image_mime, inline=False)
+    voice_saved = await save_media(store, "voices", f"voice-ref-{uuid.uuid4().hex}{voice_ext}",
+                                   voice_data, voice_mime, inline=False)
+    row = await store.add_project(
+        user_id=user["id"], name=f"Talking avatar assets: {portrait.filename or 'portrait'}",
+        project_type="talking_avatar_assets",
+        settings={"portrait_url": portrait_saved.get("url"), "voice_sample_url": voice_saved.get("url"),
+                  "portrait_name": portrait.filename, "voice_name": voice_sample.filename,
+                  "consent_confirmed": True},
+    )
+    return {"asset_id": row["id"], "portrait_url": portrait_saved.get("url"),
+            "portrait_data_uri": portrait_saved.get("data_uri"),
+            "voice_sample_url": voice_saved.get("url"),
+            "voice_sample_data_uri": voice_saved.get("data_uri"),
+            "storage": {"portrait": portrait_saved.get("stored"), "voice": voice_saved.get("stored")},
+            "note": "Only upload your own voice, or a voice you have explicit permission to use."}
 
 
 @router.get("/models")
