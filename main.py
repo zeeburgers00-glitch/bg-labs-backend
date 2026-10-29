@@ -146,6 +146,7 @@ from app.routes.vimax_api import router as vimax_router
 from app.routes.assistant_hub import router as assistant_hub_router  # noqa: E402
 from app.routes.course_ai import router as course_ai_router  # noqa: E402
 from app.routes.avatar_api import router as avatar_api_router  # noqa: E402
+from app.routes.shorts_api import router as shorts_api_router  # noqa: E402
 
 app.include_router(frontend_router)
 app.include_router(agents_router)
@@ -156,6 +157,7 @@ app.include_router(vimax_router)
 app.include_router(assistant_hub_router)
 app.include_router(course_ai_router)
 app.include_router(avatar_api_router)
+app.include_router(shorts_api_router)
 
 loaded_optional_routers: List[str] = []
 if os.getenv("ENABLE_EXTRA_ROUTERS", "").lower() in ("1", "true", "yes"):
