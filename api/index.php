@@ -10,11 +10,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 // Database config
-$DB_HOST = 'sql300.infinityfree.com';
-$DB_NAME = 'if0_42526367_bglabs';
-$DB_USER = 'if0_42526367';
-$DB_PASS = '6rD9YVkDPHPyvs';
-$SECRET = 'bglabs-secret-2024';
+$DB_HOST = getenv('DB_HOST') ?: 'localhost';
+$DB_NAME = getenv('DB_NAME') ?: '';
+$DB_USER = getenv('DB_USER') ?: '';
+$DB_PASS = getenv('DB_PASS') ?: '';
+$SECRET = getenv('APP_SECRET') ?: 'change-me';
 
 // Connect to MySQL
 try {

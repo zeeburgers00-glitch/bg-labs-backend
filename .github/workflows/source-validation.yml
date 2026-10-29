@@ -1,0 +1,132 @@
+name: Source validation
+
+on:
+  push:
+    branches:
+      - fix/jarvis-vimax-unified
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Parse Python source
+        run: |
+          python - <<'PY'
+          import ast
+          import json
+          from pathlib import Path
+
+          paths = [Path("main.py"), Path("tts_engine.py")]
+          paths.extend(Path("app").rglob("*.py"))
+          parsed = 0
+          for path in paths:
+              if not path.exists():
+                  continue
+              ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+              parsed += 1
+          json.loads(Path("vercel.json").read_text(encoding="utf-8"))
+          assert Path("app/routes/assistant_hub.py").exists()
+          assert Path("app/routes/course_ai.py").exists()
+          source = Path("main.py").read_text(encoding="utf-8")
+          assert "assistant_hub_router" in source
+          assert "course_ai_router" in source
+          assert "avatar_api_router" in source
+          assert "shorts_api_router" in source
+          assert "vimax_router" in source
+          avatar = Path("app/routes/avatar_api.py").read_text(encoding="utf-8")
+          for route in [
+              '@router.get("/talking-video/config")',
+              '@router.post("/talking-video")',
+              '@router.get("/talking-video/{job_id}")'
+          ]:
+              assert route in avatar, f"Missing talking-avatar API route: {route}"
+          for hook in ["FAL_QUEUE_MODEL", "voice-clone", "speech-02-hd", "image_url", "audio_url"]:
+              assert hook in avatar, f"Missing talking-avatar pipeline hook: {hook}"
+          shorts = Path("app/routes/shorts_api.py").read_text(encoding="utf-8")
+          for route in [
+              '@router.get("/status")',
+              '@router.post("/create")',
+              '@router.post("/upload-url")',
+              '@router.get("/projects")',
+              '@router.get("/projects/{project_id}")'
+          ]:
+              assert route in shorts, f"Missing AI Shorts API route: {route}"
+          for feature in ["maxClipNumber", "ratioOfClip", "subtitleSwitch", "headlineSwitch", "highlightSwitch", "autoBrollSwitch", "removeSilenceSwitch", "viralScore", "VIZARDAI_API_KEY", "payload[\"keyword\"]", "project/social-accounts", "valid", "upload/resumable", ".storage.supabase.co"]:
+              assert feature in shorts, f"Missing AI Shorts integration hook: {feature}"
+          course = Path("app/routes/course_ai.py").read_text(encoding="utf-8")
+          for route in [
+              '@router.post("/drive/import")',
+              '@router.post("/chat")',
+              '@router.post("/channel-plan")',
+              '@router.post("/channel-insights")',
+              '@router.post("/channel-branding")',
+              '@router.post("/content-plan")',
+              '@router.get("/plans")',
+              '@router.post("/plans/{plan_id}/status")'
+          ]:
+              assert route in course, f"Missing course/creator route: {route}"
+          vimax = Path("app/routes/vimax_api.py").read_text(encoding="utf-8")
+          assert "Daily ViMax attempt cap reached" in vimax
+          print(f"Parsed {parsed} Python files; API routes, course retrieval, calendar and Vercel config validated.")
+          PY
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Check inline JavaScript and required UI hooks
+        run: |
+          node - <<'NODE'
+          const fs = require("node:fs");
+          const html = fs.readFileSync("index.html", "utf8");
+          const scripts = [...html.matchAll(/<script\b(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)];
+          if (!scripts.length) throw new Error("No inline JavaScript found");
+          for (const script of scripts) new Function(script[1]);
+          for (const required of [
+            "jarvis-orb-core",
+            "navigate('hub')",
+            "case 'hub': renderHub(); break;",
+            "daily_attempts",
+            "function renderViMaxStudio",
+            "JARVIS COMMAND CENTER",
+            "function openCommandPalette",
+            "function renderPlanner",
+            "function generateCreatorPlan",
+            "function courseAiQuickPrompt",
+            "function renderCourseAiInsights",
+            "Course-trained YouTube AI",
+            "navigate('planner')",
+            "Talking Avatar Studio",
+            "function generateTalkingAvatar",
+            "function pollTalkingAvatar",
+            "/api/avatar/talking-video",
+            "AI Shorts Maker",
+            "function createShortsProject",
+            "function renderShortsClipCards",
+            "/api/shorts/create",
+            "Edit + music/SFX",
+            "function uploadShortsLocalFile",
+            "tus-js-client@4",
+            "/api/shorts/upload-url",
+            "shortsUploadConsent",
+            "x-signature"
+          ]) {
+            if (!html.includes(required)) throw new Error("Missing UI hook: " + required);
+          }
+          console.log(`Parsed ${scripts.length} inline script(s); required JARVIS, course AI, Creator Calendar and ViMax UI hooks found.`);
+          NODE

@@ -1,30 +1,62 @@
-app.py
+# Files Vercel must NOT upload/build.
+#
+# IMPORTANT: the Python runtime traces imports from main.py, so every first-party
+# module the API needs has to be uploaded: main.py, tts_engine.py, app/** and
+# requirements.txt. The previous version of this file ignored "app/", which made
+# every deployment crash with ModuleNotFoundError.
+
+# --- local / build artifacts ---
+.venv/
+venv/
+env/
 __pycache__/
-*.pyc
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+build/
+*.log
+
+# --- secrets & local config ---
 .env
 .env.local
+.env.*.local
+
+# --- generated media (never part of the bundle) ---
 storage/
+voice_samples/
 *.db
-.git/
-.github/
-README.md
-DEPLOY.md
+*.sqlite3
+
+# --- other platforms / legacy scripts ---
+api/
 Dockerfile
 docker-compose.yml
 render.yaml
-Procfile
 railway.toml
-alembic.ini
+Procfile
+runtime.txt
 alembic/
-app/
-api/
+alembic.ini
 custom_htaccess.txt
+htaccess_check.txt
+htaccess_tmp.txt
 fix_403.py
 ftp_upload.py
 ftp_upload2.py
 ftp_upload3.py
-htaccess_check.txt
-htaccess_tmp.txt
 infinity_login.py
 list_voices.py
-voice_samples/
+
+# --- docs & repo meta ---
+README.md
+DEPLOY.md
+DEPLOY_VERCEL.md
+ANALYSIS.md
+.github/
+.git/
+arena/
+tests/
+requirements-full.txt

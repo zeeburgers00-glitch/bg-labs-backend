@@ -41,3 +41,10 @@ docker-compose.override.yml
 # Temp
 *.tmp
 *.temp
+
+# local virtualenv
+.venv/
+
+# generated media (local runs / tests)
+storage/*/
+!storage/*/.gitkeep
