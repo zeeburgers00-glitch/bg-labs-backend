@@ -343,7 +343,7 @@ async def create_shorts_project(request: Request):
         "projectName": project_name,
     }
     if keywords:
-        payload["keywords"] = keywords
+        payload["keyword"] = keywords
     if ext:
         payload["ext"] = ext
     if body.get("template_id"):
