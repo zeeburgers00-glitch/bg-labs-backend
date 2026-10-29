@@ -9,6 +9,8 @@ import ipaddress
 import logging
 import os
 import re
+import uuid
+from urllib.parse import quote
 from urllib.parse import urlparse
 
 import httpx
@@ -204,6 +206,77 @@ async def shorts_status():
         "requires_paid_plan": True,
         "setup_url": "https://docs.vizard.ai/docs/quickstart",
         "message": "Ready" if VIZARD_API_KEY else "Add VIZARDAI_API_KEY to Vercel to enable the cloud clipping API.",
+    }
+
+
+@router.post("/upload-url")
+async def create_shorts_upload_url(request: Request):
+    """Issue a short-lived Supabase signed upload token; the browser uploads directly to Storage."""
+    user = await get_current_user(request)
+    if not check_rate_limit(get_client_ip(request), "shorts-upload-url", 4, 60):
+        raise HTTPException(429, "Too many video uploads started. Wait a moment.")
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(400, "Expected upload metadata as JSON.") from None
+    if not isinstance(body, dict):
+        raise HTTPException(400, "Expected upload metadata as a JSON object.")
+
+    filename = str(body.get("filename") or "")
+    ext = os.path.splitext(filename.lower())[1]
+    allowed = {
+        ".mp4": "video/mp4",
+        ".mov": "video/quicktime",
+        ".avi": "video/x-msvideo",
+        ".3gp": "video/3gpp",
+    }
+    if ext not in allowed:
+        raise HTTPException(400, "Local uploads must be MP4, MOV, AVI or 3GP.")
+    try:
+        file_size = int(body.get("size") or 0)
+    except (TypeError, ValueError):
+        raise HTTPException(400, "The file size is invalid.") from None
+    max_size = 2 * 1024 * 1024 * 1024
+    if file_size <= 0 or file_size > max_size:
+        raise HTTPException(413, "Local source videos must be between 1 byte and 2 GB; Storage plan limits also apply.")
+
+    store = await get_store()
+    if getattr(store, "name", "") != "supabase" or not all(hasattr(store, attr) for attr in ("storage", "bucket", "_send", "_headers")):
+        raise HTTPException(
+            503,
+            "Direct video upload needs the persistent Supabase Storage backend and a public media bucket. Use a public video link or the Windows local option instead.",
+        )
+    path = f"shorts/{user['id']}/{uuid.uuid4().hex}{ext}"
+    signed_path = (
+        f"{store.storage}/object/upload/sign/"
+        f"{quote(str(store.bucket), safe='')}/{quote(path, safe='/')}"
+    )
+    try:
+        response = await store._send(
+            "POST",
+            signed_path,
+            payload={"upsert": False},
+            headers=store._headers(),
+            expect=(200, 201),
+        )
+        signing_data = response.json()
+    except (StoreError, ValueError) as exc:
+        logger.warning("Could not sign Shorts video upload: %s", type(exc).__name__)
+        raise HTTPException(502, "Could not prepare a secure Storage upload. Check your Supabase bucket and permissions.") from None
+
+    token = str(signing_data.get("token") or "")
+    if not token:
+        raise HTTPException(502, "Storage did not return an upload token.")
+    public_url = f"{store.storage}/object/public/{store.bucket}/{path}"
+    return {
+        "endpoint": f"{store.storage}/upload/resumable",
+        "token": token,
+        "bucket": str(store.bucket),
+        "path": path,
+        "content_type": allowed[ext],
+        "public_url": public_url,
+        "max_size_bytes": max_size,
+        "message": "Secure upload token ready. The browser uploads directly to Supabase Storage, not through Vercel.",
     }
 
 
