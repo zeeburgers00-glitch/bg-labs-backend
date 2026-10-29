@@ -262,6 +262,11 @@
                     <i class="fa-solid fa-cubes w-5 text-center"></i><span>Models & Providers</span>
                     <span class="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-600 text-white">72</span>
                 </div>
+                <div class="sidebar-item px-4 py-3 rounded-lg cursor-pointer flex items-center gap-3 text-gray-300 hover:bg-gray-800" onclick="navigate('tools')">
+                    <i class="fa-solid fa-toolbox w-5 text-center"></i>
+                    <span>AI Tools Hub</span>
+                    <span class="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded bg-cyan-700 text-white">NEW</span>
+                </div>
 
                 <div class="sidebar-item px-4 py-3 rounded-lg cursor-pointer flex items-center gap-3 text-gray-300 hover:bg-gray-800" onclick="navigate('youtube')">
                     <i class="fa-brands fa-youtube w-5 text-center"></i>
@@ -549,7 +554,7 @@
         const pageTitles = {
             dashboard:'Command Center', hub:'JARVIS Hub', 'course-ai':'Course-trained YouTube AI',
             planner:'Creator Calendar', youtube:'YouTube Automation', agents:'AI Agents',
-            skills:'Skills & Research', vimax:'ViMax Video Studio', models:'Models & Providers',
+            skills:'Skills & Research', vimax:'ViMax Video Studio', models:'Models & Providers', tools:'AI Tools Hub',
             studio:'AI Studio', voices:'Voice Library', image:'Image Generator',
             script:'Script Writer', avatar:'Avatar Studio', billing:'Billing & Usage',
             referral:'Referral Program', admin:'Admin Panel'
@@ -570,6 +575,7 @@
                 case 'skills': renderSkillsHub(); break;
                 case 'vimax': renderViMaxStudio(); break;
                 case 'models': renderModelsHub(); break;
+                case 'tools': renderAiToolsHub(); break;
                 case 'youtube': renderYouTube(); break;
                 case 'course-ai': renderCourseAI(); break;
                 case 'planner': renderPlanner(); break;
@@ -602,6 +608,7 @@
 
 
     const COMMAND_ITEMS = [
+        {page:'tools',label:'AI Tools Hub',detail:'Search built-in tools, model APIs, GitHub repos and external services',icon:'fa-toolbox',keywords:'tools integrations APIs models repos search'},
         {page:'dashboard',label:'Command Center',detail:'Live system overview and quick actions',icon:'fa-gauge-high',keywords:'home status dashboard'},
         {page:'hub',label:'JARVIS Hub',detail:'Chat with your assistant and inspect providers',icon:'fa-brain',keywords:'chat assistant ai'},
         {page:'course-ai',label:'Course-trained YouTube AI',detail:'Import lessons and ground answers in your course',icon:'fa-graduation-cap',keywords:'drive course knowledge'},
@@ -4329,6 +4336,210 @@
     async function runModel3(id,cap){busy3('tryRun3',true,'Generating…');const out=document.getElementById('tryOut3');out.innerHTML='';const text=document.getElementById('tryPrompt3').value;try{const d=await aiRequest('/api/generate/'+cap,'POST',{model:id,text,prompt:text,image_url:document.getElementById('tryImage3').value,audio_url:document.getElementById('tryAudio3').value,aspect_ratio:'16:9'});let media='';const u=mediaUrl(d.url,d.data_uri);if(u&&cap==='image')media=`<img src="${esc3(u)}" class="mt-4 max-h-96 rounded-xl">`;if(u&&cap==='tts')media=`<audio controls src="${esc3(u)}" class="mt-4 w-full"></audio>`;if(u&&(cap==='video'||cap==='avatar'))media=`<video controls src="${esc3(u)}" class="mt-4 max-h-96 rounded-xl"></video>`;out.innerHTML=media+resultBox3(d);}catch(e){out.innerHTML=`<p class="mt-3 text-red-400">${esc3(e.message)}</p>`;}finally{busy3('tryRun3',false);} }
 
 
-    </script>
+    
+
+    // ============================================================================
+    // AI TOOLS HUB — consolidated directory with honest connection/readiness states
+    // ============================================================================
+    let aiToolsTab = "all";
+    let aiToolsItems = [];
+    const AI_TOOLS_BUILTINS = [
+      {id:"jarvis-chat",name:"JARVIS Chat",category:"Assistant",description:"Chat using a configured compatible AI provider.",page:"hub"},
+      {id:"ai-model-router",name:"Models & Providers",category:"Models",description:"Browse registered model routes, test working models, and securely manage provider keys.",page:"models"},
+      {id:"ai-agents",name:"AI Agents",category:"Agents",description:"Create and manage the app's agent workflows.",page:"agents"},
+      {id:"skills-research",name:"Skills & Research",category:"Agents",description:"Run the installed creator skills and sourced research tools.",page:"skills"},
+      {id:"ai-studio",name:"AI Studio",category:"Audio",description:"Generate speech with the built-in voice engine and view audio history.",page:"studio"},
+      {id:"voice-library",name:"Voice Library",category:"Audio",description:"Browse built-in voices and saved voice profiles.",page:"voices"},
+      {id:"image-generator",name:"Image Generator",category:"Images",description:"Generate images with the app's current image route.",page:"image"},
+      {id:"script-writer",name:"Script Writer",category:"Writing",description:"Create scripts with the built-in script engine.",page:"script"},
+      {id:"avatar-studio",name:"Talking Avatar Studio",category:"Video",description:"Create lip-synced avatar videos through the configured cloud provider.",page:"avatar"},
+      {id:"vimax-studio",name:"ViMax Video Studio",category:"Video",description:"Use the app's video workflow and AI Shorts Maker.",page:"vimax"},
+      {id:"youtube-automation",name:"YouTube Automation",category:"Automation",description:"Creator workflow helpers; publishing features depend on YouTube OAuth/API setup.",page:"youtube"},
+      {id:"course-ai",name:"Course-trained YouTube AI",category:"Research",description:"Use imported course content as the grounding source for creator work.",page:"course-ai"},
+      {id:"creator-calendar",name:"Creator Calendar",category:"Automation",description:"Plan creator publishing workflows.",page:"planner"},
+      {id:"billing-usage",name:"Billing & Usage",category:"Workspace",description:"Review account and usage features.",page:"billing"}
+    ];
+
+    const AI_TOOLS_DISCOVERY = [
+      {id:"openai-platform",name:"OpenAI API Platform",category:"Model APIs",description:"Hosted text, vision, audio and structured-output models; key needed for API use.",url:"https://platform.openai.com"},
+      {id:"anthropic-console",name:"Anthropic Claude API",category:"Model APIs",description:"Claude model API for reasoning, writing and tool use.",url:"https://console.anthropic.com"},
+      {id:"google-ai-studio",name:"Google AI Studio / Gemini",category:"Model APIs",description:"Gemini API keys and model playground; quotas and model access vary by account.",url:"https://aistudio.google.com"},
+      {id:"groq-console",name:"Groq API",category:"Model APIs",description:"Fast inference for supported open models; developer limits apply.",url:"https://console.groq.com"},
+      {id:"openrouter",name:"OpenRouter",category:"Model APIs",description:"Unified API across many model providers. Free routes have limits and availability can change.",url:"https://openrouter.ai"},
+      {id:"huggingface",name:"Hugging Face",category:"Model APIs",description:"Model hub, inference endpoints and community Spaces; hosted compute may cost money.",url:"https://huggingface.co"},
+      {id:"mistral",name:"Mistral AI",category:"Model APIs",description:"Hosted language models and embeddings; check plan and billing settings.",url:"https://console.mistral.ai"},
+      {id:"deepseek",name:"DeepSeek API",category:"Model APIs",description:"Hosted language model API; requires provider account/key.",url:"https://platform.deepseek.com"},
+      {id:"together",name:"Together AI",category:"Model APIs",description:"Hosted open-model inference and fine-tuning.",url:"https://api.together.ai"},
+      {id:"fireworks",name:"Fireworks AI",category:"Model APIs",description:"Hosted inference for supported open models.",url:"https://fireworks.ai"},
+      {id:"cohere",name:"Cohere",category:"Model APIs",description:"Text generation, embeddings and reranking APIs.",url:"https://dashboard.cohere.com"},
+      {id:"xai",name:"xAI API",category:"Model APIs",description:"Grok API access and model settings.",url:"https://console.x.ai"},
+      {id:"ollama",name:"Ollama (local models)",category:"Local & Open Source",description:"Run local models on a PC; this cloud app needs a local bridge to use your computer's Ollama instance.",url:"https://ollama.com"},
+      {id:"lmstudio",name:"LM Studio",category:"Local & Open Source",description:"Run local models and optionally expose a local OpenAI-compatible endpoint.",url:"https://lmstudio.ai"},
+      {id:"open-webui",name:"Open WebUI",category:"Local & Open Source",description:"Self-hosted local-model chat interface; separate service, not embedded in this app.",url:"https://github.com/open-webui/open-webui"},
+      {id:"openai-agents",name:"OpenAI Agents SDK",category:"Agents & MCP",description:"Open-source agent SDK for tool calling and handoffs; integration requires backend adapter work.",url:"https://github.com/openai/openai-agents-python"},
+      {id:"mcp-python",name:"Model Context Protocol SDK",category:"Agents & MCP",description:"Standard SDK for connecting MCP tools; remote MCP servers still need secure configuration.",url:"https://github.com/modelcontextprotocol/python-sdk"},
+      {id:"mcp-servers",name:"MCP Servers Collection",category:"Agents & MCP",description:"Community tool servers for files, search, databases and developer workflows.",url:"https://github.com/modelcontextprotocol/servers"},
+      {id:"opendots",name:"OpenDots",category:"Agents & MCP",description:"Agent interface/reference project; present in the repository registry as a reference, not an active deployment.",url:"https://github.com/CopilotKit/OpenDots"},
+      {id:"composio",name:"Composio",category:"Agents & MCP",description:"Managed tool connectors for third-party apps; requires its own account and configured actions.",url:"https://composio.dev"},
+      {id:"crewai",name:"CrewAI",category:"Agents & MCP",description:"Open-source multi-agent framework; the repository registry includes ported orchestration patterns.",url:"https://github.com/crewAIInc/crewAI"},
+      {id:"langgraph",name:"LangGraph",category:"Agents & MCP",description:"Stateful agent/workflow framework; the repository registry includes ported workflow patterns.",url:"https://github.com/langchain-ai/langgraph"},
+      {id:"browser-use",name:"Browser Use",category:"Browser & Research",description:"Browser agent framework; running browser sessions requires a local or hosted worker.",url:"https://github.com/browser-use/browser-use"},
+      {id:"playwright",name:"Playwright",category:"Browser & Research",description:"Browser automation library. It is not enabled for arbitrary remote computer control in this serverless app.",url:"https://github.com/microsoft/playwright"},
+      {id:"firecrawl",name:"Firecrawl",category:"Browser & Research",description:"Web crawling and extraction API; requires service URL/key and policy-compliant access.",url:"https://www.firecrawl.dev"},
+      {id:"tavily",name:"Tavily Search",category:"Browser & Research",description:"Search API designed for AI applications; key required for use.",url:"https://tavily.com"},
+      {id:"brave-search",name:"Brave Search API",category:"Browser & Research",description:"Web search API; requires an API key and plan configuration.",url:"https://brave.com/search/api"},
+      {id:"exa",name:"Exa Search",category:"Browser & Research",description:"Search API oriented toward semantic/web research.",url:"https://exa.ai"},
+      {id:"n8n",name:"n8n",category:"Automation & Workflows",description:"Self-hosted or cloud workflow automation; a webhook/credentials setup is required.",url:"https://github.com/n8n-io/n8n"},
+      {id:"zapier",name:"Zapier",category:"Automation & Workflows",description:"External workflow platform; connect through a configured Zapier action/webhook.",url:"https://zapier.com"},
+      {id:"make",name:"Make",category:"Automation & Workflows",description:"External workflow automation platform; scenarios must be configured separately.",url:"https://www.make.com"},
+      {id:"pipedream",name:"Pipedream",category:"Automation & Workflows",description:"Hosted workflow and API integration platform.",url:"https://pipedream.com"},
+      {id:"flowise",name:"Flowise",category:"Automation & Workflows",description:"Visual LLM flow builder; self-host or configure a service endpoint.",url:"https://github.com/FlowiseAI/Flowise"},
+      {id:"dify",name:"Dify",category:"Automation & Workflows",description:"LLM application/workflow platform; separate deployment/API configuration required.",url:"https://github.com/langgenius/dify"},
+      {id:"supabase",name:"Supabase",category:"Data & Memory",description:"Current app storage backend when configured; includes database and object storage.",url:"https://supabase.com"},
+      {id:"qdrant",name:"Qdrant",category:"Data & Memory",description:"Vector database service; an adapter and credentials are required before use.",url:"https://qdrant.tech"},
+      {id:"chroma",name:"Chroma",category:"Data & Memory",description:"Open-source embedding/vector store; a separate database integration is required.",url:"https://github.com/chroma-core/chroma"},
+      {id:"pinecone",name:"Pinecone",category:"Data & Memory",description:"Managed vector database; service key and index configuration required.",url:"https://www.pinecone.io"},
+      {id:"elevenlabs",name:"ElevenLabs",category:"Speech & Audio",description:"Hosted speech generation/voice tools; only usable when configured in the model registry.",url:"https://elevenlabs.io"},
+      {id:"deepgram",name:"Deepgram",category:"Speech & Audio",description:"Speech-to-text and audio APIs.",url:"https://deepgram.com"},
+      {id:"assemblyai",name:"AssemblyAI",category:"Speech & Audio",description:"Transcription and audio intelligence API.",url:"https://www.assemblyai.com"},
+      {id:"cartesia",name:"Cartesia",category:"Speech & Audio",description:"Low-latency speech synthesis APIs.",url:"https://cartesia.ai"},
+      {id:"playht",name:"PlayHT",category:"Speech & Audio",description:"Hosted text-to-speech platform; verify current API availability and plan.",url:"https://play.ht"},
+      {id:"fal",name:"fal.ai",category:"Image, Video & Avatar",description:"Hosted media model platform; used by the talking-avatar workflow when FAL_KEY is configured.",url:"https://fal.ai"},
+      {id:"replicate",name:"Replicate",category:"Image, Video & Avatar",description:"Hosted model API for image, video, audio and other models; adapter/key needed for each route.",url:"https://replicate.com"},
+      {id:"stability",name:"Stability AI",category:"Image, Video & Avatar",description:"Hosted image-generation APIs; separate provider key/configuration required.",url:"https://platform.stability.ai"},
+      {id:"black-forest-labs",name:"Black Forest Labs / FLUX",category:"Image, Video & Avatar",description:"FLUX models can be reached through supported hosted routes or your own deployment.",url:"https://blackforestlabs.ai"},
+      {id:"comfyui",name:"ComfyUI",category:"Image, Video & Avatar",description:"Open image workflow UI; this app supports a configured ComfyUI server URL in the model/key registry.",url:"https://github.com/comfyanonymous/ComfyUI"},
+      {id:"runway",name:"Runway",category:"Image, Video & Avatar",description:"External generative video platform; not connected just by listing it here.",url:"https://runwayml.com"},
+      {id:"pika",name:"Pika",category:"Image, Video & Avatar",description:"External AI video creation platform; separate account and API access required.",url:"https://pika.art"},
+      {id:"luma",name:"Luma Dream Machine",category:"Image, Video & Avatar",description:"External AI video/image service; verify API access and pricing before enabling.",url:"https://lumalabs.ai"},
+      {id:"vizard",name:"Vizard AI",category:"Image, Video & Avatar",description:"Vizard powers the app's AI Shorts Maker when the Vizard API key is valid; jobs consume plan minutes.",url:"https://vizard.ai"},
+      {id:"pexels",name:"Pexels Media API",category:"Media & Creator",description:"Free stock media search adapter exists; an API key is needed for live requests.",url:"https://www.pexels.com/api/"},
+      {id:"youtube-data-api",name:"YouTube Data API",category:"Media & Creator",description:"YouTube OAuth/API setup is needed for channel actions and publishing.",url:"https://developers.google.com/youtube/v3"},
+      {id:"ffmpeg",name:"FFmpeg",category:"Media & Creator",description:"Open media processing toolkit; actual rendering needs a worker/binary outside Vercel.",url:"https://github.com/FFmpeg/FFmpeg"},
+      {id:"remotion",name:"Remotion",category:"Media & Creator",description:"Programmatic video rendering; a separate Node rendering worker is needed.",url:"https://github.com/remotion-dev/remotion"},
+      {id:"rakazo",name:"Rakazo",category:"Bots & Chat Apps",description:"Groq-bot starter you asked about earlier; community project, not a live connector until installed/configured.",url:"https://github.com/elie222/rakazo"},
+      {id:"telegram-bot-api",name:"Telegram Bot API",category:"Bots & Chat Apps",description:"A bot requires your bot token, webhook and configured message handler.",url:"https://core.telegram.org/bots/api"},
+      {id:"vercel-ai-sdk",name:"Vercel AI SDK",category:"Developer Tools",description:"SDK for integrating model APIs and streaming UI; it is an available extension path, not itself a model.",url:"https://github.com/vercel/ai"},
+      {id:"litellm",name:"LiteLLM",category:"Developer Tools",description:"Unified LLM proxy; its adapter is listed in the repository registry and requires a configured proxy.",url:"https://github.com/BerriAI/litellm"},
+      {id:"promptfoo",name:"Promptfoo",category:"Developer Tools",description:"Prompt testing and evaluation framework.",url:"https://github.com/promptfoo/promptfoo"},
+      {id:"open-interpreter",name:"Open Interpreter",category:"Desktop & Computer Control",description:"Local computer/file execution project; use a controlled Windows agent and approval gates rather than granting a cloud API direct PC access.",url:"https://github.com/OpenInterpreter/open-interpreter"},
+      {id:"pyautogui",name:"PyAutoGUI",category:"Desktop & Computer Control",description:"Windows mouse/keyboard automation library; must run on the paired local PC, not this cloud service.",url:"https://github.com/asweigart/pyautogui"}
+    ];
+
+    function aiToolsEsc(v) { return String(v == null ? "" : v).replace(/[&<>"']/g, function(ch) { return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]; }); }
+
+    async function renderAiToolsHub() {
+      const c = document.getElementById("contentArea");
+      c.innerHTML = '<div class="max-w-7xl mx-auto space-y-6"><div class="creator-hero"><div class="creator-eyebrow">JARVIS EXTENSION CENTER</div><h2 class="creator-title mt-3">AI Tools Hub</h2><p class="creator-subtitle mt-3">One searchable place for the app’s built-in features, model routes, GitHub integrations and external AI services. A listing is not a live connection—each card shows what is actually ready versus what needs setup.</p><div class="flex flex-wrap gap-2 mt-6"><button onclick="navigate(\'models\')" class="px-4 py-2 rounded-xl bg-indigo-600 font-semibold"><i class="fa-solid fa-key mr-2"></i>Models & Keys</button><button onclick="navigate(\'hub\')" class="px-4 py-2 rounded-xl bg-slate-800 border border-slate-700 font-semibold"><i class="fa-solid fa-brain mr-2"></i>JARVIS Chat</button><button onclick="renderAiToolsHub()" class="px-4 py-2 rounded-xl bg-slate-800 border border-slate-700 font-semibold"><i class="fa-solid fa-rotate mr-2"></i>Refresh status</button></div></div><div id="aiToolsStats" class="grid grid-cols-2 lg:grid-cols-4 gap-3"><div class="creator-stat animate-pulse">Checking installed tools…</div></div><section class="glass-panel rounded-2xl p-4 sm:p-5"><div class="grid lg:grid-cols-[1fr_220px] gap-3"><input id="aiToolsSearch" type="search" oninput="drawAiToolsHub()" placeholder="Search tools, APIs, repositories, capabilities…" class="w-full bg-gray-900/80 border border-gray-700 rounded-xl px-4 py-3 text-sm"><select id="aiToolsCategory" onchange="drawAiToolsHub()" class="bg-gray-900/80 border border-gray-700 rounded-xl px-3 py-3 text-sm"><option value="all">All categories</option></select></div><div id="aiToolsTabs" class="flex flex-wrap gap-2 mt-4"></div><div id="aiToolsGrid" class="grid md:grid-cols-2 xl:grid-cols-3 gap-3 mt-5"><div class="loader"></div></div><p id="aiToolsFootnote" class="text-xs text-slate-500 mt-4">Status is read from the app’s registries and safe readiness fields. API keys are never shown here.</p></section></div>';
+      const results = await Promise.allSettled([
+        aiRequest("/api/models"),
+        aiRequest("/api/integrations"),
+        aiRequest("/api/hub/modules")
+      ]);
+      const modelData = results[0].status === "fulfilled" ? results[0].value : {models:[],status:{repos:[]},capabilities:[]};
+      const integrationData = results[1].status === "fulfilled" ? results[1].value : {integrations:[],summary:{total:0}};
+      const moduleData = results[2].status === "fulfilled" ? results[2].value : {modules:[]};
+
+      aiToolsItems = AI_TOOLS_BUILTINS.map(function(x) { return Object.assign({kind:"builtin",status:"in-app",statusLabel:"IN APP"},x); });
+      (modelData.models || []).forEach(function(m) {
+        aiToolsItems.push({
+          id:"model-"+m.id, name:m.label || m.id, category:"Model routes / "+(m.capability || "AI"),
+          description:m.notes || "Registered model route.", kind:"model", configured:!!m.configured,
+          status:m.configured ? "ready" : "needs-setup", statusLabel:m.configured ? "READY" : ("NEEDS "+(m.needs || "KEY")),
+          meta:(m.backend || "")+" · "+(m.model || ""), url:m.repo || "", modelId:m.id, capability:m.capability || ""
+        });
+      });
+      (integrationData.integrations || []).forEach(function(r) {
+        aiToolsItems.push({
+          id:"repo-"+r.id, name:r.id, category:"GitHub / "+(r.category || "tools"),
+          description:r.integration || "Open-source project.", kind:"repo", status:r.status || "reference",
+          statusLabel:(r.status || "reference").toUpperCase(), url:r.url || "", meta:"Repository integration registry"
+        });
+      });
+      AI_TOOLS_DISCOVERY.forEach(function(x) {
+        aiToolsItems.push(Object.assign({kind:"external",status:"directory",statusLabel:"EXTERNAL / SETUP"},x));
+      });
+
+      // Keep module/readiness info visible without reporting remote services as connected.
+      const modules = moduleData.modules || [];
+      modules.forEach(function(m) {
+        const already = aiToolsItems.some(function(x) { return x.name.toLowerCase() === String(m.name || "").toLowerCase(); });
+        if (!already) aiToolsItems.push({
+          id:"module-"+m.id, name:m.name, category:"JARVIS capability", description:m.notes || "JARVIS capability module.",
+          kind:"module", status:m.status || "partial", statusLabel:String(m.status || "partial").toUpperCase(),
+          url:"", meta:m.endpoint || "Capability registry"
+        });
+      });
+
+      const readyModels = (modelData.models || []).filter(function(m) { return m.configured; }).length;
+      const activeRepos = (integrationData.integrations || []).filter(function(r) { return r.status === "active" || r.status === "ported"; }).length;
+      const available = AI_TOOLS_BUILTINS.length + readyModels + activeRepos;
+      document.getElementById("aiToolsStats").innerHTML =
+        '<div class="creator-stat"><div class="stat-label">Catalog entries</div><div class="stat-value">'+aiToolsItems.length+'</div><p class="text-xs text-slate-500 mt-1">Tools, routes, repos & services</p></div>'+
+        '<div class="creator-stat"><div class="stat-label">Built into the app</div><div class="stat-value">'+AI_TOOLS_BUILTINS.length+'</div><p class="text-xs text-slate-500 mt-1">Open existing JARVIS pages</p></div>'+
+        '<div class="creator-stat"><div class="stat-label">Model routes ready</div><div class="stat-value">'+readyModels+' / '+(modelData.models || []).length+'</div><p class="text-xs text-slate-500 mt-1">Read from configured keys</p></div>'+
+        '<div class="creator-stat"><div class="stat-label">Active / ported repos</div><div class="stat-value">'+activeRepos+' / '+(integrationData.integrations || []).length+'</div><p class="text-xs text-slate-500 mt-1">Others need an adapter or worker</p></div>';
+      const categories = Array.from(new Set(aiToolsItems.map(function(x) { return x.category || "Other"; }))).sort();
+      document.getElementById("aiToolsCategory").innerHTML = '<option value="all">All categories</option>'+categories.map(function(x) { return '<option value="'+aiToolsEsc(x)+'">'+aiToolsEsc(x)+'</option>'; }).join("");
+      document.getElementById("aiToolsTabs").innerHTML = [
+        ["all","All"],
+        ["builtin","Built-in"],
+        ["model","Models & APIs"],
+        ["repo","GitHub repos"],
+        ["external","External tools"],
+        ["module","JARVIS capabilities"]
+      ].map(function(t) {
+        return '<button onclick="filterAiToolsTab(\''+t[0]+'\')" class="px-3 py-2 rounded-lg text-sm border '+(aiToolsTab === t[0] ? 'bg-cyan-500/15 border-cyan-400/30 text-cyan-200' : 'bg-slate-900/60 border-slate-700 text-slate-400')+'">'+t[1]+'</button>';
+      }).join("");
+      drawAiToolsHub();
+    }
+
+    function filterAiToolsTab(tab) {
+      aiToolsTab = tab;
+      document.querySelectorAll("#aiToolsTabs button").forEach(function(b) {
+        b.className = "px-3 py-2 rounded-lg text-sm border bg-slate-900/60 border-slate-700 text-slate-400";
+        if (b.getAttribute("onclick") === "filterAiToolsTab('"+tab+"')") b.className = "px-3 py-2 rounded-lg text-sm border bg-cyan-500/15 border-cyan-400/30 text-cyan-200";
+      });
+      drawAiToolsHub();
+    }
+
+    function drawAiToolsHub() {
+      const grid = document.getElementById("aiToolsGrid");
+      if (!grid) return;
+      const q = (document.getElementById("aiToolsSearch")?.value || "").trim().toLowerCase();
+      const cat = document.getElementById("aiToolsCategory")?.value || "all";
+      const filtered = aiToolsItems.filter(function(x) {
+        const categoryOK = cat === "all" || x.category === cat;
+        const typeOK = aiToolsTab === "all" || x.kind === aiToolsTab;
+        const hay = [x.id,x.name,x.category,x.description,x.statusLabel,x.meta,x.url].join(" ").toLowerCase();
+        return categoryOK && typeOK && (!q || hay.includes(q));
+      });
+      const styles = {
+        "in-app":"text-emerald-300 bg-emerald-500/10 border-emerald-500/20",
+        "ready":"text-emerald-300 bg-emerald-500/10 border-emerald-500/20",
+        "active":"text-emerald-300 bg-emerald-500/10 border-emerald-500/20",
+        "ported":"text-cyan-300 bg-cyan-500/10 border-cyan-500/20",
+        "adapter":"text-amber-200 bg-amber-500/10 border-amber-500/20",
+        "needs-setup":"text-amber-200 bg-amber-500/10 border-amber-500/20",
+        "reference":"text-slate-400 bg-slate-500/10 border-slate-500/20",
+        "directory":"text-slate-300 bg-slate-500/10 border-slate-500/20"
+      };
+      grid.innerHTML = filtered.map(function(x) {
+        const statusClass = styles[x.status] || "text-slate-300 bg-slate-500/10 border-slate-500/20";
+        const safeName = aiToolsEsc(x.name);
+        const description = aiToolsEsc(x.description || "");
+        const meta = aiToolsEsc(x.meta || x.category || "");
+        let action = "";
+        if (x.kind === "builtin") action = '<button onclick="navigate(\''+x.page+'\')" class="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold whitespace-nowrap">Open tool</button>';
+        else if (x.kind === "model") action = '<button onclick="navigate(\'models\')" class="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold whitespace-nowrap">Manage / Try</button>'+(x.url ? '<a href="'+aiToolsEsc(x.url)+'" target="_blank" rel="noopener noreferrer" class="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm">Repo</a>' : "");
+        else if (x.url) action = '<a href="'+aiToolsEsc(x.url)+'" target="_blank" rel="noopener noreferrer" class="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 hover:border-cyan-500/40 text-sm">Open link <i class="fa-solid fa-arrow-up-right-from-square ml-1 text-[10px]"></i></a>';
+        else action = '<button onclick="navigate(\'models\')" class="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm">Check setup</button>';
+        return '<article class="glass-panel rounded-xl p-4 card-hover min-w-0"><div class="flex gap-3 justify-between items-start"><div class="min-w-0"><h3 class="font-semibold text-white break-words">'+safeName+'</h3><p class="text-[11px] text-slate-500 mt-1">'+meta+'</p></div><span class="shrink-0 rounded-full border px-2 py-1 text-[9px] tracking-wide '+statusClass+'">'+aiToolsEsc(x.statusLabel || String(x.status || "catalog").toUpperCase())+'</span></div><p class="text-xs text-slate-400 leading-relaxed mt-3 min-h-[52px]">'+description+'</p><div class="flex flex-wrap items-center gap-2 mt-4">'+action+'</div></article>';
+      }).join("") || '<div class="col-span-full p-8 rounded-xl border border-slate-700/70 text-center text-slate-500">No tools match this search. Try another term or category.</div>';
+      const foot = document.getElementById("aiToolsFootnote");
+      if (foot) foot.textContent = filtered.length+" entries shown. External directory items open their service or repository; they are not represented as connected unless the app registry reports them ready.";
+    }
+
+</script>
 </body>
 </html>
