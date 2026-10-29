@@ -8,6 +8,7 @@ from __future__ import annotations
 import ipaddress
 import logging
 import os
+import os
 import re
 import uuid
 from urllib.parse import quote
@@ -347,7 +348,11 @@ async def create_shorts_project(request: Request):
     response = await _vizard("POST", "/project/create", payload)
     error = _provider_error(response)
     if error:
-        raise HTTPException(502, error)
+        try:
+            provider_code = int(response.get("code") or 0)
+        except (TypeError, ValueError):
+            provider_code = 0
+        raise HTTPException(402 if provider_code == 4007 else 502, error)
     vizard_id = response.get("projectId")
     if not vizard_id:
         raise HTTPException(502, "Vizard accepted the request but returned no project ID. Check your Vizard dashboard.")
