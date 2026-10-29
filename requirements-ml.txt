@@ -1,5 +1,0 @@
-# Optional model dependencies for a dedicated GPU worker only.
-# Do not install this file in the Vercel serverless deployment.
-torch==2.14.1
-numpy==2.4.6
-TTS
