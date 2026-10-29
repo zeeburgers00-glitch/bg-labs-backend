@@ -60,11 +60,12 @@ jobs:
           for route in [
               '@router.get("/status")',
               '@router.post("/create")',
+              '@router.post("/upload-url")',
               '@router.get("/projects")',
               '@router.get("/projects/{project_id}")'
           ]:
               assert route in shorts, f"Missing AI Shorts API route: {route}"
-          for feature in ["maxClipNumber", "ratioOfClip", "subtitleSwitch", "headlineSwitch", "highlightSwitch", "autoBrollSwitch", "removeSilenceSwitch", "viralScore", "VIZARDAI_API_KEY"]:
+          for feature in ["maxClipNumber", "ratioOfClip", "subtitleSwitch", "headlineSwitch", "highlightSwitch", "autoBrollSwitch", "removeSilenceSwitch", "viralScore", "VIZARDAI_API_KEY", "upload/resumable", "x-signature", ".storage.supabase.co"]:
               assert feature in shorts, f"Missing AI Shorts integration hook: {feature}"
           course = Path("app/routes/course_ai.py").read_text(encoding="utf-8")
           for route in [
@@ -118,7 +119,11 @@ jobs:
             "function createShortsProject",
             "function renderShortsClipCards",
             "/api/shorts/create",
-            "Edit + music/SFX"
+            "Edit + music/SFX",
+            "function uploadShortsLocalFile",
+            "tus-js-client@4",
+            "/api/shorts/upload-url",
+            "shortsUploadConsent"
           ]) {
             if (!html.includes(required)) throw new Error("Missing UI hook: " + required);
           }
