@@ -4000,7 +4000,237 @@
     async function runResearch3(){ const out=document.getElementById('researchResult3'); busy3('researchRun3',true,'Reading sources…'); out.innerHTML=''; try{const d=await aiRequest('/api/browse/research','POST',{topic:document.getElementById('researchTopic3').value,angle:document.getElementById('researchAngle3').value,max_pages:4}); out.innerHTML=`<div class="mt-4 text-sm text-emerald-300">Read ${d.pages_read} pages · ${d.facts.length} sourced facts</div>`+resultBox3(d);}catch(e){out.innerHTML=`<p class="mt-3 text-red-400">${esc3(e.message)}</p>`;}finally{busy3('researchRun3',false);} }
 
     let vimaxHome3=null, vimaxProject3=null;
-    async function renderViMaxStudio(){ const c=document.getElementById('contentArea'); c.innerHTML=`<div class="max-w-7xl mx-auto space-y-6"><div class="glass-panel rounded-2xl p-6 border border-purple-500/30"><div class="flex flex-wrap justify-between gap-3"><div><h2 class="text-2xl font-bold">ViMax Agentic Video Studio</h2><p class="text-gray-400">Idea → planner → characters → scenes → script → storyboard → keyframes → Veo/Wan clips → timeline</p></div><a href="https://github.com/HKUDS/ViMax" target="_blank" class="text-purple-300 text-sm">MIT source <i class="fa-solid fa-arrow-up-right-from-square"></i></a></div></div><div id="vimaxApp3" class="glass-panel rounded-2xl p-6"><div class="loader mx-auto"></div></div></div>`; try{vimaxHome3=await aiRequest('/api/vimax'); drawViMaxForm3();}catch(e){document.getElementById('vimaxApp3').innerHTML=`<p class="text-red-400">${esc3(e.message)}</p>`;} }
+    async 
+    let shortsCurrentProjectId = null;
+    let shortsPollTimer = null;
+
+    async function renderViMaxStudio(){
+        const c=document.getElementById('contentArea');
+        if(shortsPollTimer){clearTimeout(shortsPollTimer);shortsPollTimer=null;}
+        c.innerHTML=\`<div class="max-w-7xl mx-auto space-y-6 fade-in">
+          <section class="glass-panel rounded-2xl p-6 md:p-8 border border-cyan-500/25 bg-gradient-to-br from-slate-950/95 via-indigo-950/35 to-slate-950/90">
+            <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5">
+              <div class="max-w-3xl">
+                <div class="text-xs uppercase tracking-[0.25em] font-bold text-cyan-300 mb-3">JARVIS / Creator tools</div>
+                <h2 class="text-3xl md:text-4xl font-black text-white">AI Shorts Maker</h2>
+                <p class="text-slate-300 mt-3 leading-relaxed">Turn a long YouTube video, public Drive link or direct video URL into ranked, captioned vertical Shorts. Auto-highlight detection, hooks, silence cuts and optional B-roll—inside your JARVIS workspace.</p>
+                <div class="flex flex-wrap gap-2 mt-5 text-xs">
+                  <span class="rounded-full px-3 py-1.5 bg-cyan-500/10 border border-cyan-400/20 text-cyan-200">Viral score + reason</span>
+                  <span class="rounded-full px-3 py-1.5 bg-indigo-500/10 border border-indigo-400/20 text-indigo-200">9:16 / Reels / Shorts</span>
+                  <span class="rounded-full px-3 py-1.5 bg-emerald-500/10 border border-emerald-400/20 text-emerald-200">Captions + silence cuts</span>
+                </div>
+              </div>
+              <button onclick="renderViMaxBuilder()" class="rounded-xl border border-purple-400/30 bg-purple-500/10 px-4 py-3 font-semibold text-sm text-purple-200 hover:bg-purple-500/20"><i class="fa-solid fa-film mr-2"></i>Open ViMax Story Builder</button>
+            </div>
+          </section>
+
+          <div id="shortsProviderStatus" class="rounded-xl border border-slate-700 bg-slate-900/70 p-4 text-sm text-slate-300"><i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Checking cloud clipping provider…</div>
+
+          <div class="grid grid-cols-1 xl:grid-cols-5 gap-6">
+            <section class="xl:col-span-3 glass-panel rounded-2xl p-5 md:p-6">
+              <div class="flex items-center gap-3 mb-5"><div class="w-10 h-10 rounded-xl bg-cyan-500/15 text-cyan-200 flex items-center justify-center"><i class="fa-solid fa-wand-magic-sparkles text-lg"></i></div><div><h3 class="text-lg font-bold text-white">Create a Shorts project</h3><p class="text-xs text-slate-400">One long video → multiple edited clips</p></div></div>
+              <form id="shortsMakerForm" class="space-y-5" onsubmit="createShortsProject(event)">
+                <div>
+                  <label for="shortsVideoUrl" class="block mb-2 text-sm font-semibold text-slate-200">Long video link <span class="text-rose-300">*</span></label>
+                  <input id="shortsVideoUrl" type="url" required maxlength="3000" placeholder="https://www.youtube.com/watch?v=…" class="w-full rounded-xl border border-slate-700 bg-slate-950/70 p-3.5 text-white placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none">
+                  <p class="text-xs text-slate-500 mt-2">Use a supported public YouTube/social link, a publicly shared Drive link, or a direct HTTPS MP4/MOV/AVI file URL. Private videos must be accessible to Vizard.</p>
+                </div>
+                <div class="grid sm:grid-cols-2 gap-4">
+                  <div><label for="shortsSourceType" class="block mb-2 text-xs font-medium text-slate-400">Source type</label><select id="shortsSourceType" class="w-full rounded-lg border border-slate-700 bg-slate-900 p-3 text-sm text-white"><option value="auto">Auto-detect</option><option value="youtube">YouTube</option><option value="gdrive">Public Google Drive</option><option value="vimeo">Vimeo</option><option value="twitch">Twitch</option><option value="tiktok">TikTok</option><option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="remote">Direct video file URL</option></select></div>
+                  <div><label for="shortsLanguage" class="block mb-2 text-xs font-medium text-slate-400">Spoken language</label><select id="shortsLanguage" class="w-full rounded-lg border border-slate-700 bg-slate-900 p-3 text-sm text-white"><option value="auto">Auto-detect</option><option value="en">English</option><option value="ur">Urdu</option><option value="hi">Hindi</option><option value="ar">Arabic</option><option value="es">Spanish</option><option value="pt">Portuguese</option><option value="fr">French</option><option value="de">German</option><option value="zh">Chinese</option></select></div>
+                  <div><label for="shortsLength" class="block mb-2 text-xs font-medium text-slate-400">Clip length</label><select id="shortsLength" class="w-full rounded-lg border border-slate-700 bg-slate-900 p-3 text-sm text-white"><option value="0">AI chooses</option><option value="1">Under 30 seconds</option><option value="2" selected>30–60 seconds</option><option value="3">60–90 seconds</option><option value="4">90 seconds–3 minutes</option></select></div>
+                  <div><label for="shortsMaxClips" class="block mb-2 text-xs font-medium text-slate-400">Maximum clips</label><select id="shortsMaxClips" class="w-full rounded-lg border border-slate-700 bg-slate-900 p-3 text-sm text-white"><option value="3">3 clips</option><option value="5">5 clips</option><option value="10" selected>10 clips</option><option value="15">15 clips</option><option value="20">20 clips</option></select></div>
+                  <div><label for="shortsRatio" class="block mb-2 text-xs font-medium text-slate-400">Export aspect ratio</label><select id="shortsRatio" class="w-full rounded-lg border border-slate-700 bg-slate-900 p-3 text-sm text-white"><option value="9:16" selected>9:16 · YouTube Shorts / Reels</option><option value="1:1">1:1 · Square</option><option value="4:5">4:5 · Portrait feed</option><option value="16:9">16:9 · Landscape</option></select></div>
+                  <div><label for="shortsModel" class="block mb-2 text-xs font-medium text-slate-400">Clipping model</label><select id="shortsModel" class="w-full rounded-lg border border-slate-700 bg-slate-900 p-3 text-sm text-white"><option value="clip_v1" selected>Model v1 · standard</option><option value="clip_v2">Model v2 · enhanced (1.25× rate)</option></select></div>
+                </div>
+                <div><label for="shortsKeywords" class="block mb-2 text-xs font-medium text-slate-400">Topics / keywords to prioritize (optional)</label><input id="shortsKeywords" maxlength="240" placeholder="e.g. AI tools, business tips, story highlights" class="w-full rounded-lg border border-slate-700 bg-slate-950/60 p-3 text-sm text-white placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none"></div>
+                <div class="grid sm:grid-cols-2 gap-4">
+                  <div><label for="shortsProjectName" class="block mb-2 text-xs font-medium text-slate-400">Project name (optional)</label><input id="shortsProjectName" maxlength="100" placeholder="My viral shorts batch" class="w-full rounded-lg border border-slate-700 bg-slate-950/60 p-3 text-sm text-white placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none"></div>
+                  <div><label for="shortsTemplateId" class="block mb-2 text-xs font-medium text-slate-400">Vizard template ID (optional)</label><input id="shortsTemplateId" type="number" min="1" step="1" placeholder="Your saved brand template ID" class="w-full rounded-lg border border-slate-700 bg-slate-950/60 p-3 text-sm text-white placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none"></div>
+                </div>
+                <div class="rounded-xl border border-slate-700 bg-slate-950/35 p-4">
+                  <div class="text-sm font-bold text-slate-200 mb-4"><i class="fa-solid fa-sliders mr-2 text-cyan-300"></i>Automatic editing</div>
+                  <div class="grid sm:grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                    <label class="flex gap-3 items-start text-slate-300"><input id="shortsSubtitles" type="checkbox" checked class="mt-1 accent-cyan-400"><span><b>Animated captions</b><small class="block text-xs text-slate-500 mt-0.5">Burned-in subtitles</small></span></label>
+                    <label class="flex gap-3 items-start text-slate-300"><input id="shortsHeadlines" type="checkbox" checked class="mt-1 accent-cyan-400"><span><b>Hook headline</b><small class="block text-xs text-slate-500 mt-0.5">Attention headline overlay</small></span></label>
+                    <label class="flex gap-3 items-start text-slate-300"><input id="shortsHighlights" type="checkbox" checked class="mt-1 accent-cyan-400"><span><b>Highlight key words</b><small class="block text-xs text-slate-500 mt-0.5">Emphasized caption words</small></span></label>
+                    <label class="flex gap-3 items-start text-slate-300"><input id="shortsEmojis" type="checkbox" class="mt-1 accent-cyan-400"><span><b>Emoji captions</b><small class="block text-xs text-slate-500 mt-0.5">Auto emojis where supported</small></span></label>
+                    <label class="flex gap-3 items-start text-slate-300"><input id="shortsBroll" type="checkbox" checked class="mt-1 accent-cyan-400"><span><b>Auto B-roll</b><small class="block text-xs text-slate-500 mt-0.5">Extra visuals where available</small></span></label>
+                    <label class="flex gap-3 items-start text-slate-300"><input id="shortsSilence" type="checkbox" checked class="mt-1 accent-cyan-400"><span><b>Remove silence + fillers</b><small class="block text-xs text-slate-500 mt-0.5">Tighten pacing automatically</small></span></label>
+                  </div>
+                </div>
+                <div class="rounded-xl border border-amber-400/20 bg-amber-500/5 p-3 text-xs leading-relaxed text-slate-300"><i class="fa-solid fa-music mr-2 text-amber-300"></i><b>Music / SFX:</b> This API request supports the editing controls above but not a documented independent music/SFX switch. Use each finished clip’s Vizard editor link to finish soundtrack or effects, or apply a configured custom template. The original audio is not silently replaced.</div>
+                <button id="shortsCreateBtn" type="submit" class="w-full rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-500 px-5 py-4 font-bold text-white shadow-lg shadow-cyan-950/20 transition hover:brightness-110 disabled:opacity-50"><i class="fa-solid fa-wand-magic-sparkles mr-2"></i> Find & Edit Shorts</button>
+                <p class="text-xs text-slate-500">Cloud API uses Vizard video minutes from a paid plan. Check its remaining minutes before submitting large videos.</p>
+              </form>
+            </section>
+
+            <aside class="xl:col-span-2 space-y-5">
+              <section class="glass-panel rounded-2xl p-5">
+                <div class="flex items-center justify-between gap-3 mb-3"><h3 class="font-bold text-white">Current project</h3><span id="shortsStateChip" class="rounded-full bg-slate-700 px-2.5 py-1 text-[10px] uppercase font-bold tracking-wider text-slate-300">Ready</span></div>
+                <div id="shortsProjectStatus" class="text-sm leading-relaxed text-slate-400">Paste a long-video link, choose your editing preferences and start. Ranked clips will show here with their preview, score and download/editor links.</div>
+                <div id="shortsProjectActions" class="hidden mt-4 flex flex-wrap gap-2"><button type="button" onclick="refreshShortsProject()" class="rounded-lg border border-cyan-400/30 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-100 hover:bg-cyan-500/20"><i class="fa-solid fa-rotate mr-1"></i> Refresh results</button><a id="shortsProviderProjectLink" href="#" target="_blank" rel="noopener noreferrer" class="hidden rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-200 hover:bg-slate-800">Open Vizard project <i class="fa-solid fa-arrow-up-right-from-square ml-1"></i></a></div>
+              </section>
+              <section class="glass-panel rounded-2xl p-5">
+                <div class="flex items-center justify-between gap-2 mb-4"><h3 class="font-bold text-white">Recent Shorts projects</h3><button type="button" onclick="loadShortsProjects()" class="text-xs text-cyan-300 hover:text-cyan-200">Refresh</button></div>
+                <div id="shortsRecentProjects" class="space-y-2"><p class="text-sm text-slate-500">Loading your projects…</p></div>
+              </section>
+              <section class="rounded-2xl border border-slate-700/70 bg-slate-950/35 p-5">
+                <h3 class="text-sm font-bold text-slate-200 mb-3"><i class="fa-solid fa-laptop mr-2 text-purple-300"></i>Have a local video file?</h3>
+                <p class="text-xs text-slate-400 leading-relaxed mb-3">This hosted page accepts public video links; it does not upload large local video files to the cloud. For drag-and-drop local processing on Windows, ClipMint is an open-source option with local transcription, ranked clip candidates, speaker-aware crops and caption export.</p>
+                <a href="https://github.com/kleZ799/clipmint/releases" target="_blank" rel="noopener noreferrer" class="text-sm font-semibold text-purple-300 hover:text-purple-200">Open ClipMint Windows releases <i class="fa-solid fa-arrow-up-right-from-square ml-1"></i></a>
+              </section>
+            </aside>
+          </div>
+          <section id="shortsResultsPanel" class="hidden glass-panel rounded-2xl p-5 md:p-6">
+            <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-5"><div><div class="text-xs uppercase tracking-[0.2em] text-cyan-300 font-bold">AI-picked clips</div><h3 class="text-xl font-bold text-white mt-1">Your edited Shorts</h3></div><p class="text-xs text-slate-500">Download links typically expire after 7 days. Save clips you want to keep.</p></div>
+            <div id="shortsResultsGrid" class="grid md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+          </section>
+        </div>\`;
+        loadShortsStatus();
+        loadShortsProjects();
+    }
+
+    async function loadShortsStatus(){
+        try{
+            const d=await aiRequest('/api/shorts/status');
+            const el=document.getElementById('shortsProviderStatus');
+            if(!el)return;
+            el.innerHTML=d.configured
+              ? '<i class="fa-solid fa-circle-check mr-2 text-emerald-300"></i><b>Vizard cloud engine ready.</b> Submit a project to find high-potential clips. API processing uses your Vizard plan minutes.'
+              : '<i class="fa-solid fa-triangle-exclamation mr-2 text-amber-300"></i><b>Cloud engine needs setup.</b> Add <code>VIZARDAI_API_KEY</code> to Vercel Environment Variables and redeploy. <a class="underline text-cyan-200" href="https://docs.vizard.ai/docs/quickstart" target="_blank" rel="noopener noreferrer">Official API setup</a> · <a class="underline text-cyan-200" href="https://vizard.ai/pricing" target="_blank" rel="noopener noreferrer">Plans</a>';
+        }catch(e){
+            const el=document.getElementById('shortsProviderStatus');
+            if(el)el.innerHTML='<i class="fa-solid fa-triangle-exclamation mr-2 text-amber-300"></i>Could not check the cloud engine. Check backend health or use the Windows local option below.';
+        }
+    }
+
+    async function createShortsProject(event){
+        event.preventDefault();
+        const btn=document.getElementById('shortsCreateBtn');
+        const status=document.getElementById('shortsProjectStatus');
+        const chip=document.getElementById('shortsStateChip');
+        if(shortsPollTimer){clearTimeout(shortsPollTimer);shortsPollTimer=null;}
+        const videoUrl=(document.getElementById('shortsVideoUrl')?.value||'').trim();
+        if(!videoUrl){toast('Paste a long-video URL first.','error');return;}
+        const templateRaw=(document.getElementById('shortsTemplateId')?.value||'').trim();
+        const payload={
+          video_url:videoUrl,
+          source_type:document.getElementById('shortsSourceType')?.value||'auto',
+          language:document.getElementById('shortsLanguage')?.value||'auto',
+          preferred_length:document.getElementById('shortsLength')?.value||'2',
+          max_clips:parseInt(document.getElementById('shortsMaxClips')?.value||'10',10),
+          aspect_ratio:document.getElementById('shortsRatio')?.value||'9:16',
+          clip_model:document.getElementById('shortsModel')?.value||'clip_v1',
+          keywords:(document.getElementById('shortsKeywords')?.value||'').trim(),
+          project_name:(document.getElementById('shortsProjectName')?.value||'').trim()||'AI Shorts Project',
+          template_id:templateRaw?parseInt(templateRaw,10):null,
+          subtitles:!!document.getElementById('shortsSubtitles')?.checked,
+          headlines:!!document.getElementById('shortsHeadlines')?.checked,
+          highlight_keywords:!!document.getElementById('shortsHighlights')?.checked,
+          emojis:!!document.getElementById('shortsEmojis')?.checked,
+          auto_broll:!!document.getElementById('shortsBroll')?.checked,
+          remove_silence:!!document.getElementById('shortsSilence')?.checked
+        };
+        busy3('shortsCreateBtn',true,'Submitting to clipping engine…');
+        if(status)status.innerHTML='<i class="fa-solid fa-circle-notch fa-spin mr-2 text-cyan-300"></i>Submitting source URL and editing settings…';
+        if(chip)chip.textContent='Submitting';
+        try{
+          const d=await aiRequest('/api/shorts/create','POST',payload);
+          shortsCurrentProjectId=d.project_id;
+          const actions=document.getElementById('shortsProjectActions');
+          if(actions)actions.classList.remove('hidden');
+          const providerLink=document.getElementById('shortsProviderProjectLink');
+          if(providerLink){
+            if(d.share_link){providerLink.href=d.share_link;providerLink.classList.remove('hidden');}
+            else providerLink.classList.add('hidden');
+          }
+          if(chip)chip.textContent='Processing';
+          if(status)status.innerHTML='<b class="text-white block mb-2">Project submitted.</b><p>'+hubEscape(d.message||'Processing started.')+'</p><p class="text-xs text-slate-500 mt-3">Project #'+hubEscape(d.project_id)+' · check back in about 30 seconds.</p>';
+          document.getElementById('shortsResultsPanel')?.classList.remove('hidden');
+          const grid=document.getElementById('shortsResultsGrid');
+          if(grid)grid.innerHTML='<div class="md:col-span-2 xl:col-span-3 text-sm text-slate-400"><i class="fa-solid fa-circle-notch fa-spin mr-2 text-cyan-300"></i>Waiting for Vizard to process the source video…</div>';
+          toast('Shorts project submitted.','success');
+          await loadShortsProjects();
+          shortsPollTimer=window.setTimeout(()=>pollShortsProject(shortsCurrentProjectId),30000);
+        }catch(e){
+          if(chip)chip.textContent='Error';
+          if(status)status.innerHTML='<b class="text-rose-200 block mb-2">Could not start clipping.</b><p>'+hubEscape(e.message||'Unknown error')+'</p>';
+          toast(e.message||'Could not create Shorts project.','error');
+        }finally{busy3('shortsCreateBtn',false);}
+    }
+
+    async function refreshShortsProject(){
+        if(!shortsCurrentProjectId){toast('Create or select a recent project first.','info');return;}
+        if(shortsPollTimer){clearTimeout(shortsPollTimer);shortsPollTimer=null;}
+        await pollShortsProject(shortsCurrentProjectId);
+    }
+
+    async function pollShortsProject(projectId){
+        if(!projectId)return;
+        try{
+          const d=await aiRequest('/api/shorts/projects/'+encodeURIComponent(projectId));
+          const chip=document.getElementById('shortsStateChip');
+          const status=document.getElementById('shortsProjectStatus');
+          if(chip)chip.textContent=d.status==='ready'?'Clips ready':'Processing';
+          const providerLink=document.getElementById('shortsProviderProjectLink');
+          if(providerLink){
+            if(d.share_link){providerLink.href=d.share_link;providerLink.classList.remove('hidden');}
+            else providerLink.classList.add('hidden');
+          }
+          if(status)status.innerHTML='<b class="'+(d.status==='ready'?'text-emerald-200':'text-white')+' block mb-2">'+(d.status==='ready'?'Clips are ready.':'Processing your long video…')+'</b><p class="text-slate-400">'+hubEscape(d.message||'')+'</p><p class="text-xs text-slate-500 mt-3">Project #'+hubEscape(d.project_id)+' · '+(d.clips||[]).length+' clips returned</p>';
+          renderShortsClipCards(d.clips||[]);
+          await loadShortsProjects();
+          if(d.status!=='ready' && shortsCurrentProjectId===projectId){
+            shortsPollTimer=window.setTimeout(()=>pollShortsProject(projectId),30000);
+          }else if(d.status==='ready'){
+            toast((d.clips||[]).length+' Shorts ready. Save important clips before links expire.','success');
+          }
+        }catch(e){
+          const status=document.getElementById('shortsProjectStatus');
+          if(status)status.innerHTML='<p class="text-amber-200">Could not refresh results: '+hubEscape(e.message||'Unknown error')+'</p><p class="text-xs text-slate-500 mt-2">Your submitted project is still saved; click Refresh results to retry.</p>';
+        }
+    }
+
+    async function openShortsProject(projectId){
+        shortsCurrentProjectId=projectId;
+        const actions=document.getElementById('shortsProjectActions');
+        if(actions)actions.classList.remove('hidden');
+        const status=document.getElementById('shortsProjectStatus');
+        if(status)status.innerHTML='<i class="fa-solid fa-circle-notch fa-spin mr-2 text-cyan-300"></i>Loading saved Shorts project…';
+        const panel=document.getElementById('shortsResultsPanel');
+        if(panel)panel.classList.remove('hidden');
+        await pollShortsProject(projectId);
+    }
+
+    async function loadShortsProjects(){
+        const container=document.getElementById('shortsRecentProjects');
+        if(!container)return;
+        try{
+          const d=await aiRequest('/api/shorts/projects?limit=20');
+          const projects=d.projects||[];
+          if(!projects.length){container.innerHTML='<p class="text-sm text-slate-500">No Shorts projects yet.</p>';return;}
+          container.innerHTML=projects.map(p=>'<button type="button" onclick="openShortsProject('+Number(p.id)+')" class="w-full rounded-xl border border-slate-700/70 bg-slate-950/40 p-3 text-left hover:border-cyan-400/40"><span class="flex items-start justify-between gap-2"><b class="text-sm text-slate-200 truncate">'+hubEscape(p.name||'Shorts project')+'</b><span class="text-[10px] uppercase text-cyan-300">'+hubEscape(p.status||'processing')+'</span></span><span class="block text-xs text-slate-500 mt-1">'+hubEscape(p.source_type||'video')+' · '+Number(p.clip_count||0)+' clips</span><span class="block text-[10px] text-slate-600 mt-1">'+hubEscape(p.created_at||'')+'</span></button>').join('');
+        }catch(e){container.innerHTML='<p class="text-sm text-slate-500">Could not load project history.</p>';}
+    }
+
+    function renderShortsClipCards(clips){
+        const panel=document.getElementById('shortsResultsPanel');
+        const grid=document.getElementById('shortsResultsGrid');
+        if(!panel||!grid)return;
+        panel.classList.remove('hidden');
+        if(!clips.length){grid.innerHTML='<div class="md:col-span-2 xl:col-span-3 rounded-xl border border-slate-700/70 bg-slate-950/35 p-4 text-sm text-slate-400">No clips returned yet. The project may still be processing—refresh in about 30 seconds.</div>';return;}
+        grid.innerHTML=clips.map((clip,i)=>{
+          const score=Math.max(0,Math.min(10,Number(clip.viral_score||0)));
+          const video=clip.video_url?'<video controls playsinline preload="metadata" class="w-full aspect-[9/16] max-h-[420px] rounded-lg bg-black" src="'+hubEscape(clip.video_url)+'"></video>':'<div class="flex aspect-[9/16] max-h-[420px] items-center justify-center rounded-lg bg-slate-950 text-slate-500">Video preview unavailable</div>';
+          const download=clip.video_url?'<a href="'+hubEscape(clip.video_url)+'" target="_blank" rel="noopener noreferrer" class="rounded-lg bg-cyan-500/15 px-3 py-2 text-xs font-semibold text-cyan-100 hover:bg-cyan-500/25"><i class="fa-solid fa-download mr-1"></i> Open / save</a>':'';
+          const editor=clip.editor_url?'<a href="'+hubEscape(clip.editor_url)+'" target="_blank" rel="noopener noreferrer" class="rounded-lg border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-800"><i class="fa-solid fa-sliders mr-1"></i> Edit + music/SFX</a>':'';
+          return '<article class="rounded-2xl border border-slate-700/80 bg-slate-950/45 p-3"><div class="flex items-start justify-between gap-2 mb-3"><span class="text-[10px] uppercase tracking-widest text-cyan-300 font-bold">CLIP '+(i+1)+'</span><span class="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2 py-1 text-xs font-bold text-emerald-200">'+score.toFixed(1)+'/10 score</span></div>'+video+'<h4 class="font-bold text-white mt-3">'+hubEscape(clip.title||'AI short')+'</h4><p class="text-xs text-slate-500 mt-1">'+Number(clip.duration_seconds||0)+' seconds</p>'+(clip.viral_reason?'<p class="text-xs leading-relaxed text-slate-400 mt-3">'+hubEscape(clip.viral_reason)+'</p>':'')+(clip.transcript?'<details class="mt-3"><summary class="cursor-pointer text-xs text-cyan-200">View transcript</summary><p class="whitespace-pre-wrap text-xs leading-relaxed text-slate-400 mt-2">'+hubEscape(clip.transcript)+'</p></details>':'')+'<div class="flex flex-wrap gap-2 mt-4">'+download+editor+'</div></article>';
+        }).join('');
+    }
+
+    function renderViMaxBuilder(){ const c=document.getElementById('contentArea'); c.innerHTML=\`<div class="max-w-7xl mx-auto space-y-6"><div class="glass-panel rounded-2xl p-6 border border-purple-500/30"><div class="flex flex-wrap justify-between gap-3"><button onclick="renderViMaxStudio()" class="rounded-lg border border-cyan-400/30 bg-cyan-500/10 px-3 py-2 text-sm text-cyan-200 hover:bg-cyan-500/20"><i class="fa-solid fa-arrow-left mr-2"></i>AI Shorts Maker</button><div><h2 class="text-2xl font-bold">ViMax Agentic Video Studio</h2><p class="text-gray-400">Idea → planner → characters → scenes → script → storyboard → keyframes → Veo/Wan clips → timeline</p></div><a href="https://github.com/HKUDS/ViMax" target="_blank" class="text-purple-300 text-sm">MIT source <i class="fa-solid fa-arrow-up-right-from-square"></i></a></div></div><div id="vimaxApp3" class="glass-panel rounded-2xl p-6"><div class="loader mx-auto"></div></div></div>\`; try{vimaxHome3=await aiRequest('/api/vimax'); drawViMaxForm3();}catch(e){document.getElementById('vimaxApp3').innerHTML=\`<p class="text-red-400">\${esc3(e.message)}</p>\`;} }
+function renderViMaxBuilder(){ const c=document.getElementById('contentArea'); c.innerHTML=`<div class="max-w-7xl mx-auto space-y-6"><div class="glass-panel rounded-2xl p-6 border border-purple-500/30"><div class="flex flex-wrap justify-between gap-3"><div><h2 class="text-2xl font-bold">ViMax Agentic Video Studio</h2><p class="text-gray-400">Idea → planner → characters → scenes → script → storyboard → keyframes → Veo/Wan clips → timeline</p></div><a href="https://github.com/HKUDS/ViMax" target="_blank" class="text-purple-300 text-sm">MIT source <i class="fa-solid fa-arrow-up-right-from-square"></i></a></div></div><div id="vimaxApp3" class="glass-panel rounded-2xl p-6"><div class="loader mx-auto"></div></div></div>`; try{vimaxHome3=await aiRequest('/api/vimax'); drawViMaxForm3();}catch(e){document.getElementById('vimaxApp3').innerHTML=`<p class="text-red-400">${esc3(e.message)}</p>`;} }
     function opts3(cap){ return (vimaxHome3?.models?.[cap]||[]).map(m=>`<option value="${esc3(m.id)}" ${!m.configured?'disabled':''}>${m.configured?'●':'○'} ${esc3(m.label)}${m.free?' · FREE':''}</option>`).join(''); }
     function drawViMaxForm3(){ document.getElementById('vimaxApp3').innerHTML=`<div class="grid lg:grid-cols-3 gap-5"><div class="lg:col-span-2"><label class="text-sm text-gray-400">Pipeline</label><select id="vxPipeline3" class="w-full mt-1 bg-gray-900 border border-gray-700 rounded-xl p-3"><option value="idea2video">Idea → Video</option><option value="script2video">Script → Video</option><option value="novel2movie">Novel/Article → Movie</option></select><label class="block text-sm text-gray-400 mt-4">Idea, script or long text</label><textarea id="vxIdea3" rows="8" class="w-full mt-1 bg-gray-900 border border-gray-700 rounded-xl p-3" placeholder="A 60-second documentary about the last bookbinder in Lahore…"></textarea><div class="grid sm:grid-cols-3 gap-3 mt-3"><div><label class="text-xs text-gray-400">Duration</label><input id="vxDuration3" type="number" value="60" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2"></div><div><label class="text-xs text-gray-400">Shots</label><input id="vxShots3" type="number" value="8" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2"></div><div><label class="text-xs text-gray-400">Aspect</label><select id="vxAspect3" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2"><option>16:9</option><option>9:16</option><option>1:1</option></select></div></div></div><div class="space-y-3"><div><label class="text-xs text-gray-400">Strong AI brain</label><select id="vxChat3" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2">${opts3('chat')}</select></div><div><label class="text-xs text-gray-400">Keyframe model</label><select id="vxImage3" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2">${opts3('image')}</select></div><div><label class="text-xs text-gray-400">Video model</label><select id="vxVideo3" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2">${opts3('video')}</select></div><div><label class="text-xs text-gray-400">Voice</label><select id="vxTts3" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2">${opts3('tts')}</select></div><label class="flex gap-2 items-center text-sm"><input id="vxImages3" type="checkbox"> Generate keyframes now</label><label class="flex gap-2 items-center text-sm"><input id="vxVoice3" type="checkbox"> Generate voiceover now</label><label class="flex gap-2 items-center text-sm"><input id="vxVideoNow3" type="checkbox"> Queue video clips now</label><p class="text-xs text-amber-300">Daily safety cap: ${vimaxHome3?.daily_attempts?.used_today ?? 0}/${vimaxHome3?.daily_attempts?.limit ?? 10} attempts (UTC reset). Planning can use the built-in engine; GPU boxes only run when checked.</p></div></div><button id="vxRun3" onclick="runViMax3()" class="w-full mt-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 font-bold">Build project</button><div id="vxResult3"></div>`; }
     async function runViMax3(){busy3('vxRun3',true,'Agents are planning…');const out=document.getElementById('vxResult3');out.innerHTML='';try{const pipeline=document.getElementById('vxPipeline3').value;const text=document.getElementById('vxIdea3').value;const body={duration_seconds:+document.getElementById('vxDuration3').value,shots:+document.getElementById('vxShots3').value,aspect_ratio:document.getElementById('vxAspect3').value,chat_model:document.getElementById('vxChat3').value,image_model:document.getElementById('vxImage3').value,video_model:document.getElementById('vxVideo3').value,tts_model:document.getElementById('vxTts3').value,generate_images:document.getElementById('vxImages3').checked,generate_voiceover:document.getElementById('vxVoice3').checked,render_video:document.getElementById('vxVideoNow3').checked,max_images:+document.getElementById('vxShots3').value,max_clips:document.getElementById('vxVideoNow3').checked?4:0};body[pipeline==='idea2video'?'idea':pipeline==='script2video'?'script':'novel']=text;vimaxProject3=await aiRequest(`/api/vimax/${pipeline}/run`,'POST',body);drawViMaxResult3(vimaxProject3);toast('ViMax project saved','success');}catch(e){out.innerHTML=`<p class="mt-4 text-red-400">${esc3(e.message)}</p>`;}finally{busy3('vxRun3',false);} }
