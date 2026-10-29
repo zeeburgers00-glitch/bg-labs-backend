@@ -45,6 +45,7 @@ jobs:
           assert "assistant_hub_router" in source
           assert "course_ai_router" in source
           assert "avatar_api_router" in source
+          assert "shorts_api_router" in source
           assert "vimax_router" in source
           avatar = Path("app/routes/avatar_api.py").read_text(encoding="utf-8")
           for route in [
@@ -55,6 +56,16 @@ jobs:
               assert route in avatar, f"Missing talking-avatar API route: {route}"
           for hook in ["FAL_QUEUE_MODEL", "voice-clone", "speech-02-hd", "image_url", "audio_url"]:
               assert hook in avatar, f"Missing talking-avatar pipeline hook: {hook}"
+          shorts = Path("app/routes/shorts_api.py").read_text(encoding="utf-8")
+          for route in [
+              '@router.get("/status")',
+              '@router.post("/create")',
+              '@router.get("/projects")',
+              '@router.get("/projects/{project_id}")'
+          ]:
+              assert route in shorts, f"Missing AI Shorts API route: {route}"
+          for feature in ["maxClipNumber", "ratioOfClip", "subtitleSwitch", "headlineSwitch", "highlightSwitch", "autoBrollSwitch", "removeSilenceSwitch", "viralScore", "VIZARDAI_API_KEY"]:
+              assert feature in shorts, f"Missing AI Shorts integration hook: {feature}"
           course = Path("app/routes/course_ai.py").read_text(encoding="utf-8")
           for route in [
               '@router.post("/drive/import")',
@@ -102,7 +113,12 @@ jobs:
             "Talking Avatar Studio",
             "function generateTalkingAvatar",
             "function pollTalkingAvatar",
-            "/api/avatar/talking-video"
+            "/api/avatar/talking-video",
+            "AI Shorts Maker",
+            "function createShortsProject",
+            "function renderShortsClipCards",
+            "/api/shorts/create",
+            "Edit + music/SFX"
           ]) {
             if (!html.includes(required)) throw new Error("Missing UI hook: " + required);
           }
