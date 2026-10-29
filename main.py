@@ -1,670 +1,747 @@
 """
 BG LABS - Complete AI Platform Backend
-Deploy to Vercel - 100% FREE, unlimited
-Edge TTS (generation) + cvoice.ai (character browsing)
+======================================
+
+FastAPI entrypoint. Runs unchanged on:
+
+* Vercel serverless functions (``vercel.json`` builds this file)
+* Render / Railway / Fly (``python main.py``)
+* Docker (see ``Dockerfile``)
+* local development (``uvicorn main:app --reload``)
+
+Everything persistent goes through :mod:`app.store`, which picks Supabase
+(PostgREST + Storage), plain PostgreSQL (asyncpg) or an in-memory fallback
+depending on the environment variables it finds.
+
+Free engines used by the API:
+
+* TTS      -> Edge-TTS (Microsoft neural voices, no key)
+* Images   -> Pollinations.ai (no key)
+* Avatars  -> generated SVG (no external service)
+* Scripts  -> built-in template engine (:mod:`app.script_engine`)
 """
-import os
-import json
-import uuid
-import time
+from __future__ import annotations
+
 import asyncio
-import hashlib
+import importlib
+import json
 import logging
-from pathlib import Path
-from datetime import datetime, timedelta
-from typing import Optional, Dict
-from collections import defaultdict
+import os
+import uuid
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
-import asyncpg
-import jwt
-import httpx
-from fastapi import FastAPI, HTTPException, Request, Form, Query
+from fastapi import FastAPI, Form, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-from dotenv import load_dotenv
+from fastapi.responses import FileResponse, JSONResponse, Response
 
-from app.routes.youtube_agent import router as youtube_agent_router
-from app.routes.video_generation import router as video_generation_router
-from app.routes.video_editing import router as video_editing_router
-from app.routes.agent_skills import router as agent_skills_router
-from app.routes.tts_providers import router as tts_providers_router
-from app.routes.llm_providers import router as llm_providers_router
-from app.routes.vector_memory import router as vector_memory_router
-from app.routes.browser_automation import router as browser_automation_router
-from app.routes.workflow import router as workflow_router
-from app.routes.mcp import router as mcp_router
+try:  # local development convenience
+    from dotenv import load_dotenv
 
-from tts_engine import (
-    edge_tts_generate,
-    cvoice_search_characters,
-    cvoice_get_voices,
-    get_edge_voices,
-    EDGE_VOICES,
-)
-
-load_dotenv()
-
-logger = logging.getLogger("bglabs")
-
-# ============================================================
-# CONFIG
-# ============================================================
-BASE_DIR = Path(__file__).parent
-STORAGE_DIR = Path("/tmp/bglabs_storage") if os.getenv("VERCEL") else BASE_DIR / "storage"
-AUDIO_DIR = STORAGE_DIR / "audio"
-IMAGE_DIR = STORAGE_DIR / "images"
-VIDEO_DIR = STORAGE_DIR / "videos"
-AVATAR_DIR = STORAGE_DIR / "avatars"
-SECRET_KEY = os.getenv("SECRET_KEY", "bglabs-secret-key-change-in-production")
-ALGORITHM = "HS256"
-DATABASE_URL = os.getenv("DATABASE_URL", "")
-
-try:
-    for d in [STORAGE_DIR, AUDIO_DIR, IMAGE_DIR, VIDEO_DIR, AVATAR_DIR]:
-        d.mkdir(parents=True, exist_ok=True)
-except OSError:
+    load_dotenv()
+except ImportError:  # pragma: no cover - python-dotenv is optional at runtime
     pass
 
-# ============================================================
-# RATE LIMITING (in-memory, per-IP)
-# ============================================================
-_rate_limits: Dict[str, list] = defaultdict(list)
-RATE_LIMIT_GENERATE = 30  # max generations per minute
-RATE_LIMIT_AUTH = 10  # max auth attempts per minute
+from app.deps import (
+    RATE_LIMIT_AUTH,
+    RATE_LIMIT_GENERATE,
+    RATE_LIMIT_IMAGE,
+    check_rate_limit,
+    create_token,
+    get_client_ip,
+    get_current_user,
+    hash_password,
+    needs_rehash,
+    public_user,
+    verify_password,
+)
+from app.engines import (
+    IMAGE_STYLES,
+    avatar_preset,
+    generate_avatar_svg,
+    generate_image,
+    guess_content_type,
+    image_extension,
+    parse_size,
+)
+from app.media import STORAGE_DIR, ensure_dirs, read_local, save_media
+from app.script_engine import generate_script
+from app.store import DuplicateError, StoreError, get_store
+from tts_engine import (
+    EDGE_VOICES,
+    cvoice_get_voices,
+    cvoice_search_characters,
+    edge_tts_generate,
+    get_edge_voices,
+    pitch_to_offset,
+    resolve_voice_key,
+    speed_to_rate,
+)
 
-def check_rate_limit(ip: str, action: str = "generate", limit: int = 30, window: int = 60) -> bool:
-    now = time.time()
-    key = f"{ip}:{action}"
-    _rate_limits[key] = [t for t in _rate_limits[key] if now - t < window]
-    if len(_rate_limits[key]) >= limit:
-        return False
-    _rate_limits[key].append(now)
-    return True
+logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
+logger = logging.getLogger("bglabs")
 
-# ============================================================
-# DATABASE
-# ============================================================
-pool: Optional[asyncpg.Pool] = None
+BASE_DIR = Path(__file__).resolve().parent
+APP_VERSION = os.getenv("APP_VERSION", "10.0.0")
 
-async def init_db():
-    global pool
-    if not DATABASE_URL:
-        logger.warning("DATABASE_URL not set")
-        return
-    try:
-        pool = await asyncpg.create_pool(DATABASE_URL, min_size=1, max_size=5)
-        async with pool.acquire() as conn:
-            await conn.execute("""
-                CREATE TABLE IF NOT EXISTS users (
-                    id SERIAL PRIMARY KEY, email TEXT UNIQUE NOT NULL, username TEXT UNIQUE NOT NULL,
-                    full_name TEXT DEFAULT '', password_hash TEXT NOT NULL, role TEXT DEFAULT 'user',
-                    is_active BOOLEAN DEFAULT TRUE, credits INTEGER DEFAULT 999999,
-                    total_used INTEGER DEFAULT 0, referral_code TEXT, created_at TIMESTAMP DEFAULT NOW()
-                );
-                CREATE TABLE IF NOT EXISTS audio_history (
-                    id SERIAL PRIMARY KEY, user_id INTEGER, text TEXT, voice TEXT,
-                    engine TEXT, filename TEXT, url TEXT, chars INTEGER, created_at TIMESTAMP DEFAULT NOW()
-                );
-                CREATE TABLE IF NOT EXISTS image_history (
-                    id SERIAL PRIMARY KEY, user_id INTEGER, prompt TEXT, style TEXT,
-                    filename TEXT, url TEXT, created_at TIMESTAMP DEFAULT NOW()
-                );
-                CREATE TABLE IF NOT EXISTS voice_profiles (
-                    id SERIAL PRIMARY KEY, user_id INTEGER, name TEXT,
-                    voice_key TEXT, settings TEXT, created_at TIMESTAMP DEFAULT NOW()
-                );
-                CREATE TABLE IF NOT EXISTS scripts (
-                    id SERIAL PRIMARY KEY, user_id INTEGER, topic TEXT, genre TEXT,
-                    mood TEXT, content TEXT, word_count INTEGER, created_at TIMESTAMP DEFAULT NOW()
-                );
-            """)
-        logger.info("Database initialized")
-    except Exception as e:
-        logger.error(f"Database init failed: {e}")
-        pool = None
+# Optional SQLAlchemy based routers (YouTube agent, workflow engine, MCP, ...).
+# They need the full dependency set (``requirements-full.txt``) *and* the
+# SQLAlchemy schema, so they are opt-in and never break the serverless build.
+OPTIONAL_ROUTERS = (
+    "app.routes.youtube_agent",
+    "app.routes.video_generation",
+    "app.routes.video_editing",
+    "app.routes.agent_skills",
+    "app.routes.tts_providers",
+    "app.routes.llm_providers",
+    "app.routes.vector_memory",
+    "app.routes.browser_automation",
+    "app.routes.workflow",
+    "app.routes.mcp",
+)
 
-# ============================================================
-# AUTH HELPERS
-# ============================================================
-def hash_pass(p: str) -> str:
-    return hashlib.sha256(p.encode()).hexdigest()
+ensure_dirs()
 
-def verify_pass(p: str, h: str) -> bool:
-    return hash_pass(p) == h
-
-def create_token(user_id: int) -> str:
-    return jwt.encode({"user_id": user_id, "exp": datetime.utcnow() + timedelta(days=30)}, SECRET_KEY, algorithm=ALGORITHM)
-
-def decode_token(token: str) -> Optional[int]:
-    try:
-        return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM]).get("user_id")
-    except Exception:
-        return None
-
-async def get_current_user(request: Request):
-    auth = request.headers.get("Authorization", "")
-    if not auth.startswith("Bearer "):
-        raise HTTPException(401, "No token provided")
-    user_id = decode_token(auth.replace("Bearer ", ""))
-    if not user_id:
-        raise HTTPException(401, "Invalid token")
-    if not pool:
-        raise HTTPException(503, "Database not available")
-    async with pool.acquire() as conn:
-        user = await conn.fetchrow("SELECT * FROM users WHERE id=$1", user_id)
-    if not user or not user["is_active"]:
-        raise HTTPException(401, "User not found or blocked")
-    return dict(user)
-
-def get_client_ip(request: Request) -> str:
-    return request.headers.get("X-Forwarded-For", request.client.host if request.client else "unknown")
 
 # ============================================================
-# IMAGE GENERATION - Pollinations.ai
-# ============================================================
-async def generate_image_pollinations(prompt: str, style: str = "realistic", width: int = 1024, height: int = 1024) -> bytes:
-    style_prompts = {
-        "realistic": "photorealistic, high quality, detailed",
-        "anime": "anime style, manga, vibrant colors",
-        "oil_painting": "oil painting, classical art, textured",
-        "digital_art": "digital art, concept art, vibrant",
-        "watercolor": "watercolor painting, soft colors, artistic",
-        "3d_render": "3D render, octane render, cinematic",
-        "pixel_art": "pixel art, retro, 16-bit style",
-        "cyberpunk": "cyberpunk style, neon lights, futuristic",
-        "cinematic": "cinematic lighting, dramatic, movie quality",
-        "portrait": "portrait photography, studio lighting, detailed face",
-        "landscape": "landscape photography, golden hour, scenic",
-        "fantasy": "fantasy art, magical, ethereal",
-        "minimalist": "minimalist design, clean, simple",
-        "comic": "comic book style, bold lines, vibrant",
-    }
-    style_suffix = style_prompts.get(style, "")
-    full_prompt = f"{prompt}, {style_suffix}" if style_suffix else prompt
-    encoded_prompt = full_prompt.replace(" ", "%20")
-    url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width={width}&height={height}&seed={int(time.time())}&nologo=true"
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        resp = await client.get(url, follow_redirects=True)
-        if resp.status_code != 200:
-            raise Exception(f"Image generation failed: {resp.status_code}")
-        return resp.content
-
-# ============================================================
-# AVATAR GENERATION - SVG
-# ============================================================
-def generate_avatar_svg(hair_color: str = "#333", eye_color: str = "#333", skin_tone: str = "#fdbcb4", clothing_color: str = "#3b82f6") -> str:
-    return f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
-        <defs>
-            <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" style="stop-color:{clothing_color};stop-opacity:0.15"/>
-                <stop offset="100%" style="stop-color:{clothing_color};stop-opacity:0.05"/>
-            </linearGradient>
-            <radialGradient id="glow">
-                <stop offset="0%" style="stop-color:{clothing_color};stop-opacity:0.2"/>
-                <stop offset="100%" style="stop-color:{clothing_color};stop-opacity:0"/>
-            </radialGradient>
-        </defs>
-        <circle cx="100" cy="100" r="95" fill="url(#bg)"/>
-        <circle cx="100" cy="100" r="80" fill="url(#glow)"/>
-        <circle cx="100" cy="85" r="55" fill="{hair_color}"/>
-        <circle cx="100" cy="100" r="45" fill="{skin_tone}"/>
-        <circle cx="80" cy="92" r="8" fill="white"/>
-        <circle cx="120" cy="92" r="8" fill="white"/>
-        <circle cx="80" cy="92" r="5" fill="{eye_color}"/>
-        <circle cx="120" cy="92" r="5" fill="{eye_color}"/>
-        <circle cx="80" cy="90" r="1.5" fill="white"/>
-        <circle cx="120" cy="90" r="1.5" fill="white"/>
-        <path d="M 85 105 Q 100 115 115 105" stroke="{clothing_color}" fill="none" stroke-width="2.5" stroke-linecap="round"/>
-        <ellipse cx="100" cy="145" rx="40" ry="25" fill="{clothing_color}"/>
-    </svg>'''
-
-# ============================================================
-# FASTAPI APP
+# APP + LIFECYCLE
 # ============================================================
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """Warm the store once so the first request is fast (local/container runs)."""
     try:
-        await init_db()
-    except Exception as e:
-        logger.error(f"Startup error: {e}")
+        store = await get_store()
+        logger.info("store ready: %s", store.status())
+    except Exception as exc:  # pragma: no cover - the store never raises by design
+        logger.error("store warm-up failed: %s", exc)
     yield
 
-app = FastAPI(title="BG LABS API", version="9.0.0", lifespan=lifespan)
+
+app = FastAPI(
+    title="BG LABS API",
+    version=APP_VERSION,
+    lifespan=lifespan,
+    docs_url="/docs",
+    redoc_url="/redoc",
+)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Content-Disposition"],
 )
 
-# ============================================================
-# INCLUDE ALL ROUTE MODULES
-# ============================================================
-app.include_router(youtube_agent_router)
-app.include_router(video_generation_router)
-app.include_router(video_editing_router)
-app.include_router(agent_skills_router)
-app.include_router(tts_providers_router)
-app.include_router(llm_providers_router)
-app.include_router(vector_memory_router)
-app.include_router(browser_automation_router)
-app.include_router(workflow_router)
-app.include_router(mcp_router)
+# The web UI contract (index.html) - always mounted.
+from app.routes.frontend_api import router as frontend_router  # noqa: E402
+from app.routes.agents_api import router as agents_router  # noqa: E402
+from app.routes.youtube_connect import router as youtube_router  # noqa: E402
+from app.routes.skills_api import router as skills_router  # noqa: E402
+from app.routes.generation_api import router as generation_router  # noqa: E402
+from app.routes.vimax_api import router as vimax_router  # noqa: E402
 
-try:
-    app.mount("/api/storage", StaticFiles(directory=str(STORAGE_DIR)), name="storage")
-except Exception:
-    pass
+app.include_router(frontend_router)
+app.include_router(agents_router)
+app.include_router(youtube_router)
+app.include_router(skills_router)
+app.include_router(generation_router)
+app.include_router(vimax_router)
+
+loaded_optional_routers: List[str] = []
+if os.getenv("ENABLE_EXTRA_ROUTERS", "").lower() in ("1", "true", "yes"):
+    for module_name in OPTIONAL_ROUTERS:
+        try:
+            module = importlib.import_module(module_name)
+            app.include_router(module.router)
+            loaded_optional_routers.append(module_name)
+        except Exception as exc:
+            logger.warning("optional router %s skipped: %s", module_name, exc)
+
 
 # ============================================================
-# ROOT
+# ROOT / HEALTH
 # ============================================================
-@app.get("/")
+@app.get("/", include_in_schema=False)
 async def root():
+    """Serve the bundled web UI when it is available (local/container runs)."""
     html_path = BASE_DIR / "index.html"
-    if html_path.exists():
+    if html_path.is_file():
         return FileResponse(str(html_path), media_type="text/html")
-    return {"name": "BG LABS API", "version": "9.0.0", "status": "running", "docs": "/docs"}
+    return {
+        "name": "BG LABS API",
+        "version": APP_VERSION,
+        "status": "running",
+        "docs": "/docs",
+        "health": "/health",
+    }
+
 
 @app.get("/health")
-async def health():
-    return {"status": "healthy", "version": "9.0.0"}
+async def health() -> Dict[str, Any]:
+    store = await get_store()
+    return {
+        "status": "healthy",
+        "version": APP_VERSION,
+        "store": store.status(),
+        "persistent": store.name in ("supabase", "postgres"),
+        "extra_routers": loaded_optional_routers,
+        "voices": len(EDGE_VOICES),
+        "time": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+@app.get("/keep-alive", include_in_schema=False)
+async def keep_alive() -> Dict[str, Any]:
+    """Cheap endpoint for uptime pingers (cron-job.org, Render keep-alive...)."""
+    return {"ok": True, "version": APP_VERSION, "time": datetime.now(timezone.utc).isoformat()}
+
 
 # ============================================================
 # AUTH
 # ============================================================
+async def _register_or_409(store: Any, *, email: str, username: str, full_name: str,
+                           password: str, referred_by: Optional[int] = None) -> Dict[str, Any]:
+    email = (email or "").strip().lower()
+    username = (username or "").strip()
+    if not email or not username or not password:
+        raise HTTPException(400, "email, username and password are required")
+    if len(password) < 6:
+        raise HTTPException(400, "Password must be at least 6 characters")
+
+    # The very first account becomes the admin so the owner can use the panel.
+    role = "user"
+    try:
+        if await store.count_users() == 0:
+            role = "admin"
+    except StoreError:
+        pass
+
+    user = await store.create_user(
+        email=email, username=username, full_name=(full_name or "").strip(),
+        password_hash=hash_password(password), role=role,
+        referral_code=uuid.uuid4().hex[:8].upper(), referred_by=referred_by,
+    )
+    return user
+
+
 @app.post("/api/auth/register")
-async def register(email: str = Form(...), username: str = Form(...), full_name: str = Form(""), password: str = Form(...)):
-    if not pool:
-        raise HTTPException(503, "Database not available")
-    code = uuid.uuid4().hex[:8]
-    async with pool.acquire() as conn:
-        existing = await conn.fetchrow("SELECT 1 FROM users WHERE email=$1 OR username=$2", email, username)
-        if existing:
-            raise HTTPException(400, "Email or username already exists")
-        row = await conn.fetchrow(
-            "INSERT INTO users (email, username, full_name, password_hash, referral_code) VALUES ($1,$2,$3,$4,$5) RETURNING *",
-            email, username, full_name, hash_pass(password), code
+async def register(request: Request, email: str = Form(...), username: str = Form(...),
+                   full_name: str = Form(""), password: str = Form(...),
+                   referral_code: str = Form("")) -> Dict[str, Any]:
+    ip = get_client_ip(request)
+    if not check_rate_limit(ip, "auth", RATE_LIMIT_AUTH, 60):
+        raise HTTPException(429, "Too many attempts. Please wait a minute.")
+
+    store = await get_store()
+    referred_by = None
+    code = (referral_code or request.query_params.get("ref") or "").strip()
+    if code:
+        referrer = await store.get_user_by_referral(code)
+        referred_by = referrer["id"] if referrer else None
+
+    try:
+        user = await _register_or_409(
+            store, email=email, username=username, full_name=full_name,
+            password=password, referred_by=referred_by,
         )
-    user = dict(row)
-    token = create_token(user["id"])
-    return {"access_token": token, "token_type": "bearer", "user": {
-        "id": user["id"], "email": user["email"], "username": user["username"],
-        "full_name": user["full_name"], "role": user["role"], "credits": user["credits"],
-        "total_credits_used": user["total_used"], "is_active": user["is_active"]
-    }}
+    except DuplicateError as exc:
+        raise HTTPException(400, str(exc)) from None
+    except StoreError as exc:
+        logger.error("registration failed: %s", exc)
+        raise HTTPException(503, f"Registration unavailable: {exc}") from None
+
+    if referred_by:
+        try:
+            referrer = await store.get_user(referred_by)
+            if referrer:
+                await store.update_user(referrer["id"], credits=int(referrer.get("credits", 0)) + 50)
+        except StoreError:
+            pass
+
+    return {
+        "access_token": create_token(user["id"], user["role"]),
+        "token_type": "bearer",
+        "user": public_user(user),
+        "store": store.name,
+    }
+
 
 @app.post("/api/auth/login")
-async def login(username: str = Form(...), password: str = Form(...)):
-    if not pool:
-        raise HTTPException(503, "Database not available")
-    async with pool.acquire() as conn:
-        user = await conn.fetchrow("SELECT * FROM users WHERE username=$1 OR email=$1", username)
+async def login(request: Request, username: str = Form(...), password: str = Form(...)) -> Dict[str, Any]:
+    ip = get_client_ip(request)
+    if not check_rate_limit(ip, "auth", RATE_LIMIT_AUTH, 60):
+        raise HTTPException(429, "Too many attempts. Please wait a minute.")
+
+    store = await get_store()
+    try:
+        user = await store.get_user_by_login(username)
+    except StoreError as exc:
+        logger.error("login failed: %s", exc)
+        raise HTTPException(503, f"Login unavailable: {exc}") from None
+
     if not user:
         raise HTTPException(401, "User not found")
-    if not verify_pass(password, user["password_hash"]):
+    if not verify_password(password, user.get("password_hash", "")):
         raise HTTPException(401, "Incorrect password")
-    if not user["is_active"]:
+    if not user.get("is_active", True):
         raise HTTPException(403, "Account blocked")
-    token = create_token(user["id"])
-    return {"access_token": token, "token_type": "bearer", "user": {
-        "id": user["id"], "email": user["email"], "username": user["username"],
-        "full_name": user["full_name"], "role": user["role"], "credits": user["credits"],
-        "total_credits_used": user["total_used"], "is_active": user["is_active"]
-    }}
+
+    if needs_rehash(user.get("password_hash", "")):
+        try:  # silently upgrade legacy sha256 hashes
+            await store.update_user(user["id"], password_hash=hash_password(password))
+        except StoreError:
+            pass
+
+    return {
+        "access_token": create_token(user["id"], user["role"]),
+        "token_type": "bearer",
+        "user": public_user(user),
+        "store": store.name,
+    }
+
 
 @app.get("/api/auth/me")
-async def get_me(request: Request):
+async def get_me(request: Request) -> Dict[str, Any]:
     user = await get_current_user(request)
-    return {"id": user["id"], "email": user["email"], "username": user["username"],
-        "full_name": user["full_name"], "role": user["role"], "is_active": bool(user["is_active"]),
-        "credits": user["credits"], "total_credits_used": user["total_used"]}
+    return public_user(user)
+
+
+@app.put("/api/auth/me")
+async def update_me(request: Request) -> Dict[str, Any]:
+    user = await get_current_user(request)
+    body = await request.json()
+    fields: Dict[str, Any] = {}
+    if "full_name" in body:
+        fields["full_name"] = str(body["full_name"])[:255]
+    if "email" in body:
+        fields["email"] = str(body["email"]).strip().lower()
+    if body.get("password"):
+        fields["password_hash"] = hash_password(str(body["password"]))
+    if not fields:
+        return public_user(user)
+
+    store = await get_store()
+    try:
+        updated = await store.update_user(user["id"], **fields)
+    except DuplicateError as exc:
+        raise HTTPException(400, str(exc)) from None
+    if not updated:
+        raise HTTPException(500, "Could not update the profile")
+    return public_user(updated)
+
 
 # ============================================================
 # VOICES
 # ============================================================
 @app.get("/api/voices")
-async def list_voices():
+async def list_voices() -> Dict[str, Any]:
     return {"voices": get_edge_voices(), "total": len(EDGE_VOICES), "engine": "Edge-TTS"}
 
+
+@app.get("/api/voices/languages")
+async def list_languages() -> Dict[str, Any]:
+    languages: Dict[str, Dict[str, Any]] = {}
+    for key, info in EDGE_VOICES.items():
+        lang = info.get("lang", "en")
+        entry = languages.setdefault(lang, {"code": lang, "name": info.get("accent", lang), "voices": []})
+        entry["voices"].append(key)
+    return {"languages": list(languages.values()), "total": len(languages)}
+
+
 @app.get("/api/voices/characters")
-async def search_characters(q: str = Query(""), limit: int = Query(50, ge=1, le=200)):
+async def search_characters(q: str = Query(""), limit: int = Query(50, ge=1, le=200)) -> Dict[str, Any]:
     try:
-        chars = await cvoice_search_characters(q, limit)
-        return {"characters": chars, "total": len(chars)}
-    except Exception as e:
-        return {"characters": [], "total": 0, "error": str(e)}
+        characters = await cvoice_search_characters(q, limit)
+        return {"characters": characters, "total": len(characters)}
+    except Exception as exc:  # upstream service is optional
+        return {"characters": [], "total": 0, "error": str(exc)}
+
 
 @app.get("/api/voices/characters/{username}")
-async def get_character_voices(username: str):
+async def get_character_voices(username: str) -> Dict[str, Any]:
     try:
         voices = await cvoice_get_voices(username)
         return {"username": username, "voices": voices, "total": len(voices)}
-    except Exception as e:
-        return {"username": username, "voices": [], "total": 0, "error": str(e)}
+    except Exception as exc:
+        return {"username": username, "voices": [], "total": 0, "error": str(exc)}
+
 
 # ============================================================
-# TTS GENERATION - Edge TTS (FREE, UNLIMITED)
+# TTS STUDIO
 # ============================================================
 @app.post("/api/studio/generate")
-async def generate_audio(request: Request):
+async def generate_audio(request: Request) -> Dict[str, Any]:
     user = await get_current_user(request)
     ip = get_client_ip(request)
-    
     if not check_rate_limit(ip, "generate", RATE_LIMIT_GENERATE, 60):
         raise HTTPException(429, "Too many requests. Please wait a moment.")
-    
-    body = await request.json()
-    text = body.get("text", "").strip()
-    voice_key = body.get("voice_key", "en-US-AriaNeural")
-    rate = body.get("rate", "+0%")
-    pitch = body.get("pitch", "+0Hz")
 
+    body = await request.json()
+    text = (body.get("text") or "").strip()
     if not text:
         raise HTTPException(400, "Text is required")
     if len(text) > 10000:
-        raise HTTPException(400, "Text too long (max 10,000 chars)")
+        raise HTTPException(400, "Text too long (max 10,000 characters)")
+
+    # A custom voice profile id/key maps onto its Edge-TTS base voice.
+    voice_input = body.get("voice_key") or body.get("voice") or body.get("voice_id") or ""
+    store = await get_store()
+    if str(voice_input).isdigit():
+        try:
+            profile = await store.get_voice(int(voice_input), user["id"])
+            if profile:
+                voice_input = profile.get("base_voice") or voice_input
+        except StoreError:
+            pass
+
+    voice_key = resolve_voice_key(voice_input, body.get("language"))
+    rate = speed_to_rate(body.get("speed"), body.get("rate"))
+    pitch = pitch_to_offset(body.get("pitch"))
 
     try:
         audio_bytes = await edge_tts_generate(text, voice_key, rate=rate, pitch=pitch)
-    except Exception as e:
-        raise HTTPException(500, f"TTS failed: {str(e)}")
+    except Exception as exc:
+        logger.error("TTS failed: %s", exc)
+        raise HTTPException(502, f"TTS failed: {exc}") from None
 
     filename = f"{uuid.uuid4().hex}.mp3"
+    saved = await save_media(store, "audio", filename, audio_bytes, "audio/mpeg")
+    voice_info = EDGE_VOICES.get(voice_key, {})
+
+    # durable object storage -> keep the URL; otherwise keep the inline audio so
+    # the history list stays playable after the container is recycled.
+    history_data = None if saved.get("stored") == "storage" else saved.get("data_uri")
+    history_url = saved["url"]
     try:
-        (AUDIO_DIR / filename).write_bytes(audio_bytes)
-    except OSError:
-        tmp_dir = Path("/tmp/bglabs_audio")
-        tmp_dir.mkdir(parents=True, exist_ok=True)
-        (tmp_dir / filename).write_bytes(audio_bytes)
+        await store.add_audio(
+            user_id=user["id"], text=text[:500], voice=voice_info.get("name", voice_key),
+            engine="Edge-TTS", filename=filename, url=history_url, chars=len(text),
+            data_uri=history_data,
+        )
+        await store.add_usage(user["id"], len(text))
+    except StoreError as exc:
+        logger.warning("audio history not saved: %s", exc)
 
-    voice_info = EDGE_VOICES.get(voice_key, {"name": "Unknown", "lang": "en"})
+    return {
+        "url": saved["url"],
+        "data_uri": saved.get("data_uri"),
+        "filename": filename,
+        "engine": "Edge-TTS",
+        "voice": voice_info.get("name", voice_key),
+        "voice_key": voice_key,
+        "rate": rate,
+        "pitch": pitch,
+        "chars": len(text),
+        "stored": saved.get("stored"),
+    }
 
-    if pool:
-        try:
-            async with pool.acquire() as conn:
-                await conn.execute(
-                    "INSERT INTO audio_history (user_id, text, voice, engine, filename, url, chars) VALUES ($1,$2,$3,$4,$5,$6,$7)",
-                    user["id"], text[:500], voice_info.get("name", voice_key), "Edge-TTS", filename, f"/api/storage/audio/{filename}", len(text)
-                )
-                await conn.execute("UPDATE users SET total_used = total_used + $1 WHERE id = $2", len(text), user["id"])
-        except Exception:
-            pass
-
-    return {"url": f"/api/storage/audio/{filename}", "filename": filename, "engine": "Edge-TTS", "voice": voice_info.get("name", voice_key), "chars": len(text)}
 
 @app.get("/api/studio/audio")
-async def list_audio(request: Request):
+async def list_audio(request: Request) -> List[Dict[str, Any]]:
     user = await get_current_user(request)
-    if not pool:
+    store = await get_store()
+    try:
+        return await store.list_audio(user["id"], limit=50)
+    except StoreError as exc:
+        logger.warning("audio history unavailable: %s", exc)
         return []
-    async with pool.acquire() as conn:
-        rows = await conn.fetch("SELECT * FROM audio_history WHERE user_id=$1 ORDER BY created_at DESC LIMIT 50", user["id"])
-    return [dict(r) for r in rows]
+
 
 @app.get("/api/studio/audio/download/{filename}")
-async def download_audio(filename: str):
-    filepath = AUDIO_DIR / filename
-    if not filepath.exists():
-        tmp_path = Path("/tmp/bglabs_audio") / filename
-        if tmp_path.exists():
-            filepath = tmp_path
-        else:
-            raise HTTPException(404, "Audio file not found")
-    return FileResponse(str(filepath), media_type="audio/mpeg", filename=f"bglabs_{filename}")
+async def download_audio(filename: str) -> Response:
+    data = read_local("audio", filename)
+    if not data:
+        raise HTTPException(404, "Audio file not found (serverless storage is ephemeral)")
+    return Response(content=data, media_type="audio/mpeg",
+                    headers={"Content-Disposition": f'attachment; filename="bglabs_{filename}"'})
 
-@app.get("/api/voices/languages")
-async def list_languages():
-    langs = {}
-    for key, info in EDGE_VOICES.items():
-        lang = info.get("lang", "en")
-        if lang not in langs:
-            langs[lang] = {"code": lang, "name": info.get("accent", lang), "voices": []}
-        langs[lang]["voices"].append(key)
-    return {"languages": list(langs.values()), "total": len(langs)}
+
+@app.get("/api/storage/{kind}/{filename}")
+async def serve_storage(kind: str, filename: str) -> Response:
+    """Serve locally generated media (Supabase Storage URLs are used when available)."""
+    if kind not in ("audio", "images", "videos", "avatars", "voices"):
+        raise HTTPException(404, "Unknown storage kind")
+    data = read_local(kind, filename)
+    if not data:
+        raise HTTPException(404, "File not found on this instance")
+    media_types = {
+        "audio": "audio/mpeg", "images": guess_content_type(data), "videos": "video/mp4",
+        "avatars": "image/svg+xml", "voices": "audio/mpeg",
+    }
+    return Response(content=data, media_type=media_types.get(kind, "application/octet-stream"))
+
 
 # ============================================================
 # IMAGE GENERATION
 # ============================================================
 @app.post("/api/image/generate")
-async def generate_image(request: Request):
+async def image_generate(request: Request) -> Dict[str, Any]:
     user = await get_current_user(request)
     ip = get_client_ip(request)
-    
-    if not check_rate_limit(ip, "image", 10, 60):
+    if not check_rate_limit(ip, "image", RATE_LIMIT_IMAGE, 60):
         raise HTTPException(429, "Too many image requests. Please wait.")
-    
+
     body = await request.json()
-    prompt = body.get("prompt", "").strip()
-    style = body.get("style", "realistic")
-    width = body.get("width", 1024)
-    height = body.get("height", 1024)
+    prompt = (body.get("prompt") or "").strip()
     if not prompt:
         raise HTTPException(400, "Prompt is required")
-    try:
-        image_bytes = await generate_image_pollinations(prompt, style, width, height)
-    except Exception as e:
-        raise HTTPException(500, f"Image generation failed: {str(e)}")
-    filename = f"{uuid.uuid4().hex}.png"
-    try:
-        (IMAGE_DIR / filename).write_bytes(image_bytes)
-    except OSError:
-        tmp_dir = Path("/tmp/bglabs_images")
-        tmp_dir.mkdir(parents=True, exist_ok=True)
-        (tmp_dir / filename).write_bytes(image_bytes)
-    if pool:
+
+    style = body.get("style") or "realistic"
+    model = body.get("model") or ""
+    width, height = parse_size(body.get("size"), body.get("width"), body.get("height"))
+    count = max(1, min(2, int(body.get("n") or 1)))
+    store = await get_store()
+
+    results = await asyncio.gather(
+        *[generate_image(prompt, style, width, height, model, seed=None) for _ in range(count)],
+        return_exceptions=True,
+    )
+    images: List[Dict[str, Any]] = []
+    errors: List[str] = []
+    for item in results:
+        if isinstance(item, Exception):
+            errors.append(str(item))
+            continue
+        content_type = guess_content_type(item)
+        filename = f"{uuid.uuid4().hex}{image_extension(content_type)}"
+        saved = await save_media(store, "images", filename, item, content_type)
+        durable = saved.get("stored") == "storage"
         try:
-            async with pool.acquire() as conn:
-                await conn.execute("INSERT INTO image_history (user_id, prompt, style, filename, url) VALUES ($1,$2,$3,$4,$5)",
-                    user["id"], prompt[:500], style, filename, f"/api/storage/images/{filename}")
-        except Exception:
-            pass
-    return {"url": f"/api/storage/images/{filename}", "filename": filename, "prompt": prompt, "style": style}
+            await store.add_image(
+                user_id=user["id"], prompt=prompt[:1000], style=style, filename=filename,
+                url=saved["url"], model=model,
+                size=f"{width}x{height}", data_uri=None if durable else saved.get("data_uri"),
+            )
+        except StoreError as exc:
+            logger.warning("image history not saved: %s", exc)
+        images.append({
+            "url": saved["url"],
+            "data_uri": saved.get("data_uri"),
+            "filename": filename,
+            "stored": saved.get("stored"),
+        })
+
+    if not images:
+        raise HTTPException(502, f"Image generation failed: {errors[0] if errors else 'unknown error'}")
+
+    first = images[0]
+    return {
+        "url": first["url"],
+        "data_uri": first["data_uri"],
+        "filename": first["filename"],
+        "prompt": prompt,
+        "style": style,
+        "model": model,
+        "size": f"{width}x{height}",
+        "images": images,
+        "result": {"image_url": first["url"], "revised_prompt": prompt},
+        "stored": first["stored"],
+        "errors": errors,
+    }
+
 
 @app.get("/api/image/styles")
-async def list_image_styles():
-    return {"styles": [
-        {"id": "realistic", "name": "Realistic", "icon": "📷", "desc": "Photorealistic images"},
-        {"id": "anime", "name": "Anime", "icon": "🎌", "desc": "Japanese anime style"},
-        {"id": "oil_painting", "name": "Oil Painting", "icon": "🎨", "desc": "Classical oil painting"},
-        {"id": "digital_art", "name": "Digital Art", "icon": "💻", "desc": "Digital concept art"},
-        {"id": "watercolor", "name": "Watercolor", "icon": "🖌️", "desc": "Soft watercolor painting"},
-        {"id": "3d_render", "name": "3D Render", "icon": "🧊", "desc": "3D rendered scenes"},
-        {"id": "pixel_art", "name": "Pixel Art", "icon": "👾", "desc": "Retro pixel art"},
-        {"id": "cyberpunk", "name": "Cyberpunk", "icon": "🌃", "desc": "Futuristic neon style"},
-        {"id": "cinematic", "name": "Cinematic", "icon": "🎬", "desc": "Movie-quality stills"},
-        {"id": "portrait", "name": "Portrait", "icon": "👤", "desc": "Studio portrait photos"},
-        {"id": "landscape", "name": "Landscape", "icon": "🌄", "desc": "Scenic landscape photos"},
-        {"id": "fantasy", "name": "Fantasy", "icon": "🧙", "desc": "Magical fantasy art"},
-        {"id": "minimalist", "name": "Minimalist", "icon": "⬜", "desc": "Clean minimal design"},
-        {"id": "comic", "name": "Comic Book", "icon": "💥", "desc": "Bold comic book style"},
-    ]}
+async def list_image_styles() -> Dict[str, Any]:
+    seen: Dict[str, Dict[str, Any]] = {}
+    icons = {
+        "realistic": "📷", "vivid": "🌈", "anime": "🎌", "oil_painting": "🎨", "digital_art": "💻",
+        "watercolor": "🖌️", "3d_render": "🧊", "pixel_art": "👾", "cyberpunk": "🌃", "cinematic": "🎬",
+        "portrait": "👤", "landscape": "🌄", "fantasy": "🧙", "minimalist": "⬜", "comic": "💥",
+        "photorealistic": "📸", "sketch": "✏️",
+    }
+    for key, prompt_suffix in IMAGE_STYLES.items():
+        canonical = key.replace("-", "_")
+        if canonical in seen:
+            continue
+        seen[canonical] = {
+            "id": canonical, "name": canonical.replace("_", " ").title(),
+            "icon": icons.get(canonical, "🎨"), "desc": prompt_suffix,
+        }
+    return {"styles": list(seen.values()), "total": len(seen)}
+
 
 @app.get("/api/image/history")
-async def image_history(request: Request):
+async def image_history(request: Request) -> List[Dict[str, Any]]:
     user = await get_current_user(request)
-    if not pool:
+    store = await get_store()
+    try:
+        return await store.list_images(user["id"], limit=50)
+    except StoreError as exc:
+        logger.warning("image history unavailable: %s", exc)
         return []
-    async with pool.acquire() as conn:
-        rows = await conn.fetch("SELECT * FROM image_history WHERE user_id=$1 ORDER BY created_at DESC LIMIT 50", user["id"])
-    return [dict(r) for r in rows]
+
 
 # ============================================================
 # AVATAR STUDIO
 # ============================================================
 @app.post("/api/avatar/generate")
-async def generate_avatar(request: Request):
-    user = await get_current_user(request)
+async def avatar_generate(request: Request) -> Dict[str, Any]:
+    await get_current_user(request)
     body = await request.json()
-    svg = generate_avatar_svg(body.get("hair_color", "#333"), body.get("eye_color", "#333"), body.get("skin_tone", "#fdbcb4"), body.get("clothing_color", "#3b82f6"))
+    preset = avatar_preset(body.get("avatar_type", "default"), body.get("background"))
+    colours = {
+        "hair_color": body.get("hair_color") or preset["hair_color"],
+        "eye_color": body.get("eye_color") or preset["eye_color"],
+        "skin_tone": body.get("skin_tone") or preset["skin_tone"],
+        "clothing_color": body.get("clothing_color") or preset["clothing_color"],
+    }
+    svg = generate_avatar_svg(background=preset.get("background", "studio"), **colours)
+
+    store = await get_store()
     filename = f"{uuid.uuid4().hex}.svg"
-    try:
-        (AVATAR_DIR / filename).write_text(svg)
-    except OSError:
-        tmp_dir = Path("/tmp/bglabs_avatars")
-        tmp_dir.mkdir(parents=True, exist_ok=True)
-        (tmp_dir / filename).write_text(svg)
-    return {"url": f"/api/storage/avatars/{filename}", "filename": filename, "svg": svg}
+    saved = await save_media(store, "avatars", filename, svg.encode("utf-8"), "image/svg+xml")
+    return {
+        "url": saved["url"],
+        "data_uri": saved.get("data_uri") or f"data:image/svg+xml;utf8,{svg}",
+        "filename": filename,
+        "svg": svg,
+        "avatar_type": body.get("avatar_type", "default"),
+        "background": preset.get("background"),
+        "stored": saved.get("stored"),
+    }
+
 
 # ============================================================
-# VOICE CLONING
+# VOICE PROFILES (legacy /api/voice-clone/* contract)
 # ============================================================
 @app.post("/api/voice-clone/create")
-async def create_voice_clone(request: Request):
+async def create_voice_clone(request: Request) -> Dict[str, Any]:
     user = await get_current_user(request)
     body = await request.json()
-    name = body.get("name", "My Voice")
-    base_voice = body.get("base_voice", "en-US-AriaNeural")
-    settings = {"base_voice": base_voice, "name": name}
-    if pool:
-        try:
-            async with pool.acquire() as conn:
-                row = await conn.fetchrow("INSERT INTO voice_profiles (user_id, name, voice_key, settings) VALUES ($1,$2,$3,$4) RETURNING id", user["id"], name, base_voice, json.dumps(settings))
-                return {"id": row["id"], "name": name, "base_voice": base_voice}
-        except Exception:
-            pass
-    return {"id": 0, "name": name, "base_voice": base_voice}
+    name = (body.get("name") or "My Voice").strip()
+    base_voice = resolve_voice_key(body.get("base_voice"), body.get("language"))
+    store = await get_store()
+    try:
+        voice = await store.add_voice(
+            user_id=user["id"], name=name, description=body.get("description", ""),
+            voice_key=f"custom-{uuid.uuid4().hex[:10]}", base_voice=base_voice,
+            sample_url=body.get("sample_url"),
+            settings={"base_voice": base_voice, "name": name, **{k: v for k, v in body.items() if k in ("rate", "pitch", "style")}},
+        )
+    except StoreError as exc:
+        logger.warning("voice profile not saved: %s", exc)
+        return {"id": 0, "name": name, "base_voice": base_voice, "persisted": False}
+    return {"id": voice["id"], "name": name, "base_voice": base_voice, "voice_key": voice["voice_key"], "persisted": True}
+
 
 @app.get("/api/voice-clone/list")
-async def list_voice_clones(request: Request):
+async def list_voice_clones(request: Request) -> List[Dict[str, Any]]:
     user = await get_current_user(request)
-    if not pool:
+    store = await get_store()
+    try:
+        return await store.list_voices(user["id"])
+    except StoreError as exc:
+        logger.warning("voice profiles unavailable: %s", exc)
         return []
-    async with pool.acquire() as conn:
-        rows = await conn.fetch("SELECT * FROM voice_profiles WHERE user_id=$1 ORDER BY created_at DESC", user["id"])
-    return [dict(r) for r in rows]
+
 
 @app.post("/api/voice-clone/generate")
-async def generate_with_clone(request: Request):
+async def generate_with_clone(request: Request) -> Dict[str, Any]:
     user = await get_current_user(request)
     body = await request.json()
-    text = body.get("text", "").strip()
-    profile_id = body.get("profile_id")
+    text = (body.get("text") or "").strip()
+    profile_id = body.get("profile_id") or body.get("voice_id")
     if not text:
         raise HTTPException(400, "Text is required")
-    if not pool:
-        raise HTTPException(503, "Database not available")
-    async with pool.acquire() as conn:
-        profile = await conn.fetchrow("SELECT * FROM voice_profiles WHERE id=$1 AND user_id=$2", profile_id, user["id"])
+
+    store = await get_store()
+    profile = None
+    if profile_id:
+        try:
+            profile = await store.get_voice(int(profile_id), user["id"])
+        except (StoreError, ValueError, TypeError):
+            profile = None
     if not profile:
         raise HTTPException(404, "Voice profile not found")
-    settings = json.loads(profile["settings"])
-    voice_key = settings.get("base_voice", "en-US-AriaNeural")
+
+    voice_key = resolve_voice_key(profile.get("base_voice"))
     try:
-        audio_bytes = await edge_tts_generate(text, voice_key)
-    except Exception as e:
-        raise HTTPException(500, f"Voice generation failed: {str(e)}")
+        audio_bytes = await edge_tts_generate(text, voice_key,
+                                              rate=speed_to_rate(body.get("speed"), body.get("rate")))
+    except Exception as exc:
+        raise HTTPException(502, f"Voice generation failed: {exc}") from None
+
     filename = f"{uuid.uuid4().hex}.mp3"
+    saved = await save_media(store, "audio", filename, audio_bytes, "audio/mpeg")
     try:
-        (AUDIO_DIR / filename).write_bytes(audio_bytes)
-    except OSError:
-        tmp_dir = Path("/tmp/bglabs_audio")
-        tmp_dir.mkdir(parents=True, exist_ok=True)
-        (tmp_dir / filename).write_bytes(audio_bytes)
-    return {"url": f"/api/storage/audio/{filename}", "filename": filename, "profile_name": profile["name"]}
+        await store.add_audio(
+            user_id=user["id"], text=text[:500], voice=profile["name"], engine="Edge-TTS (profile)",
+            filename=filename, url=saved["url"], chars=len(text),
+            data_uri=None if saved.get("stored") == "storage" else saved.get("data_uri"),
+        )
+        await store.add_usage(user["id"], len(text))
+    except StoreError:
+        pass
+    return {
+        "url": saved["url"], "data_uri": saved.get("data_uri"), "filename": filename,
+        "profile_name": profile["name"], "voice_key": voice_key, "chars": len(text),
+    }
+
 
 # ============================================================
-# SCRIPT WRITER
+# SCRIPT WRITER (legacy endpoint)
 # ============================================================
 @app.post("/api/script/write")
-async def write_script(request: Request):
+async def write_script(request: Request) -> Dict[str, Any]:
     user = await get_current_user(request)
     body = await request.json()
-    topic = body.get("topic", "").strip()
-    genre = body.get("genre", "general")
-    mood = body.get("mood", "neutral")
-    length = body.get("length", "medium")
+    topic = (body.get("topic") or "").strip()
     if not topic:
         raise HTTPException(400, "Topic is required")
-    
-    templates = {
-        "youtube": {
-            "short": {"intro": f"Hey! Quick video on {topic}.", "body": f"Here's what you need to know about {topic}.", "outro": "Like & subscribe!"},
-            "medium": {"intro": f"Hey everyone! Welcome back. Today we're diving into {topic}.", "body": f"Let me break this down. {topic} is fascinating. Here's what you need to know. First, the basics. Then we'll go deeper. And finally, the key takeaways.", "outro": f"That's it! Smash like and subscribe for more content like this!"},
-            "long": {"intro": f"Hey everyone! Welcome back to the channel. Today we're going to do a deep dive into {topic}. This is something I've been wanting to cover for a while now, and I think you're going to find this really valuable.", "body": f"Let's start with the basics. {topic} has been gaining a lot of attention recently, and for good reason. The fundamentals are solid, and there's a lot to unpack here.\n\nFirst, let's talk about why {topic} matters. In today's landscape, understanding this can give you a significant advantage.\n\nNow, let's look at the key aspects. There are several important points to consider.\n\nFinally, let me share my personal take on {topic} and what I think the future holds.", "outro": f"And that wraps up our deep dive into {topic}! If you found this helpful, please hit that like button and subscribe. Drop a comment below with your thoughts. See you in the next one!"}
-        },
-        "podcast": {
-            "short": f"Welcome. Today: {topic}. Let's dive in.",
-            "medium": f"Welcome to another episode. Today we're exploring {topic}. So {topic} has been on everyone's mind. Here's what I've discovered through research and experience. The first thing to understand is... The second key point is... And that brings us to the bigger picture. That wraps up today's discussion on {topic}. Thanks for tuning in.",
-            "long": f"Welcome to another episode of our podcast. I'm your host, and today we have a really exciting topic to discuss: {topic}.\n\nNow, {topic} is something that's been generating a lot of buzz lately, and I wanted to take some time to really dig into it.\n\nLet's start from the beginning. {topic} first came to my attention when... Since then, I've been researching extensively, and here's what I've found.\n\nThe first major insight about {topic} is... This is crucial because...\n\nMoving on to the second point... This is where things get really interesting.\n\nAnd finally, the third key takeaway... This ties everything together nicely.\n\nThat's all for today's episode on {topic}. I hope you found this valuable. If you did, please share it with someone who needs to hear this. Until next time!"
-        },
-        "presentation": {
-            "short": f"Today I'll present on {topic}. Let's begin.",
-            "medium": f"Good morning everyone. Today I'll be presenting on {topic}. Let's examine the key aspects. First, the overview. {topic} is a critical area that impacts many industries. The data shows clear trends. Let's look at the numbers. In conclusion, {topic} presents significant opportunities. Thank you for your attention. Questions?",
-            "long": f"Good morning everyone, and thank you for being here today. My name is [Name], and I'll be presenting on {topic}.\n\nLet me start with an overview. {topic} has become increasingly important in recent years, and understanding it is crucial for success.\n\nFirst, let's look at the background. {topic} emerged as a key area of focus when... The initial research showed promising results.\n\nNow, let's examine the current state. The data clearly indicates several important trends.\n\nLooking at the numbers, we can see that... This represents a significant shift in how we approach {topic}.\n\nMoving forward, the opportunities are substantial. Organizations that embrace {topic} stand to gain a competitive advantage.\n\nIn conclusion, {topic} is not just a trend, it's a fundamental shift. I recommend we take proactive steps to capitalize on these opportunities.\n\nThank you for your attention. I'm happy to take any questions."
-        },
-        "ad": {
-            "short": f"Tired of the ordinary? Try {topic}. Transform your experience today.",
-            "medium": f"Introducing {topic} - the game changer you've been waiting for. Whether you're a beginner or expert, {topic} delivers results. Join thousands who've already made the switch. Don't miss out. Try {topic} today and see the difference.",
-            "long": f"Are you tired of settling for less? It's time to experience {topic}.\n\nHere's the thing - most people struggle with this exact problem. And that's exactly why {topic} was created.\n\nWith {topic}, you get: First, unmatched quality that speaks for itself. Second, a seamless experience from start to finish. And third, results that speak louder than words.\n\nDon't just take our word for it. Join the thousands of satisfied users who've already transformed their experience.\n\n{topic} - because you deserve better. Try it free today."
-        },
-        "general": {
-            "short": f"Today: {topic}. Here's what you need to know.",
-            "medium": f"Today we're exploring {topic}. Let's dive deeper into this fascinating subject. The fundamentals are clear. {topic} has evolved significantly. Here are the key points to understand. First, the basics. Then the advanced concepts. And finally, practical applications. That concludes our overview of {topic}.",
-            "long": f"Today we're going to take an in-depth look at {topic}. This is a subject that many people are curious about, and for good reason.\n\nLet's start with the fundamentals. {topic} encompasses several key elements that work together.\n\nThe first aspect to consider is... This is foundational to understanding the bigger picture.\n\nNext, let's explore... This is where things get particularly interesting.\n\nWe should also discuss... This adds another layer of complexity and nuance.\n\nFinally, the practical applications of {topic} are vast and growing. Understanding these can provide significant advantages.\n\nThat concludes our comprehensive overview of {topic}. I hope this has been informative and valuable."
-        }
-    }
-    
-    t = templates.get(genre, templates["general"])
-    if isinstance(t, dict):
-        script = t.get(length, t.get("medium", ""))
-    else:
-        script = t
-    
-    if pool:
-        try:
-            async with pool.acquire() as conn:
-                await conn.execute("INSERT INTO scripts (user_id, topic, genre, mood, content, word_count) VALUES ($1,$2,$3,$4,$5,$6)",
-                    user["id"], topic, genre, mood, script[:2000], len(script.split()))
-        except Exception:
-            pass
-    return {"script": script, "topic": topic, "genre": genre, "mood": mood, "length": length, "word_count": len(script.split())}
+
+    try:
+        result = generate_script(
+            topic,
+            template=body.get("genre") or body.get("template") or "general",
+            style=body.get("style", ""),
+            tone=body.get("mood") or body.get("tone") or "neutral",
+            length=body.get("length") or "medium",
+            audience=body.get("audience") or "general",
+            language=body.get("language") or "english",
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from None
+
+    store = await get_store()
+    project_id = None
+    try:
+        project = await store.add_project(
+            user_id=user["id"], name=topic[:80], project_type="script",
+            settings={
+                "topic": topic, "template": result["template"], "genre": result["genre"],
+                "tone": result["tone"], "length": result["length"],
+                "script_content": result["script"], "word_count": result["word_count"],
+            },
+        )
+        project_id = project["id"]
+    except StoreError as exc:
+        logger.warning("script not saved: %s", exc)
+
+    payload = dict(result)
+    payload["project_id"] = project_id
+    return payload
+
 
 # ============================================================
-# ADMIN
+# REFERRAL (legacy alias)
 # ============================================================
-@app.get("/api/admin/stats")
-async def admin_stats(request: Request):
-    user = await get_current_user(request)
-    if user["role"] != "admin":
-        raise HTTPException(403, "Admin only")
-    if not pool:
-        return {"total_users": 0, "total_voices": len(EDGE_VOICES), "total_audio": 0, "total_images": 0}
-    async with pool.acquire() as conn:
-        users = await conn.fetchval("SELECT COUNT(*) FROM users")
-        audio_count = await conn.fetchval("SELECT COUNT(*) FROM audio_history")
-        image_count = await conn.fetchval("SELECT COUNT(*) FROM image_history")
-    return {"total_users": users, "total_voices": len(EDGE_VOICES), "total_audio": audio_count, "total_images": image_count}
-
-@app.get("/api/admin/users")
-async def admin_users(request: Request):
-    user = await get_current_user(request)
-    if user["role"] != "admin":
-        raise HTTPException(403, "Admin only")
-    if not pool:
-        return []
-    async with pool.acquire() as conn:
-        rows = await conn.fetch("SELECT * FROM users ORDER BY created_at DESC")
-    return [dict(r) for r in rows]
-
-# ============================================================
-# BILLING / REFERRAL
-# ============================================================
-@app.get("/api/billing/plans")
-async def plans():
-    return {"plans": {"free": {"name": "FREE", "price": 0, "credits": "Unlimited"}}}
-
-@app.get("/api/billing/current")
-async def current_sub(request: Request):
-    user = await get_current_user(request)
-    return {"tier": "free", "credits": user["credits"], "status": "active"}
-
 @app.get("/api/referral/code")
-async def get_referral_code(request: Request):
+async def get_referral_code(request: Request) -> Dict[str, Any]:
     user = await get_current_user(request)
-    code = user.get("referral_code", "UNKNOWN")
-    return {"referral_code": code, "referral_link": f"https://bglabs.app?ref={code}"}
+    code = user.get("referral_code") or "UNKNOWN"
+    base = str(request.base_url).rstrip("/")
+    return {"referral_code": code, "referral_link": f"{base}/?ref={code}"}
+
+
+# ============================================================
+# LOCAL SERVER ENTRYPOINT
+# ============================================================
+if __name__ == "__main__":
+    import uvicorn
+
+    port = int(os.getenv("PORT", "7860"))
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=os.getenv("RELOAD", "") == "1")
