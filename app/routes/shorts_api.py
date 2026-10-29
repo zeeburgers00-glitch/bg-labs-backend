@@ -259,7 +259,6 @@ async def create_shorts_upload_url(request: Request):
         response = await store._send(
             "POST",
             signed_path,
-            payload={"upsert": False},
             headers=store._headers(),
             expect=(200, 201),
         )
