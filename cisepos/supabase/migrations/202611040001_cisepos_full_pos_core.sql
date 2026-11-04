@@ -1,0 +1,1 @@
+-- Schema is applied through the Supabase migration API for the selected project. See CISePOS migration commit notes.
