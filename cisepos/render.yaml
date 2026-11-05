@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: cisepos-api
+    runtime: node
+    plan: free
+    region: singapore
+    branch: feature/cisepos-pos-rebuild
+    rootDir: cisepos/backend
+    buildCommand: bun install
+    startCommand: bun run start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: BUN_VERSION
+        value: 1.4.3
+      - key: SUPABASE_URL
+        value: https://ankoqogbbclovfuurujw.supabase.co
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: APP_ORIGIN
+        value: https://bg-labs-pos.vercel.app
