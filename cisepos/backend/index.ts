@@ -5,9 +5,9 @@ import { z } from "zod";
 
 type Vars = { db: SupabaseClient; user: User };
 const app = new Hono<{ Variables: Vars }>();
-const SUPABASE_URL = Bun.env.SUPABASE_URL ?? "";
-const SUPABASE_ANON_KEY = Bun.env.SUPABASE_ANON_KEY ?? "";
-const APP_ORIGIN = Bun.env.APP_ORIGIN ?? "*";
+const SUPABASE_URL = process.env.SUPABASE_URL ?? "";
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY ?? "";
+const APP_ORIGIN = process.env.APP_ORIGIN ?? "*";
 
 app.use("*", cors({ origin: APP_ORIGIN === "*" ? "*" : [APP_ORIGIN], allowHeaders: ["Authorization","Content-Type"], allowMethods: ["GET","POST","PATCH","DELETE","OPTIONS"], maxAge: 86400 }));
 app.get("/health", (c) => c.json({ status: "ok", service: "cisepos-api", configured: Boolean(SUPABASE_URL && SUPABASE_ANON_KEY) }));
@@ -156,4 +156,5 @@ app.get("/api/reports/sales", async (c) => {
 
 app.onError((error,c)=>{ console.error("CISePOS API error",error); return c.json({error:"Internal server error"},500); });
 app.notFound((c)=>c.json({error:"Route not found"},404));
-Bun.serve({ port: Number(Bun.env.PORT ?? 3000), fetch: app.fetch });
+export { app };
+export default app;
