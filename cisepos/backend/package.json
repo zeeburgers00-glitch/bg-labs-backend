@@ -11,5 +11,8 @@
     "@supabase/supabase-js": "^2.57.4",
     "hono": "^4.9.8",
     "zod": "^4.1.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0"
   }
 }
