@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "bun run index.ts",
-    "dev": "bun --watch index.ts"
+    "start": "bun run server.ts",
+    "dev": "bun --watch server.ts"
   },
   "dependencies": {
     "@hono/zod-validator": "^0.4.3",
