@@ -8,8 +8,9 @@ const app = new Hono<{ Variables: Vars }>();
 const SUPABASE_URL = process.env.SUPABASE_URL ?? "";
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY ?? "";
 const APP_ORIGIN = process.env.APP_ORIGIN ?? "*";
+const ALLOWED_ORIGINS = APP_ORIGIN === "*" ? "*" : APP_ORIGIN.split(",").map((origin) => origin.trim()).filter(Boolean);
 
-app.use("*", cors({ origin: APP_ORIGIN === "*" ? "*" : [APP_ORIGIN], allowHeaders: ["Authorization","Content-Type"], allowMethods: ["GET","POST","PATCH","DELETE","OPTIONS"], maxAge: 86400 }));
+app.use("*", cors({ origin: ALLOWED_ORIGINS, allowHeaders: ["Authorization","Content-Type"], allowMethods: ["GET","POST","PATCH","DELETE","OPTIONS"], maxAge: 86400 }));
 app.get("/health", (c) => c.json({ status: "ok", service: "cisepos-api", configured: Boolean(SUPABASE_URL && SUPABASE_ANON_KEY) }));
 
 app.use("/api/*", async (c, next) => {
